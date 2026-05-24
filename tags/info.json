@@ -1,0 +1,7 @@
+{
+  "name": "tags",
+  "author": ["Antigravity"],
+  "description": "Create and manage custom server tags and triggers.",
+  "short": "Custom server tags and triggers.",
+  "version": "1.0.0"
+}
