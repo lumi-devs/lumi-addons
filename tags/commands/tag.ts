@@ -41,7 +41,10 @@ export class TagCommand extends EmberSubcommand {
 
     if (!content) {
       return message.reply(
-        makeErrorCard("Tag Not Found", `The tag **${tagName}** does not exist.`),
+        makeErrorCard(
+          "Tag Not Found",
+          `The tag **${tagName}** does not exist.`,
+        ),
       );
     }
 
@@ -52,8 +55,11 @@ export class TagCommand extends EmberSubcommand {
   }
 
   public async messageRunAdd(message: Message, args: Args) {
-    const member = message.member;
-    if (!member || !member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+    const { member } = message;
+    if (
+      !member ||
+      !member.permissions.has(PermissionFlagsBits.ManageMessages)
+    ) {
       return message.reply(
         makeErrorCard(
           "Permission Denied",
@@ -72,7 +78,11 @@ export class TagCommand extends EmberSubcommand {
     }
 
     const sanitizedName = name.toLowerCase().replace(/[^a-zA-Z0-9_-]/g, "");
-    if (!sanitizedName || sanitizedName.length < 2 || sanitizedName.length > 30) {
+    if (
+      !sanitizedName ||
+      sanitizedName.length < 2 ||
+      sanitizedName.length > 30
+    ) {
       return message.reply(
         makeErrorCard(
           "Invalid Name",
@@ -82,7 +92,16 @@ export class TagCommand extends EmberSubcommand {
     }
 
     // Block names that conflict with subcommands
-    const reserved = ["add", "create", "set", "remove", "delete", "del", "list", "show"];
+    const reserved = [
+      "add",
+      "create",
+      "set",
+      "remove",
+      "delete",
+      "del",
+      "list",
+      "show",
+    ];
     if (reserved.includes(sanitizedName)) {
       return message.reply(
         makeErrorCard(
@@ -108,8 +127,11 @@ export class TagCommand extends EmberSubcommand {
   }
 
   public async messageRunRemove(message: Message, args: Args) {
-    const member = message.member;
-    if (!member || !member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+    const { member } = message;
+    if (
+      !member ||
+      !member.permissions.has(PermissionFlagsBits.ManageMessages)
+    ) {
       return message.reply(
         makeErrorCard(
           "Permission Denied",
@@ -120,9 +142,7 @@ export class TagCommand extends EmberSubcommand {
 
     const name = await args.pick("string").catch(() => null);
     if (!name) {
-      return message.reply(
-        makeErrorCard("Usage", "`,tag remove <name>`"),
-      );
+      return message.reply(makeErrorCard("Usage", "`,tag remove <name>`"));
     }
 
     const sanitizedName = name.toLowerCase();
@@ -133,7 +153,10 @@ export class TagCommand extends EmberSubcommand {
     const exists = await this.container.redis.sismember(listKey, sanitizedName);
     if (!exists) {
       return message.reply(
-        makeErrorCard("Tag Not Found", `The tag **${sanitizedName}** does not exist.`),
+        makeErrorCard(
+          "Tag Not Found",
+          `The tag **${sanitizedName}** does not exist.`,
+        ),
       );
     }
 
@@ -141,7 +164,10 @@ export class TagCommand extends EmberSubcommand {
     await this.container.redis.srem(listKey, sanitizedName);
 
     return message.reply(
-      makeSuccessCard("Tag Removed", `Successfully removed tag **${sanitizedName}**.`),
+      makeSuccessCard(
+        "Tag Removed",
+        `Successfully removed tag **${sanitizedName}**.`,
+      ),
     );
   }
 
@@ -163,7 +189,7 @@ export class TagCommand extends EmberSubcommand {
     return message.reply(
       makeInfoCard(
         "Custom Tags",
-        sortedTags.map(t => `• \`${t}\``).join("\n"),
+        sortedTags.map((t) => `• \`${t}\``).join("\n"),
       ),
     );
   }

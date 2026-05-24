@@ -11,7 +11,9 @@ import { EmberEmojis } from "#utilities/assets.js";
 
 const EMOJI_REGEX = /<(a?):([a-zA-Z0-9_]+):([0-9]+)>/g;
 
-async function downloadImage(url: string): Promise<{ buffer: Buffer; contentType: string }> {
+async function downloadImage(
+  url: string,
+): Promise<{ buffer: Buffer; contentType: string }> {
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Failed to fetch image: status ${res.status}`);
@@ -33,7 +35,10 @@ async function createEmoji(
   try {
     const { buffer } = await downloadImage(url);
     if (buffer.length > 256 * 1024) {
-      return { success: false, error: "Image size exceeds Discord's 256 KB limit." };
+      return {
+        success: false,
+        error: "Image size exceeds Discord's 256 KB limit.",
+      };
     }
     const emoji = await guild.emojis.create({ attachment: buffer, name });
     return { success: true, emoji };
@@ -52,7 +57,7 @@ async function createEmoji(
 
 function sanitizeEmojiName(name: string): string {
   const dotIndex = name.lastIndexOf(".");
-  let baseName = dotIndex !== -1 ? name.slice(0, dotIndex) : name;
+  const baseName = dotIndex === -1 ? name : name.slice(0, dotIndex);
   let sanitized = baseName.replace(/[^a-zA-Z0-9_]/g, "");
   sanitized = sanitized.replace(/_+/g, "_").replace(/^_+|_+$/g, "");
   if (sanitized.length < 2) {
@@ -67,7 +72,8 @@ function sanitizeEmojiName(name: string): string {
 @ApplyOptions<Command.Options>({
   name: "steal",
   aliases: ["emoji-steal", "steal-emoji", "addemoji", "add-emoji"],
-  description: "Steal custom emojis from messages, replies, or URLs and add them to the server.",
+  description:
+    "Steal custom emojis from messages, replies, or URLs and add them to the server.",
   preconditions: ["GuildOnly"],
   requiredClientPermissions: [PermissionFlagsBits.ManageGuildExpressions],
   requiredUserPermissions: [PermissionFlagsBits.ManageGuildExpressions],
@@ -84,7 +90,8 @@ export class StealCommand extends Command {
       if (repliedMessageId) {
         let repliedMessage: Message;
         try {
-          repliedMessage = await message.channel.messages.fetch(repliedMessageId);
+          repliedMessage =
+            await message.channel.messages.fetch(repliedMessageId);
         } catch {
           return message.reply(
             makeErrorCard(
@@ -98,7 +105,7 @@ export class StealCommand extends Command {
         const emojiMatches = [...repliedMessage.content.matchAll(EMOJI_REGEX)];
         if (emojiMatches.length > 0) {
           const uniqueEmojis = Array.from(
-            new Map(emojiMatches.map(m => [m[3], m])).values(),
+            new Map(emojiMatches.map((m) => [m[3], m])).values(),
           );
 
           const maxSteals = 5;
@@ -114,8 +121,8 @@ export class StealCommand extends Command {
           const failed: { name: string; reason: string }[] = [];
 
           for (const match of toSteal) {
-            const isAnimated = !!match[1];
-            const originalName = match[2];
+            const isAnimated = Boolean(match[1]);
+            const originalName = match[2] || "emoji";
             const id = match[3];
             const name = sanitizeEmojiName(originalName);
             const emojiUrl = `https://cdn.discordapp.com/emojis/${id}.${isAnimated ? "gif" : "png"}`;
@@ -124,7 +131,10 @@ export class StealCommand extends Command {
             if (result.success && result.emoji) {
               succeeded.push(`${result.emoji} (\`:${result.emoji.name}:\`)`);
             } else {
-              failed.push({ name: originalName, reason: result.error || "Unknown error" });
+              failed.push({
+                name: originalName,
+                reason: result.error || "Unknown error",
+              });
             }
           }
 
@@ -133,23 +143,26 @@ export class StealCommand extends Command {
             descParts.push(`### Succeeded:\n${succeeded.join("\n")}`);
           }
           if (failed.length > 0) {
-            descParts.push(`### Failed:\n${failed.map(f => `❌ **:${f.name}:** — ${f.reason}`).join("\n")}`);
+            descParts.push(
+              `### Failed:\n${failed.map((f) => `❌ **:${f.name}:** — ${f.reason}`).join("\n")}`,
+            );
           }
           if (uniqueEmojis.length > maxSteals) {
-            descParts.push(`\n-# *Note: Capped at ${maxSteals} emojis per command to prevent rate limits.*`);
+            descParts.push(
+              `\n-# *Note: Capped at ${maxSteals} emojis per command to prevent rate limits.*`,
+            );
           }
 
           await feedbackMsg.edit(
-            makeSuccessCard(
-              "Emoji Stealer Results",
-              descParts.join("\n\n"),
-            ),
+            makeSuccessCard("Emoji Stealer Results", descParts.join("\n\n")),
           );
           return;
         }
 
         // 2. Check for image attachments in replied message
-        const attachment = repliedMessage.attachments.find(a => !!a.contentType?.startsWith("image/"));
+        const attachment = repliedMessage.attachments.find((a) =>
+          Boolean(a.contentType?.startsWith("image/")),
+        );
         if (attachment) {
           const name = sanitizeEmojiName(attachment.name || "stolen_emoji");
           const feedbackMsg = await message.reply(
@@ -212,10 +225,12 @@ export class StealCommand extends Command {
     const emojiMatch = arg1.match(/<(a?):([a-zA-Z0-9_]+):([0-9]+)>/);
     if (emojiMatch) {
       // Case A: Custom Emoji Argument
-      const isAnimated = !!emojiMatch[1];
-      const originalName = emojiMatch[2];
+      const isAnimated = Boolean(emojiMatch[1]);
+      const originalName = emojiMatch[2] || "emoji";
       const id = emojiMatch[3];
-      const name = arg2 ? sanitizeEmojiName(arg2) : sanitizeEmojiName(originalName);
+      const name = arg2
+        ? sanitizeEmojiName(arg2)
+        : sanitizeEmojiName(originalName);
       const emojiUrl = `https://cdn.discordapp.com/emojis/${id}.${isAnimated ? "gif" : "png"}`;
 
       const feedbackMsg = await message.reply(
