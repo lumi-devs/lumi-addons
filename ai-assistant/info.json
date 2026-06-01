@@ -1,0 +1,7 @@
+{
+  "name": "ai-assistant",
+  "author": ["Antigravity"],
+  "description": "Semantically aware AI module using Gemini to answer server queries.",
+  "short": "AI assistant for your server.",
+  "version": "1.0.0"
+}

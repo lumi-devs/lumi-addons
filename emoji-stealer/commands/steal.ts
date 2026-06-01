@@ -7,7 +7,7 @@ import {
   makeWarningCard,
   makeInfoCard,
 } from "#utilities/cards.js";
-import { EmberEmojis } from "#utilities/assets.js";
+import { Emojis } from "#utilities/assets.js";
 
 const EMOJI_REGEX = /<(a?):([a-zA-Z0-9_]+):([0-9]+)>/g;
 
@@ -113,7 +113,7 @@ export class StealCommand extends Command {
           const feedbackMsg = await message.reply(
             makeInfoCard(
               "Stealing Emojis",
-              `${EmberEmojis.LOADING} Processing and uploading ${toSteal.length} emoji(s)...`,
+              `${Emojis.LOADING} Processing and uploading ${toSteal.length} emoji(s)...`,
             ),
           );
 
@@ -168,7 +168,7 @@ export class StealCommand extends Command {
           const feedbackMsg = await message.reply(
             makeInfoCard(
               "Stealing Emoji",
-              `${EmberEmojis.LOADING} Downloading attachment and creating emoji...`,
+              `${Emojis.LOADING} Downloading attachment and creating emoji...`,
             ),
           );
 
@@ -236,7 +236,7 @@ export class StealCommand extends Command {
       const feedbackMsg = await message.reply(
         makeInfoCard(
           "Stealing Emoji",
-          `${EmberEmojis.LOADING} Processing and uploading custom emoji...`,
+          `${Emojis.LOADING} Processing and uploading custom emoji...`,
         ),
       );
 
@@ -275,7 +275,7 @@ export class StealCommand extends Command {
       const feedbackMsg = await message.reply(
         makeInfoCard(
           "Stealing Emoji",
-          `${EmberEmojis.LOADING} Downloading image from URL and uploading...`,
+          `${Emojis.LOADING} Downloading image from URL and uploading...`,
         ),
       );
 

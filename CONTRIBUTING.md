@@ -38,7 +38,7 @@ Ember features dynamic plugin isolation. If your module has external package dep
 
 ### C. Isolated State Management
 * **Do not add module-specific methods to the main `DatabaseService`**. Modules must remain 100% self-contained. 
-* Access data directly via `container.prisma` (relational Postgres data) or `container.redis` (high-speed key-value cache/state).
+* Access data through `container.db.guildKV` — the generic per-module key/value store (`getModuleData`/`setModuleData`/`listModuleData`/`deleteModuleData`), keyed by `guildId + module + targetId + key` — or `container.redis` (high-speed cache/state). Do **not** reach for `container.prisma` directly; addons get no schema of their own.
 * Avoid creating custom database migrations unless strictly necessary; prefer utilizing fast Redis storage for modular features to keep installation immediate.
 
 ---
