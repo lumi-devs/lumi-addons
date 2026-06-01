@@ -7,4 +7,10 @@ import { Module, DefineModule } from "#core/module-system/Module.js";
   version: "1.0.0",
   description: "Semantically aware AI module using Gemini to answer server queries.",
 })
-export class AiAssistantModule extends Module {}
+export class AiAssistantModule extends Module {
+  public override onLoad() {
+    this.container.stores.registerPath(new URL("./commands/", import.meta.url));
+    this.container.stores.registerPath(new URL("./listeners/", import.meta.url));
+    return super.onLoad();
+  }
+}
