@@ -9,8 +9,7 @@ import { DefineModule, Module } from "#core/module-system/Module.js";
 })
 export class AutoTranslateModule extends Module {
   public override onLoad() {
-    this.container.stores.registerPath(new URL("./listeners/", import.meta.url));
-    this.container.stores.registerPath(new URL("./scheduled-tasks/", import.meta.url));
+    this.container.stores.registerPath(new URL("./commands/", import.meta.url));
     return super.onLoad();
   }
 }
