@@ -41,13 +41,13 @@ export default class AiAssistantMessageCreateListener extends Listener<
       }
 
       const ai = new GoogleGenAI({ apiKey });
-      const chat = ai.chats.create({
+      const chatConfig: any = {
         model: "gemini-2.5-flash",
         config: {
           systemInstruction: "You are a helpful AI assistant for this Discord server. You can use tools to look up users, channels, and search the server's knowledge base. Use the provided tools to fetch real information before answering.",
           tools: [{ functionDeclarations: aiToolDeclarations }],
         },
-      });
+      };
 
       // Context array for the conversation
       const history = [];
@@ -67,13 +67,13 @@ export default class AiAssistantMessageCreateListener extends Listener<
         }
       }
 
-      // Add the current question
-      history.push({
-        role: "user",
-        parts: [{ text: question || "Can you help me?" }]
-      });
+      if (history.length > 0) {
+        chatConfig.history = history;
+      }
 
-      let response = await chat.sendMessage({ contents: history } as any);
+      const chat = ai.chats.create(chatConfig);
+
+      let response = await chat.sendMessage({ message: question || "Can you help me?" } as any);
 
       let attempts = 0;
       while (response.functionCalls && response.functionCalls.length > 0 && attempts < 5) {
