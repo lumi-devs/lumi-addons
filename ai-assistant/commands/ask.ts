@@ -55,7 +55,7 @@ export class AskCommand extends BaseCommand {
       });
 
       // Pass the question directly as a string or an object structure the SDK expects
-      let response = await chat.sendMessage({ message: question } as any);
+      let response = await chat.sendMessage(question);
 
       let attempts = 0;
       while (response.functionCalls && response.functionCalls.length > 0 && attempts < 5) {
@@ -72,7 +72,7 @@ export class AskCommand extends BaseCommand {
             },
           });
         }
-        response = await chat.sendMessage({ message: parts } as any);
+        response = await chat.sendMessage(parts as any);
       }
 
       if (response.text) {

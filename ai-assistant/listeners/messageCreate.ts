@@ -73,7 +73,7 @@ export default class AiAssistantMessageCreateListener extends Listener<
 
       const chat = ai.chats.create(chatConfig);
 
-      let response = await chat.sendMessage({ message: question || "Can you help me?" } as any);
+      let response = await chat.sendMessage(question || "Can you help me?");
 
       let attempts = 0;
       while (response.functionCalls && response.functionCalls.length > 0 && attempts < 5) {
@@ -90,7 +90,7 @@ export default class AiAssistantMessageCreateListener extends Listener<
             },
           });
         }
-        response = await chat.sendMessage({ message: parts } as any);
+        response = await chat.sendMessage(parts as any);
       }
 
       if (response.text) {
