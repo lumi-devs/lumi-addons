@@ -11,9 +11,15 @@ interface AutoTranslatePayload {
   name: "auto-translate",
 })
 export default class AutoTranslateTask extends ScheduledTask {
-  public async run(payload: AutoTranslatePayload) {
-    const { channelId, messageId, content } = payload;
+  public async run(payload: unknown) {
+    this.container.logger.info("Auto Translate Task Payload:", payload);
+    const { channelId, messageId, content } = payload as AutoTranslatePayload;
     
+    if (!channelId) {
+      this.container.logger.warn("Auto Translate Task Error: channelId is undefined! Payload was:", payload);
+      return;
+    }
+
     try {
       const channel = await this.container.client.channels.fetch(channelId);
       if (!channel || !channel.isTextBased()) return;

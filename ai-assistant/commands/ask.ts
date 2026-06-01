@@ -45,11 +45,14 @@ export class AskCommand extends BaseCommand {
     }
 
     try {
-      await this.container.tasks.create("ai-request", {
-        channelId: interaction.channelId,
-        question,
-        guildId: interaction.guildId,
-        isReply: false,
+      await this.container.tasks.create({
+        name: "ai-request",
+        payload: {
+          channelId: interaction.channelId,
+          question,
+          guildId: interaction.guildId,
+          isReply: false,
+        }
       });
 
       await this.replySuccess(interaction, "AI Request Queued", "Your request has been queued and will be processed shortly.");
