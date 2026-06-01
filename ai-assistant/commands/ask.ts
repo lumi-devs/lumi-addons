@@ -45,49 +45,17 @@ export class AskCommand extends BaseCommand {
     }
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      const chat = ai.chats.create({
-        model: "gemini-2.5-flash",
-        config: {
-          systemInstruction: "You are a helpful AI assistant for this Discord server. You can use tools to look up users, channels, and search the server's knowledge base. Use the provided tools to fetch real information before answering.",
-          tools: [{ functionDeclarations: aiToolDeclarations }],
-        },
+      await this.container.tasks.create("ai-request", {
+        channelId: interaction.channelId,
+        question,
+        guildId: interaction.guildId,
+        isReply: false,
       });
 
-      // Pass the question directly as a string or an object structure the SDK expects
-      let response = await chat.sendMessage(question);
-
-      let attempts = 0;
-      while (response.functionCalls && response.functionCalls.length > 0 && attempts < 5) {
-        attempts++;
-        const parts = [];
-        for (const call of response.functionCalls) {
-          if (!call.name) continue;
-          
-          const result = await handleToolCall(call.name, call.args as Record<string, unknown>, interaction.guild!);
-          parts.push({
-            functionResponse: {
-              name: call.name,
-              response: result,
-            },
-          });
-        }
-        response = await chat.sendMessage(parts as any);
-      }
-
-      if (response.text) {
-        const text = response.text.length > 2000 ? response.text.slice(0, 1995) + "..." : response.text;
-        await this.replySuccess(interaction, "AI Response", text);
-      } else {
-        await this.replyInfo(interaction, "AI Response", "The AI didn't return any text.");
-      }
+      await this.replySuccess(interaction, "AI Request Queued", "Your request has been queued and will be processed shortly.");
     } catch (error: any) {
       this.container.logger.error("AI Error:", error);
-      await this.replyError(
-        interaction,
-        "AI Error",
-        `An error occurred while processing your request: ${error.message}`
-      );
+      await this.replyError(interaction, "Error", `An error occurred while queuing your request: ${error.message}`);
     }
   }
 }

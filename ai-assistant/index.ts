@@ -11,6 +11,7 @@ export class AiAssistantModule extends Module {
   public override onLoad() {
     this.container.stores.registerPath(new URL("./commands/", import.meta.url));
     this.container.stores.registerPath(new URL("./listeners/", import.meta.url));
+    this.container.stores.registerPath(new URL("./tasks/", import.meta.url));
     return super.onLoad();
   }
 }

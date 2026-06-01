@@ -40,15 +40,6 @@ export default class AiAssistantMessageCreateListener extends Listener<
         return;
       }
 
-      const ai = new GoogleGenAI({ apiKey });
-      const chatConfig: any = {
-        model: "gemini-2.5-flash",
-        config: {
-          systemInstruction: "You are a helpful AI assistant for this Discord server. You can use tools to look up users, channels, and search the server's knowledge base. Use the provided tools to fetch real information before answering.",
-          tools: [{ functionDeclarations: aiToolDeclarations }],
-        },
-      };
-
       // Context array for the conversation
       const history = [];
 
@@ -67,41 +58,18 @@ export default class AiAssistantMessageCreateListener extends Listener<
         }
       }
 
-      if (history.length > 0) {
-        chatConfig.history = history;
-      }
+      await this.container.tasks.create("ai-request", {
+        channelId: message.channel.id,
+        messageId: message.id,
+        question,
+        guildId: message.guildId,
+        isReply,
+        history
+      });
 
-      const chat = ai.chats.create(chatConfig);
-
-      let response = await chat.sendMessage(question || "Can you help me?");
-
-      let attempts = 0;
-      while (response.functionCalls && response.functionCalls.length > 0 && attempts < 5) {
-        attempts++;
-        const parts = [];
-        for (const call of response.functionCalls) {
-          if (!call.name) continue;
-          
-          const result = await handleToolCall(call.name, call.args as Record<string, unknown>, message.guild!);
-          parts.push({
-            functionResponse: {
-              name: call.name,
-              response: result,
-            },
-          });
-        }
-        response = await chat.sendMessage(parts as any);
-      }
-
-      if (response.text) {
-        const text = response.text.length > 2000 ? response.text.slice(0, 1995) + "..." : response.text;
-        await message.reply({ content: text, allowedMentions: { repliedUser: true } });
-      } else {
-        await message.reply("The AI didn't return any text.");
-      }
     } catch (error: any) {
       this.container.logger.error("AI Error in message listener:", error);
-      await message.reply(`An error occurred while processing your request: ${error.message}`);
+      await message.reply(`An error occurred while queuing your request: ${error.message}`);
     }
   }
 }
