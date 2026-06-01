@@ -1,6 +1,6 @@
-import { Module, EmberModule } from "#core/module-system/Module.js";
+import { Module, DefineModule } from "#core/module-system/Module.js";
 
-@EmberModule({
+@DefineModule({
   name: "activity-roles",
   displayName: "Activity Roles",
   emoji: "🎮",
