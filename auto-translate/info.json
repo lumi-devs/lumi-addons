@@ -1,0 +1,7 @@
+{
+  "name": "auto-translate",
+  "author": ["Antigravity"],
+  "description": "Automatically translates non-English messages and replies with the translation.",
+  "short": "Auto-translates messages.",
+  "version": "1.0.0"
+}
