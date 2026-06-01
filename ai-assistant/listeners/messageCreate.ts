@@ -58,13 +58,16 @@ export default class AiAssistantMessageCreateListener extends Listener<
         }
       }
 
-      await this.container.tasks.create("ai-request", {
-        channelId: message.channel.id,
-        messageId: message.id,
-        question,
-        guildId: message.guildId,
-        isReply,
-        history
+      await this.container.tasks.create({
+        name: "ai-request",
+        payload: {
+          channelId: message.channel.id,
+          messageId: message.id,
+          question,
+          guildId: message.guildId,
+          isReply,
+          history
+        }
       });
 
     } catch (error: any) {

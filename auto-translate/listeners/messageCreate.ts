@@ -19,10 +19,13 @@ export default class AutoTranslateMessageCreateListener extends Listener<
     if (message.content.startsWith(",") || message.content.startsWith("!")) return;
 
     // Enqueue for translation
-    await this.container.tasks.create("auto-translate", {
-      channelId: message.channel.id,
-      messageId: message.id,
-      content: message.content,
+    await this.container.tasks.create({
+      name: "auto-translate",
+      payload: {
+        channelId: message.channel.id,
+        messageId: message.id,
+        content: message.content,
+      }
     });
   }
 }
