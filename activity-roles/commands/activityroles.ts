@@ -1,5 +1,5 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import type { Args } from "@sapphire/framework";
+import type { Args, ApplicationCommandRegistry } from "@sapphire/framework";
 import type { Message, ChatInputCommandInteraction } from "discord.js";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
@@ -28,7 +28,7 @@ const VALID_TYPES = ["Playing", "Streaming", "Listening", "Watching", "Custom", 
   ],
 })
 export class ActivityRolesCommand extends BaseSubcommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
+  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
     registry.registerChatInputCommand((builder) =>
       builder
         .setName(this.name)
