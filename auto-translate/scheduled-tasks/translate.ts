@@ -1,6 +1,10 @@
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
 import { ApplyOptions } from "@sapphire/decorators";
 
+import LanguageDetect from "languagedetect";
+
+const lngDetector = new LanguageDetect();
+
 interface AutoTranslatePayload {
   channelId: string;
   messageId: string;
@@ -17,6 +21,13 @@ export default class AutoTranslateTask extends ScheduledTask {
     
     if (!channelId) {
       this.container.logger.warn("Auto Translate Task Error: channelId is undefined! Payload was:", payload);
+      return;
+    }
+
+    // Filter out english slang which might be mistaken for other languages
+    const detected = lngDetector.detect(content, 3);
+    const hasEnglishInTop = detected.some((d) => d[0] === "english" && (d[1] as number) > 0.15);
+    if (hasEnglishInTop) {
       return;
     }
 

@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "franc": "^6.2.0",
+    "languagedetect": "^2.0.0"
+  }
+}
