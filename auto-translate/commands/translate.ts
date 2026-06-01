@@ -11,6 +11,7 @@ import { PermissionLevel } from "#lib/permissions.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "translate",
+  aliases: ["t"],
   description: "Translate text to English",
   permissionLevel: PermissionLevel.USER,
   generateDashLessAliases: true,
