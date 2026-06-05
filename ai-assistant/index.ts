@@ -7,7 +7,7 @@ import type { TextBasedChannel } from "discord.js";
   name: "ai-assistant",
   displayName: "AI Helper",
   emoji: "🧠",
-  version: "2.1.0",
+  version: "2.1.1",
   description: "Universal OpenAI-compatible AI helper with autonomous server, host, internet, time & knowledge-base tools.",
   configSchema: cfg.object({
     apiUrl: cfg.string({
@@ -22,7 +22,9 @@ import type { TextBasedChannel } from "discord.js";
     }),
     modelName: cfg.string({
       label: "Model Name",
-      description: "Which model to request (e.g. meta-llama/llama-3.1-8b-instruct:free).",
+      // Note: stronger models (e.g. NVIDIA's meta/llama-3.3-70b-instruct) follow
+      // tool-use instructions far more reliably than 8b if you want better agentic behaviour.
+      description: "Which model to request (e.g. meta/llama-3.1-8b-instruct; meta/llama-3.3-70b-instruct is more reliable with tools).",
       default: "meta-llama/llama-3.1-8b-instruct:free",
     }),
   }),

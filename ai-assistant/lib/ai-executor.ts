@@ -22,6 +22,23 @@ export interface AiAuthor {
   displayName: string;
 }
 
+/**
+ * Matches short greetings / pleasantries / acknowledgements where calling a tool
+ * is never appropriate. Weak models (e.g. llama-3.1-8b) otherwise "helpfully"
+ * fire `search_internet` for a bare "hey", so we short-circuit those to a plain
+ * reply. Kept deliberately narrow — anything time/server/host-specific (e.g.
+ * "how many members", "what time is it") must NOT match so real tools still run.
+ */
+const SMALL_TALK =
+  /^(?:h(?:i+|ey+|ello+|iya|owdy)|yo+|sup|wass?up|wh?at'?s?\s?up|good\s+(?:morning|afternoon|evening|night)|g(?:m|n)|thanks?(?:\s+you)?|thx|ty|np|no\s+problem|ok(?:ay)?|cool|nice|gg|lol|lmao|haha+|bye|cya|see\s+ya|how(?:'?s| is| are)\b[^?]*)\b[\s!.,…~?]*$/i;
+
+function isSmallTalk(question: string): boolean {
+  const t = question.trim();
+  if (!t) return true;
+  if (t.length > 40) return false;
+  return SMALL_TALK.test(t);
+}
+
 export async function processAiRequest(
   apiUrl: string,
   apiKey: string,
@@ -38,6 +55,7 @@ export async function processAiRequest(
     "Decide for yourself when a tool is needed and call it directly — do not ask the user for permission, and do not narrate which tool you are about to use. Either call the tool or answer.",
     "You can chain tools: call one, read its result, then call another when the first answer feeds the next. Prefer tools over guessing for anything that is live, server-specific, time-sensitive, or about the host.",
     "Only answer from your own memory for things that don't change (general knowledge, definitions, casual conversation). For greetings and small talk, just reply naturally without tools.",
+    'Examples — greetings and pleasantries get a plain reply with NO tool call: User: "hey" → Assistant: "Hey! How can I help?"  •  User: "thanks" → Assistant: "Anytime!"  •  User: "how are you?" → Assistant: "Doing great, thanks for asking!". Only reach for a tool when the question genuinely needs live, server-specific, time-sensitive, or host data.',
     "You do NOT inherently know the current time — call get_datetime whenever time or dates matter.",
     "Always respond using clean Discord Markdown. Use fenced codeblocks with the right language for code or configs. Be helpful, concise, and accurate; never invent server data — if a tool says something wasn't found, say so."
   ];
@@ -69,7 +87,9 @@ export async function processAiRequest(
   let attempts = 0;
   // Set once a weak model narrates a tool call instead of emitting one; forces a
   // plain-text answer on the retry so the leaked reasoning never reaches the user.
-  let forcePlainAnswer = false;
+  // Pre-armed for greetings/small-talk so the very first call goes out with
+  // tool_choice:"none" — a bare "hey" must never trigger an internet search.
+  let forcePlainAnswer = isSmallTalk(question);
 
   // Allow several rounds so the model can chain tool calls (e.g. find_user →
   // get_user_info → search_user_history) before producing its final answer.
