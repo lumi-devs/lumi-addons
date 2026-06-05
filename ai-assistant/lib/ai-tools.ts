@@ -19,8 +19,29 @@ const SELF_REFS = new Set(["me", "myself", "i", "my", "mine", "self", "you"]);
  * "me"/"myself"/the asker's own name → the author's ID; `<@123>` mentions are
  * unwrapped to the bare snowflake; everything else passes through as a query.
  */
-function resolveUserRef(ref: string | undefined, author?: AiAuthor): string {
-  const trimmed = (ref ?? "").trim();
+/** Best-effort parse of a JSON args string the model may send instead of an object. */
+function tryParseArgs(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/** Coerce a tool argument into a string — models sometimes send numbers/objects. */
+function s(v: unknown): string {
+  if (typeof v === "string") return v;
+  if (v == null) return "";
+  if (typeof v === "number" || typeof v === "boolean" || typeof v === "bigint") return String(v);
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+
+function resolveUserRef(ref: unknown, author?: AiAuthor): string {
+  const trimmed = s(ref).trim();
   if (!trimmed) return author?.id ?? "";
 
   const lower = trimmed.toLowerCase().replace(/^@/, "");
@@ -663,6 +684,10 @@ export async function handleToolCall(
   channel: TextBasedChannel,
   author?: AiAuthor,
 ): Promise<any> {
+  // Models occasionally pass JSON instead of an args object, or send numeric IDs.
+  if (typeof args === "string") args = (tryParseArgs(args) as Record<string, unknown>) ?? {};
+  if (args == null || typeof args !== "object") args = {};
+
   switch (name) {
     // Actions
     case "close_ticket":
