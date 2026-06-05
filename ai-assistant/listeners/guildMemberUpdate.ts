@@ -22,7 +22,7 @@ export default class AiModAuditTimeoutListener extends Listener<typeof Events.Gu
 
     const apiUrl = await config.getModuleConfig(guild.id, "ai-assistant", "apiUrl") as string || "https://openrouter.ai/api/v1";
     const apiKey = await config.getModuleConfig(guildId, "ai-assistant", "apiKey") as string || process.env.OPENROUTER_API_KEY || "";
-    const modelName = await config.getModuleConfig(guild.id, "ai-assistant", "modelName") as string || "meta-llama/llama-3-8b-instruct:free";
+    const modelName = await config.getModuleConfig(guild.id, "ai-assistant", "modelName") as string || "meta-llama/llama-3.1-8b-instruct:free";
 
     try {
       // Find a channel to send the report to. Ideally an admin channel or system channel.
