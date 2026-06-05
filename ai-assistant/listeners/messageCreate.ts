@@ -58,15 +58,44 @@ export default class AiAssistantMessageCreateListener extends Listener<typeof Ev
       const botMentionRegex = new RegExp(`<@!?${this.container.client.user!.id}>`, "g");
       const question = message.content.replace(botMentionRegex, "").trim();
 
-      const history = [];
+      // Conversational context: feed the recent channel messages as history so
+      // the model can resolve references like "him", "her", "that user", or
+      // "tell me more" to whoever/whatever was just discussed — instead of
+      // defaulting to the asker. Bot messages map to the assistant role; others
+      // are labelled with the speaker's display name so the model knows who said
+      // (and who was mentioned in) each line.
+      const botId = this.container.client.user!.id;
+      const history: Array<{ role: string; parts: Array<{ text: string }> }> = [];
 
+      try {
+        const recent = await message.channel.messages.fetch({ limit: 8, before: message.id });
+        const ordered = [...recent.values()].reverse(); // oldest → newest
+        for (const m of ordered) {
+          const content = m.content?.trim();
+          if (!content) continue;
+          const isBot = m.author.id === botId;
+          const label = isBot ? "" : `${m.member?.displayName ?? m.author.username}: `;
+          history.push({
+            role: isBot ? "model" : "user",
+            parts: [{ text: `${label}${content}`.slice(0, 600) }],
+          });
+        }
+      } catch (err) {
+        this.container.logger.warn("AI Assistant: Failed to fetch recent channel context.");
+      }
+
+      // If this is a reply to a message older than the recent window, make sure
+      // that parent is still present as the most recent context line.
       if (message.reference?.messageId) {
         try {
           const parentMsg = await message.channel.messages.fetch(message.reference.messageId);
-          if (parentMsg.content) {
+          const parentContent = parentMsg.content?.trim();
+          if (parentContent && !history.some((h) => h.parts[0]?.text.includes(parentContent.slice(0, 60)))) {
+            const isBot = parentMsg.author.id === botId;
+            const label = isBot ? "" : `${parentMsg.member?.displayName ?? parentMsg.author.username}: `;
             history.push({
-              role: parentMsg.author.id === this.container.client.user!.id ? "model" : "user",
-              parts: [{ text: parentMsg.content }]
+              role: isBot ? "model" : "user",
+              parts: [{ text: `${label}${parentContent}`.slice(0, 600) }],
             });
           }
         } catch (err) {
