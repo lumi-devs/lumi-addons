@@ -1,7 +1,7 @@
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { TextBasedChannel } from "discord.js";
-import { processAiRequest } from "../lib/ai-executor.js";
+import { processAiRequest, type AiAuthor } from "../lib/ai-executor.js";
 
 export interface AiRequestPayload {
   channelId: string;
@@ -11,6 +11,7 @@ export interface AiRequestPayload {
   history?: Array<{ role: string; parts: Array<{ text: string }> }>;
   messageId?: string;
   isSupportTicket?: boolean;
+  author?: AiAuthor;
 }
 
 @ApplyOptions<ScheduledTask.Options>({
@@ -18,7 +19,7 @@ export interface AiRequestPayload {
 })
 export default class AiRequestTask extends ScheduledTask {
   public async run(payload: AiRequestPayload) {
-    const { channelId, guildId, question, history, messageId, isSupportTicket } = payload;
+    const { channelId, guildId, question, history, messageId, isSupportTicket, author } = payload;
     
     const config = this.container.db.config;
     const apiUrl = await config.getModuleConfig(guildId, "ai-assistant", "apiUrl") as string || "https://openrouter.ai/api/v1";
@@ -39,7 +40,8 @@ export default class AiRequestTask extends ScheduledTask {
         question,
         guild,
         channel,
-        history
+        history,
+        author
       );
 
       const finalContent = responseText.length > 2000 ? responseText.slice(0, 1995) + "..." : responseText;

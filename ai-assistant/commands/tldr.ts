@@ -67,7 +67,16 @@ export class TldrCommand extends BaseCommand {
         modelName,
         prompt,
         interaction.guild,
-        channel
+        channel,
+        [],
+        {
+          id: interaction.user.id,
+          username: interaction.user.username,
+          displayName:
+            (interaction.member as { displayName?: string } | null)?.displayName ??
+            interaction.user.globalName ??
+            interaction.user.username,
+        }
       );
 
       const finalContent = responseText.length > 2000 ? responseText.slice(0, 1995) + "..." : responseText;
