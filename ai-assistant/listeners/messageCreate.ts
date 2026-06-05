@@ -82,7 +82,12 @@ export default class AiAssistantMessageCreateListener extends Listener<typeof Ev
           question: question || "Did you need something?",
           guildId: message.guildId,
           isReply,
-          history
+          history,
+          author: {
+            id: message.author.id,
+            username: message.author.username,
+            displayName: message.member?.displayName ?? message.author.displayName ?? message.author.username,
+          }
         }
       });
       

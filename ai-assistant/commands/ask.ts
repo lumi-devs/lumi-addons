@@ -48,7 +48,16 @@ export class AskCommand extends BaseCommand {
         modelName,
         question,
         interaction.guild,
-        interaction.channel as TextBasedChannel
+        interaction.channel as TextBasedChannel,
+        [],
+        {
+          id: interaction.user.id,
+          username: interaction.user.username,
+          displayName:
+            (interaction.member as { displayName?: string } | null)?.displayName ??
+            interaction.user.globalName ??
+            interaction.user.username,
+        }
       );
 
       const finalContent = responseText.length > 2000 
