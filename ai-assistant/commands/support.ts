@@ -3,7 +3,6 @@ import { Command } from "@sapphire/framework";
 import { ChannelType, type ChatInputCommandInteraction, type TextChannel } from "discord.js";
 import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { processAiRequest } from "../lib/ai-executor.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "support",
@@ -55,7 +54,15 @@ export class SupportCommand extends BaseCommand {
           guildId: interaction.guildId!,
           question: `A user has opened a support ticket with the following issue: "${issue}". Search the docs and provide a step-by-step solution. If you cannot solve it, let them know human staff will check it soon. You can use the close_ticket tool if you believe the issue is entirely resolved.`,
           isReply: false,
-          isSupportTicket: true
+          isSupportTicket: true,
+          author: {
+            id: interaction.user.id,
+            username: interaction.user.username,
+            displayName:
+              (interaction.member as { displayName?: string } | null)?.displayName ??
+              interaction.user.globalName ??
+              interaction.user.username,
+          }
         }
       });
 
