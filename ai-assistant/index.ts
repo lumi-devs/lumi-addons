@@ -7,8 +7,8 @@ import type { TextBasedChannel } from "discord.js";
   name: "ai-assistant",
   displayName: "AI Helper",
   emoji: "🧠",
-  version: "2.0.1",
-  description: "Universal OpenAI-compatible AI helper with web search, docs, and Discord context.",
+  version: "2.1.0",
+  description: "Universal OpenAI-compatible AI helper with autonomous server, host, internet, time & knowledge-base tools.",
   configSchema: cfg.object({
     apiUrl: cfg.string({
       label: "API Base URL",

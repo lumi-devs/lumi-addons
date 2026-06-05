@@ -15,6 +15,13 @@ interface OpenAIMessage {
   tool_call_id?: string;
 }
 
+/** Identity of the person the assistant is currently replying to. */
+export interface AiAuthor {
+  id: string;
+  username: string;
+  displayName: string;
+}
+
 export async function processAiRequest(
   apiUrl: string,
   apiKey: string,
@@ -22,19 +29,31 @@ export async function processAiRequest(
   question: string,
   guild: Guild,
   channel: TextBasedChannel,
-  history: Array<{ role: string; parts: Array<{ text: string }> }> = []
+  history: Array<{ role: string; parts: Array<{ text: string }> }> = [],
+  author?: AiAuthor
 ): Promise<string> {
+  const systemLines = [
+    "You are an advanced, autonomous AI assistant operating inside a Discord server.",
+    "You have tools to inspect this server (members, roles, channels, emojis, recent messages, server stats), check your own bot status, read the host system (CPU, RAM, disk, uptime, process), get the current date/time, search the internet, fetch web pages, and read a knowledge-base of documents.",
+    "Decide for yourself when a tool is needed and call it directly — do not ask the user for permission, and do not narrate which tool you are about to use. Either call the tool or answer.",
+    "You can chain tools: call one, read its result, then call another when the first answer feeds the next. Prefer tools over guessing for anything that is live, server-specific, time-sensitive, or about the host.",
+    "Only answer from your own memory for things that don't change (general knowledge, definitions, casual conversation). For greetings and small talk, just reply naturally without tools.",
+    "You do NOT inherently know the current time — call get_datetime whenever time or dates matter.",
+    "Always respond using clean Discord Markdown. Use fenced codeblocks with the right language for code or configs. Be helpful, concise, and accurate; never invent server data — if a tool says something wasn't found, say so."
+  ];
+
+  if (author) {
+    // Give the model the asker's identity so "who am I", "my roles", etc. resolve
+    // to this person. Tools also accept "me"/"myself" and map it to this ID.
+    systemLines.splice(
+      1,
+      0,
+      `You are currently talking to ${author.displayName} (username: ${author.username}, user ID: ${author.id}). When they say "me", "my", "myself", or "I", they mean this person — answer about them directly, and pass "me" to user-lookup tools to reference them.`
+    );
+  }
+
   const messages: OpenAIMessage[] = [
-    {
-      role: "system",
-      content: [
-        "You are an advanced AI assistant in a Discord server.",
-        "Answer the user directly and conversationally. For greetings, small talk, or anything you already know, just reply normally — do NOT use any tools.",
-        "You have tools to search the internet, read local documents, and look up user info/messages. Use a tool ONLY when the user clearly needs real-time, external, or server-specific information you don't already have.",
-        "When you do use a tool, invoke it via the function-calling mechanism. NEVER write out your reasoning about which tool to call, and never describe a tool call in prose — either call the tool or give the user a normal answer.",
-        "Always respond using beautiful Markdown formatting. Use codeblocks with the correct language identifier when providing code or configs. Be helpful, concise, and smart."
-      ].join(" ")
-    }
+    { role: "system", content: systemLines.join(" ") }
   ];
 
   // Map Gemini-style history to OpenAI format if provided
@@ -52,7 +71,9 @@ export async function processAiRequest(
   // plain-text answer on the retry so the leaked reasoning never reaches the user.
   let forcePlainAnswer = false;
 
-  while (attempts < 5) {
+  // Allow several rounds so the model can chain tool calls (e.g. find_user →
+  // get_user_info → search_user_history) before producing its final answer.
+  while (attempts < 8) {
     attempts++;
 
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -92,7 +113,7 @@ export async function processAiRequest(
           // ignore parsing error
         }
 
-        const result = await handleToolCall(call.function.name, args, guild, channel);
+        const result = await handleToolCall(call.function.name, args, guild, channel, author);
         
         messages.push({
           role: "tool",
