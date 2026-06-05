@@ -1,7 +1,7 @@
 {
   "name": "ai-assistant",
   "displayName": "AI Assistant",
-  "version": "2.1.0",
-  "description": "An autonomous AI helper with server, host, internet, time, and knowledge-base tools.",
+  "version": "2.1.1",
+  "description": "An autonomous AI helper with server, host, internet, time, and knowledge-base tools. Hardened tool-arg coercion + small-talk guard.",
   "requirements": []
 }
