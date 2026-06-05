@@ -7,7 +7,7 @@ import type { TextBasedChannel } from "discord.js";
   name: "ai-assistant",
   displayName: "AI Helper",
   emoji: "🧠",
-  version: "2.1.1",
+  version: "2.1.2",
   description: "Universal OpenAI-compatible AI helper with autonomous server, host, internet, time & knowledge-base tools.",
   configSchema: cfg.object({
     apiUrl: cfg.string({
