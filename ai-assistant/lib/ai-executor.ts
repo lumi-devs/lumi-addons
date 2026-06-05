@@ -27,7 +27,13 @@ export async function processAiRequest(
   const messages: OpenAIMessage[] = [
     {
       role: "system",
-      content: "You are an advanced AI assistant in a Discord server. You can search the internet, read local documents, and look up user info/messages. Always respond using beautiful Markdown formatting. Use codeblocks with the correct language identifier when providing code or configs. Be helpful, concise, and smart."
+      content: [
+        "You are an advanced AI assistant in a Discord server.",
+        "Answer the user directly and conversationally. For greetings, small talk, or anything you already know, just reply normally — do NOT use any tools.",
+        "You have tools to search the internet, read local documents, and look up user info/messages. Use a tool ONLY when the user clearly needs real-time, external, or server-specific information you don't already have.",
+        "When you do use a tool, invoke it via the function-calling mechanism. NEVER write out your reasoning about which tool to call, and never describe a tool call in prose — either call the tool or give the user a normal answer.",
+        "Always respond using beautiful Markdown formatting. Use codeblocks with the correct language identifier when providing code or configs. Be helpful, concise, and smart."
+      ].join(" ")
     }
   ];
 
@@ -42,10 +48,13 @@ export async function processAiRequest(
   messages.push({ role: "user", content: question || "Hello!" });
 
   let attempts = 0;
-  
+  // Set once a weak model narrates a tool call instead of emitting one; forces a
+  // plain-text answer on the retry so the leaked reasoning never reaches the user.
+  let forcePlainAnswer = false;
+
   while (attempts < 5) {
     attempts++;
-    
+
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
 
@@ -53,7 +62,7 @@ export async function processAiRequest(
       model: modelName,
       messages,
       tools: aiToolDeclarations,
-      tool_choice: "auto"
+      tool_choice: forcePlainAnswer ? "none" : "auto"
     });
 
     // Wrap the external API call in a distributed trace
@@ -93,7 +102,28 @@ export async function processAiRequest(
         });
       }
     } else {
-      return message.content || "I processed the request, but have no text to return.";
+      const content = message.content || "";
+
+      // Weak models sometimes describe the tool they'd call ("the function call that
+      // best answers the prompt is a search…") in plain text instead of emitting a
+      // structured tool_call. Detect that once and retry with tools disabled so the
+      // model is forced to actually answer the user.
+      const looksLikeToolNarration =
+        /\b(the\s+)?function call\b|\btool call\b|\bbest answers the prompt\b|\bi (?:would|will|should|could|can|need to) (?:search|call|use|invoke|look up)\b/i.test(
+          content
+        );
+
+      if (looksLikeToolNarration && !forcePlainAnswer) {
+        forcePlainAnswer = true;
+        messages.push({
+          role: "user",
+          content:
+            "Do not describe or narrate any tool usage. Answer my previous message directly and conversationally."
+        });
+        continue;
+      }
+
+      return content || "I processed the request, but have no text to return.";
     }
   }
 
