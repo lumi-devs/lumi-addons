@@ -22,8 +22,8 @@ import type { TextBasedChannel } from "discord.js";
     }),
     modelName: cfg.string({
       label: "Model Name",
-      description: "Which model to request (e.g. meta-llama/llama-3-8b-instruct:free).",
-      default: "meta-llama/llama-3-8b-instruct:free",
+      description: "Which model to request (e.g. meta-llama/llama-3.1-8b-instruct:free).",
+      default: "meta-llama/llama-3.1-8b-instruct:free",
     }),
   }),
 })
@@ -38,7 +38,7 @@ export class AiHelperModule extends Module {
       const config = this.container.db.config;
       const apiUrl = await config.getModuleConfig(guildId, "ai-assistant", "apiUrl") as string || "https://openrouter.ai/api/v1";
       const apiKey = await config.getModuleConfig(guildId, "ai-assistant", "apiKey") as string || process.env.OPENROUTER_API_KEY || "";
-      const modelName = await config.getModuleConfig(guildId, "ai-assistant", "modelName") as string || "meta-llama/llama-3-8b-instruct:free";
+      const modelName = await config.getModuleConfig(guildId, "ai-assistant", "modelName") as string || "meta-llama/llama-3.1-8b-instruct:free";
       
       const guild = await this.container.client.guilds.fetch(guildId);
       const channel = guild.systemChannel || guild.channels.cache.find(c => c.isTextBased()) as TextBasedChannel;
