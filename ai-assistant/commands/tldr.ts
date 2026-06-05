@@ -57,7 +57,7 @@ export class TldrCommand extends BaseCommand {
       
       const apiUrl = await config.getModuleConfig(guildId, "ai-assistant", "apiUrl") as string || "https://openrouter.ai/api/v1";
       const apiKey = await config.getModuleConfig(guildId, "ai-assistant", "apiKey") as string || process.env.OPENROUTER_API_KEY || "";
-      const modelName = await config.getModuleConfig(guildId, "ai-assistant", "modelName") as string || "meta-llama/llama-3-8b-instruct:free";
+      const modelName = await config.getModuleConfig(guildId, "ai-assistant", "modelName") as string || "meta-llama/llama-3.1-8b-instruct:free";
 
       const prompt = `Please summarize the following chat log. Ignore casual memes. Identify the core topic or conflict, and highlight who was involved in 3 concise bullet points:\n\n${chatLog}`;
 
