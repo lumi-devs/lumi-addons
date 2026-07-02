@@ -2,14 +2,17 @@ import { DefineModule, Module } from "#core/module-system/Module.js";
 
 @DefineModule({
   name: "auto-translate",
-  displayName: "Auto Translate",
+  displayName: "Translate",
   emoji: "🌐",
-  version: "1.0.0",
-  description: "Automatically translates non-English messages and replies with the translation using Gemini API.",
+  version: "1.1.2",
+  description:
+    "Translate messages to English via slash command, right-click context menu, or prefix command (Google Translate).",
 })
 export class AutoTranslateModule extends Module {
-  public override onLoad() {
-    this.container.stores.registerPath(new URL("./commands/", import.meta.url));
-    return super.onLoad();
+  public override async deleteUserData(
+    _userId: string,
+    _requester: import("#core/lib/gdpr.js").RequesterType,
+  ): Promise<void> {
+    // No-op: nothing is persisted; translations are request/response only.
   }
 }
