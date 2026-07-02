@@ -1,7 +1,0 @@
-{
-  "name": "ai-assistant",
-  "displayName": "AI Assistant",
-  "version": "2.1.2",
-  "description": "An autonomous AI helper with server, host, internet, time, and knowledge-base tools. Conversation-context aware (resolves him/her/them from recent messages).",
-  "requirements": []
-}
