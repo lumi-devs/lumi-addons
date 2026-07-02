@@ -13,23 +13,30 @@ import { matchActivities } from "../lib/matcher.js";
 export class ActivityRolesPresenceListener extends Listener<
   typeof Events.PresenceUpdate
 > {
-  public async run(oldPresence: Presence | null, newPresence: Presence): Promise<void> {
+  public async run(
+    _oldPresence: Presence | null,
+    newPresence: Presence,
+  ): Promise<void> {
     if (!newPresence.guild || !newPresence.member) return;
 
     // Check if the module is enabled in this guild
-    const states = await checkModulesEnabled(newPresence.guild.id, [MODULE_NAME]);
+    const states = await checkModulesEnabled(newPresence.guild.id, [
+      MODULE_NAME,
+    ]);
     if (!states.get(MODULE_NAME)) return;
 
     const mappings = await getMappings(newPresence.guild.id);
     if (mappings.length === 0) return;
 
     // Get the roles that the user should have based on their current activities
-    const rolesToHave = new Set(matchActivities(newPresence.activities, mappings));
+    const rolesToHave = new Set(
+      matchActivities(newPresence.activities, mappings),
+    );
 
     // Get all roles managed by this module
     const managedRoleIds = new Set(mappings.map((m) => m.roleId));
 
-    const member = newPresence.member;
+    const { member } = newPresence;
     const currentRoles = member.roles.cache;
 
     const rolesToAdd: string[] = [];
@@ -53,13 +60,22 @@ export class ActivityRolesPresenceListener extends Listener<
     if (rolesToAdd.length > 0 || rolesToRemove.length > 0) {
       try {
         if (rolesToRemove.length > 0) {
-          await member.roles.remove(rolesToRemove, "Activity Roles: Activity ended");
+          await member.roles.remove(
+            rolesToRemove,
+            "Activity Roles: Activity ended",
+          );
         }
         if (rolesToAdd.length > 0) {
-          await member.roles.add(rolesToAdd, "Activity Roles: Activity started");
+          await member.roles.add(
+            rolesToAdd,
+            "Activity Roles: Activity started",
+          );
         }
       } catch (error) {
-        this.container.logger.error(`[ActivityRoles] Failed to update roles for ${member.user.tag}:`, error);
+        this.container.logger.error(
+          `[ActivityRoles] Failed to update roles for ${member.user.tag}:`,
+          error,
+        );
       }
     }
   }

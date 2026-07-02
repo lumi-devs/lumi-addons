@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": true,
+    "preserveConstEnums": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "#lib/commands.js": ["./.lumi/packages/core/src/core/lib/commands.ts"],
+      "#lib/env.js": ["./.lumi/packages/core/src/core/env.ts"],
+      "#lib/permissions.js": ["./.lumi/packages/core/src/core/permissions/index.ts"],
+      "#lib/module-system.js": ["./.lumi/packages/core/src/core/module-system/Module.ts"],
+      "#lib/rabbit.js": ["./.lumi/packages/core/src/core/rabbitmq/index.ts"],
+      "#lib/types.js": ["./.lumi/packages/core/src/core/types/common.ts"],
+      "#lib/guild-transaction.js": ["./.lumi/packages/core/src/core/lib/guild-transaction.ts"],
+      "#lib/module-check.js": ["./.lumi/packages/core/src/core/lib/module-check.ts"],
+      "#lib/scheduler-bus.js": ["./.lumi/packages/core/src/core/lib/scheduler-bus.ts"],
+      "#lib/schedule-task.js": ["./.lumi/packages/core/src/core/lib/schedule-task.ts"],
+      "#database/*.js": ["./.lumi/packages/core/src/database/*.ts"],
+      "#utilities/*.js": ["./.lumi/packages/core/src/utilities/*.ts"],
+      "#core/*.js": ["./.lumi/packages/core/src/core/*.ts"],
+      "#root/*.js": ["./.lumi/packages/core/src/*.ts"],
+      "#modules/*.js": ["./.lumi/packages/core/src/modules/*.ts"],
+      "@prisma/client": ["./.lumi/prisma/generated/client"],
+      "@lumi/contracts": ["./.lumi/packages/contracts/src/index.ts"],
+      "@lumi/event-bus": ["./.lumi/packages/event-bus/src/index.ts"],
+      "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"]
+    }
+  },
+  // Core src is included so its scattered module augmentations (Sapphire
+  // Preconditions, ScheduledTasks, i18n keys) are visible to addon files.
+  "include": ["*/**/*.ts", "./.lumi/packages/core/src/**/*.ts"],
+  "exclude": ["node_modules", ".lumi/node_modules"]
+}

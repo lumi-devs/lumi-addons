@@ -1,95 +1,116 @@
-# Contributing to Ember Addons
+# Contributing to Lumi Addons
 
-Thank you for your interest in contributing to **Ember Addons**! This repository houses high-quality, 1st-party dynamic modules and extensive addons for the **Ember** TypeScript Discord bot.
-
-By contributing to this repository, you help expand the ecosystem for all Ember bot hosts.
+Thank you for your interest in contributing to **Lumi Addons**! This repository houses first-party dynamic addons for the **Lumi** TypeScript Discord bot.
 
 ---
 
 ## 1. Code Quality & Verification Gates
 
-Before submitting a Pull Request, please ensure your module adheres to our strict quality checks. Your code **must** compile and pass formatting verification completely:
+The gates run against a local Lumi checkout — link one first:
 
-1. **Type Safety check**:
-   ```bash
+```sh
+git clone https://github.com/lumi-devs/lumi ../lumi   # and `bun install` inside it
+bun run setup                                          # or LUMI_PATH=/path/to/lumi bun run setup
+```
+
+Then, before submitting a Pull Request:
+
+1. **Type safety**:
+   ```sh
    bun run typecheck
    ```
-2. **ESLint formatting check**:
-   ```bash
+2. **ESLint**:
+   ```sh
    bun run lint
    ```
 
-All PRs must have **zero compile errors** and **zero lint warnings/errors** before they can be merged.
+All PRs must have **zero compile errors** and **zero lint errors** before they can be merged.
 
 ---
 
-## 2. Module Architectural Conventions
+## 2. Addon Architectural Conventions
 
-All submitted addons must follow Ember's core non-negotiable coding conventions:
+### A. Dynamic dependency isolation
+If your addon needs external packages:
+* List them under the `requirements` array in `info.json`.
+* The downloader creates a private `package.json` inside the addon directory and runs `bun add` there.
+* **Do not** assume anything about the bot's root `package.json`.
 
-### A. Dynamic Dependency Isolation
-Ember features dynamic plugin isolation. If your module has external package dependencies:
-* List them under the `requirements` array inside your `info.json` file.
-* The downloader will automatically initialize a private, localized `package.json` inside your module's directory and run `bun add` locally.
-* **Do not** add dependencies to the bot's root `package.json` file.
+### B. UI through the card system
+* **Never use `new EmbedBuilder()`.** All user-facing responses go through the card factories in `#utilities/cards.js` (`makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard`, `makeListCard`) or the `replySuccess`/`replyError`/… helpers on `BaseCommand`.
 
-### B. Clean UI Design Systems
-* **Never use `new EmbedBuilder()`** directly. All UI/UX responses must be formatted using Ember's beautiful native card factories located under `#utilities/cards.js` (`makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard`, etc.).
+### C. Isolated state management
+* **Do not add methods to `DatabaseService`** — addons must be 100% self-contained.
+* Persist through `container.db.guildKV` — the generic per-module key/value store, keyed `guildId + module + targetId + key`. Note the semantics: `listModuleData({ module, key, guildId })` filters on `key`, so the **varying identifier goes in `targetId`** and `key` names the collection (see `activity-roles/lib/store.ts` for the pattern).
+* Use `container.redis` for high-speed ephemeral state; define your key builders in a local `keys.ts`.
+* Do **not** touch `container.prisma` — addons get no schema of their own.
 
-### C. Isolated State Management
-* **Do not add module-specific methods to the main `DatabaseService`**. Modules must remain 100% self-contained. 
-* Access data through `container.db.guildKV` — the generic per-module key/value store (`getModuleData`/`setModuleData`/`listModuleData`/`deleteModuleData`), keyed by `guildId + module + targetId + key` — or `container.redis` (high-speed cache/state). Do **not** reach for `container.prisma` directly; addons get no schema of their own.
-* Avoid creating custom database migrations unless strictly necessary; prefer utilizing fast Redis storage for modular features to keep installation immediate.
+### D. GDPR
+If your addon stores anything keyed by a user ID (DB or Redis), override `deleteUserData(userId, requester)` on your module class and delete it there. Write a `// No-op` override with a justification if you store nothing.
+
+### E. Scheduled work
+* BullMQ pieces live in a directory named exactly **`scheduled-tasks/`** (a `tasks/` directory is silently ignored).
+* Discord/DB side-effects of a task must go through the fire bus: register with `registerTaskFireHandler(name, mode, handler)` in your module's `onLoad`. `"unicast"` = exactly one worker executes each fire (one-shot effects); `"broadcast"` = every worker executes and iterates its own `guilds.cache` (periodic sweepers).
 
 ---
 
-## 3. Creating a New Module
+## 3. Creating a New Addon
 
-Every module folder must follow this exact anatomy:
+Every addon folder follows this anatomy (only `info.json` and `index.ts` are mandatory):
+
 ```
-my-module/
-├── info.json       # Downloader metadata (author, name, requirements, etc.)
-├── index.ts        # Dynamic module entrypoint extending Module base class
-├── commands/       # Directory containing command/subcommand files
-└── README.md       # User-facing installation and usage guide
+my-addon/
+├── info.json              # Downloader metadata
+├── index.ts               # Module entrypoint (@DefineModule)
+├── README.md              # User-facing usage guide
+├── commands/              # BaseCommand / BaseSubcommand pieces
+├── listeners/             # Sapphire Listener pieces
+├── interaction-handlers/  # buttons / selects / modals
+├── scheduled-tasks/       # BullMQ ScheduledTask pieces (exact name!)
+└── lib/ keys.ts …         # plain helpers, not pieces
 ```
 
-### Example `info.json`:
+The downloader registers the addon directory as a Sapphire base path, so the sub-store directories are discovered automatically — **do not call `stores.registerPath` yourself**.
+
+### Example `info.json`
+
 ```json
 {
-  "name": "my-module",
+  "name": "my-addon",
   "author": ["YourName"],
-  "description": "Short explanation of what your dynamic module does.",
-  "short": "Summarized tagline.",
+  "description": "What your addon does, one or two sentences.",
+  "short": "One-line tagline.",
   "version": "1.0.0",
-  "requirements": ["axios"]
+  "requirements": []
 }
 ```
 
-### Example `index.ts`:
-```typescript
-import { Module, EmberModule } from "#core/module-system/Module.js";
+### Example `index.ts`
 
-@EmberModule({
-  name: "my-module",
-  displayName: "My Module",
+```typescript
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+
+@DefineModule({
+  name: "my-addon",
+  displayName: "My Addon",
   emoji: "🚀",
   version: "1.0.0",
-  description: "Short explanation of what your dynamic module does.",
+  description: "What your addon does.",
+  configSchema: cfg.object({
+    log_channel_id: cfg.channel({
+      label: "Log Channel",
+      description: "Where events are posted.",
+    }),
+  }),
 })
-export class MyModule extends Module {
-  public registerServices() {}
-
-  public override onLoad() {
-    this.container.stores.registerPath(new URL("./commands/", import.meta.url));
-    return super.onLoad();
-  }
-
+export class MyAddonModule extends Module {
   public override async deleteUserData(
     _userId: string,
     _requester: import("#core/lib/gdpr.js").RequesterType,
   ): Promise<void> {
-    // Implement GDPR user data deletion here if your module stores user data
+    // Delete anything keyed by userId here, or justify a no-op.
   }
 }
 ```
+
+Configuration declared in `configSchema` is automatically editable via `/config` and the dashboard; read it with `container.db.config.getModuleConfig(guildId, "my-addon", "log_channel_id")`.

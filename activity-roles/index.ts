@@ -8,11 +8,8 @@ import { Module, DefineModule } from "#core/module-system/Module.js";
   description: "Auto-assign roles based on users' Discord presence.",
 })
 export class ActivityRolesModule extends Module {
-  public override onLoad() {
-    this.container.stores.registerPath(new URL("./commands/", import.meta.url));
-    this.container.stores.registerPath(new URL("./listeners/", import.meta.url));
-    return super.onLoad();
-  }
+  // No onLoad registerPath: the ModuleStore registers this addon's directory
+  // as a Sapphire base path, so commands/ and listeners/ are scanned already.
 
   public override async deleteUserData(
     _userId: string,

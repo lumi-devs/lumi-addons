@@ -6,6 +6,7 @@ import {
   type Message,
   ApplicationCommandType,
 } from "discord.js";
+import { fetch as sfetch, FetchResultTypes } from "@sapphire/fetch";
 import { BaseCommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
 
@@ -19,70 +20,69 @@ import { PermissionLevel } from "#lib/permissions.js";
 export class TranslateCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     // Slash Command
-    registry.registerChatInputCommand((builder: any) =>
+    registry.registerChatInputCommand((builder) =>
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .addStringOption((opt: any) =>
+        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
+        .setContexts(...this.contexts)
+        .setIntegrationTypes(this.integrationTypes)
+        .addStringOption((opt) =>
           opt
             .setName("text")
             .setDescription("The text to translate")
-            .setRequired(true)
-        )
+            .setRequired(true),
+        ),
     );
 
     // Context Menu Command (Apps -> Translate)
-    registry.registerContextMenuCommand((builder: any) =>
+    registry.registerContextMenuCommand((builder) =>
       builder
         .setName("Translate to English")
         .setType(ApplicationCommandType.Message)
+        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
+        .setContexts(...this.contexts)
+        .setIntegrationTypes(this.integrationTypes),
     );
-  }
-
-  private async fetchTranslation(text: string): Promise<string | null> {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(
-      text
-    )}`;
-    
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!data || !data[0]) return null;
-      return data[0].map((item: any) => item[0]).join("").trim();
-    } catch (e) {
-      this.container.logger.error("Translation error", e);
-      return null;
-    }
   }
 
   // Handle Slash Command
   public override async chatInputRun(interaction: ChatInputCommandInteraction) {
     await interaction.deferReply();
     const text = interaction.options.getString("text", true);
-    
+
     const translated = await this.fetchTranslation(text);
     if (!translated) {
-      return this.replyError(interaction, "Failed", "Could not translate text.");
+      return this.replyError(
+        interaction,
+        "Failed",
+        "Could not translate text.",
+      );
     }
-    
+
     return interaction.editReply(`-# ${translated}`);
   }
 
   // Handle Right-Click Context Menu
-  public override async contextMenuRun(interaction: MessageContextMenuCommandInteraction) {
+  public override async contextMenuRun(
+    interaction: MessageContextMenuCommandInteraction,
+  ) {
     await interaction.deferReply();
     const message = interaction.targetMessage;
-    
+
     if (!message.content) {
       return this.replyError(interaction, "Failed", "No text to translate.");
     }
 
     const translated = await this.fetchTranslation(message.content);
     if (!translated) {
-      return this.replyError(interaction, "Failed", "Could not translate text.");
+      return this.replyError(
+        interaction,
+        "Failed",
+        "Could not translate text.",
+      );
     }
-    
+
     return interaction.editReply(`-# ${translated}`);
   }
 
@@ -92,14 +92,18 @@ export class TranslateCommand extends BaseCommand {
 
     // If no text was provided directly, check if the user is replying to another message
     if (!textToTranslate && message.reference?.messageId) {
-      const referencedMessage = await message.channel.messages.fetch(message.reference.messageId).catch(() => null);
+      const referencedMessage = await message.channel.messages
+        .fetch(message.reference.messageId)
+        .catch(() => null);
       if (referencedMessage && referencedMessage.content) {
         textToTranslate = referencedMessage.content;
       }
     }
 
     if (!textToTranslate) {
-      const reply = await message.reply("Please provide text to translate or reply to a message.");
+      const reply = await message.reply(
+        "Please provide text to translate or reply to a message.",
+      );
       return reply;
     }
 
@@ -111,7 +115,29 @@ export class TranslateCommand extends BaseCommand {
 
     return message.reply({
       content: `-# ${translated}`,
-      allowedMentions: { repliedUser: true }
+      allowedMentions: { repliedUser: true },
     });
+  }
+
+  private async fetchTranslation(text: string): Promise<string | null> {
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(
+      text,
+    )}`;
+
+    try {
+      // Response shape: [[["translated", "original", ...], ...], ...]
+      const data = await sfetch<[Array<[string, ...unknown[]]>]>(
+        url,
+        FetchResultTypes.JSON,
+      );
+      if (!Array.isArray(data) || !Array.isArray(data[0])) return null;
+      return data[0]
+        .map((item) => item[0])
+        .join("")
+        .trim();
+    } catch (e) {
+      this.container.logger.error("Translation error", e);
+      return null;
+    }
   }
 }

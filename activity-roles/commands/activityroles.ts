@@ -12,7 +12,14 @@ import { Emojis } from "#utilities/assets.js";
 import { MODULE_NAME } from "../lib/keys.js";
 import { addMapping, getMappings, removeMapping } from "../lib/store.js";
 
-const VALID_TYPES = ["Playing", "Streaming", "Listening", "Watching", "Custom", "Competing"];
+const VALID_TYPES = [
+  "Playing",
+  "Streaming",
+  "Listening",
+  "Watching",
+  "Custom",
+  "Competing",
+];
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "activityroles",
@@ -24,67 +31,75 @@ const VALID_TYPES = ["Playing", "Streaming", "Listening", "Watching", "Custom", 
   subcommands: [
     { name: "add", messageRun: "msgAdd", chatInputRun: "chatAdd" },
     { name: "remove", messageRun: "msgRemove", chatInputRun: "chatRemove" },
-    { name: "list", messageRun: "msgList", chatInputRun: "chatList", default: true },
+    {
+      name: "list",
+      messageRun: "msgList",
+      chatInputRun: "chatList",
+      default: true,
+    },
   ],
 })
 export class ActivityRolesCommand extends BaseSubcommand {
-  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((cmd) =>
-          cmd
-            .setName("add")
-            .setDescription("Add a new activity role mapping")
-            .addStringOption((opt) =>
-              opt
-                .setName("type")
-                .setDescription("The activity type (e.g. Playing, Listening)")
-                .setRequired(true)
-                .addChoices(
-                  ...VALID_TYPES.map((t) => ({ name: t, value: t }))
-                )
-            )
-            .addStringOption((opt) =>
-              opt
-                .setName("match")
-                .setDescription("The string to match in the activity name or status")
-                .setRequired(true)
-            )
-            .addRoleOption((opt) =>
-              opt
-                .setName("role")
-                .setDescription("The role to assign")
-                .setRequired(true)
-            )
-        )
-        .addSubcommand((cmd) =>
-          cmd
-            .setName("remove")
-            .setDescription("Remove an activity role mapping")
-            .addStringOption((opt) =>
-              opt
-                .setName("type")
-                .setDescription("The activity type")
-                .setRequired(true)
-                .addChoices(
-                  ...VALID_TYPES.map((t) => ({ name: t, value: t }))
-                )
-            )
-            .addStringOption((opt) =>
-              opt
-                .setName("match")
-                .setDescription("The match string to remove")
-                .setRequired(true)
-            )
-        )
-        .addSubcommand((cmd) =>
-          cmd
-            .setName("list")
-            .setDescription("List all activity roles")
-        ),
-      { idHints: [] }
+  public override registerApplicationCommands(
+    registry: ApplicationCommandRegistry,
+  ) {
+    registry.registerChatInputCommand(
+      (builder) =>
+        builder
+          .setName(this.name)
+          .setDescription(this.description)
+          .addSubcommand((cmd) =>
+            cmd
+              .setName("add")
+              .setDescription("Add a new activity role mapping")
+              .addStringOption((opt) =>
+                opt
+                  .setName("type")
+                  .setDescription("The activity type (e.g. Playing, Listening)")
+                  .setRequired(true)
+                  .addChoices(
+                    ...VALID_TYPES.map((t) => ({ name: t, value: t })),
+                  ),
+              )
+              .addStringOption((opt) =>
+                opt
+                  .setName("match")
+                  .setDescription(
+                    "The string to match in the activity name or status",
+                  )
+                  .setRequired(true),
+              )
+              .addRoleOption((opt) =>
+                opt
+                  .setName("role")
+                  .setDescription("The role to assign")
+                  .setRequired(true),
+              ),
+          )
+          .addSubcommand((cmd) =>
+            cmd
+              .setName("remove")
+              .setDescription("Remove an activity role mapping")
+              .addStringOption((opt) =>
+                opt
+                  .setName("type")
+                  .setDescription("The activity type")
+                  .setRequired(true)
+                  .addChoices(
+                    ...VALID_TYPES.map((t) => ({ name: t, value: t })),
+                  ),
+              )
+              .addStringOption((opt) =>
+                opt
+                  .setName("match")
+                  .setDescription("The match string to remove")
+                  .setRequired(true),
+              ),
+          )
+          .addSubcommand((cmd) =>
+            cmd.setName("list").setDescription("List all activity roles"),
+          ),
+      { idHints: [] },
     );
   }
 
@@ -96,7 +111,9 @@ export class ActivityRolesCommand extends BaseSubcommand {
     const matchString = interaction.options.getString("match", true);
     const role = interaction.options.getRole("role", true);
 
-    const type = VALID_TYPES.find(t => t.toLowerCase() === typeArg.toLowerCase())!;
+    const type = VALID_TYPES.find(
+      (t) => t.toLowerCase() === typeArg.toLowerCase(),
+    )!;
 
     await addMapping(interaction.guildId, type, matchString, role.id);
 
@@ -104,9 +121,9 @@ export class ActivityRolesCommand extends BaseSubcommand {
       embeds: [
         makeSuccessCard(
           "Activity Role Added",
-          `Users who are **${type}** and matching \`${matchString}\` will receive the <@&${role.id}> role.`
-        )
-      ]
+          `Users who are **${type}** and matching \`${matchString}\` will receive the <@&${role.id}> role.`,
+        ),
+      ],
     });
   }
 
@@ -123,9 +140,9 @@ export class ActivityRolesCommand extends BaseSubcommand {
         embeds: [
           makeErrorCard(
             "Not Found",
-            `No activity role mapping found for type \`${typeArg}\` and match string \`${matchString}\`.`
-          )
-        ]
+            `No activity role mapping found for type \`${typeArg}\` and match string \`${matchString}\`.`,
+          ),
+        ],
       });
     }
 
@@ -133,41 +150,38 @@ export class ActivityRolesCommand extends BaseSubcommand {
       embeds: [
         makeSuccessCard(
           "Activity Role Removed",
-          `The activity role mapping for **${typeArg}** (\`${matchString}\`) has been removed.`
-        )
-      ]
+          `The activity role mapping for **${typeArg}** (\`${matchString}\`) has been removed.`,
+        ),
+      ],
     });
   }
 
   public async chatList(interaction: ChatInputCommandInteraction) {
     if (!interaction.inGuild()) return;
-    
+
     const mappings = await getMappings(interaction.guildId);
     if (mappings.length === 0) {
       return interaction.reply({
         embeds: [
           makeInfoCard(
             `${Emojis.GEAR} Activity Roles`,
-            "No activity roles are configured for this server."
-          )
-        ]
+            "No activity roles are configured for this server.",
+          ),
+        ],
       });
     }
 
     const guild = interaction.guild!;
     const lines = mappings.map((m) => {
       const role = guild.roles.cache.get(m.roleId);
-      const roleText = role ? `<@&${role.id}>` : `*(Deleted Role: ${m.roleId})*`;
+      const roleText = role
+        ? `<@&${role.id}>`
+        : `*(Deleted Role: ${m.roleId})*`;
       return `**${m.type}** (\`${m.match}\`) ${Emojis.ARROW_RIGHT} ${roleText}`;
     });
 
     return interaction.reply({
-      embeds: [
-        makeInfoCard(
-          `${Emojis.GEAR} Activity Roles`,
-          lines.join("\n")
-        )
-      ]
+      embeds: [makeInfoCard(`${Emojis.GEAR} Activity Roles`, lines.join("\n"))],
     });
   }
 
@@ -178,7 +192,10 @@ export class ActivityRolesCommand extends BaseSubcommand {
     const { guild } = message;
 
     const typeArg = await args.pick("string").catch(() => null);
-    if (!typeArg || !VALID_TYPES.map(t => t.toLowerCase()).includes(typeArg.toLowerCase())) {
+    if (
+      !typeArg ||
+      !VALID_TYPES.map((t) => t.toLowerCase()).includes(typeArg.toLowerCase())
+    ) {
       return message.reply(
         makeErrorCard(
           "Invalid Type",
@@ -208,7 +225,9 @@ export class ActivityRolesCommand extends BaseSubcommand {
     }
 
     // Use proper capitalization
-    const type = VALID_TYPES.find(t => t.toLowerCase() === typeArg.toLowerCase())!;
+    const type = VALID_TYPES.find(
+      (t) => t.toLowerCase() === typeArg.toLowerCase(),
+    )!;
 
     await addMapping(guild.id, type, matchString, role.id);
 
@@ -272,15 +291,14 @@ export class ActivityRolesCommand extends BaseSubcommand {
 
     const lines = mappings.map((m) => {
       const role = guild.roles.cache.get(m.roleId);
-      const roleText = role ? `<@&${role.id}>` : `*(Deleted Role: ${m.roleId})*`;
+      const roleText = role
+        ? `<@&${role.id}>`
+        : `*(Deleted Role: ${m.roleId})*`;
       return `**${m.type}** (\`${m.match}\`) ${Emojis.ARROW_RIGHT} ${roleText}`;
     });
 
     return message.reply(
-      makeInfoCard(
-        `${Emojis.GEAR} Activity Roles`,
-        lines.join("\n"),
-      ),
+      makeInfoCard(`${Emojis.GEAR} Activity Roles`, lines.join("\n")),
     );
   }
 }

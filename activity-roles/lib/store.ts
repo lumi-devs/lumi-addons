@@ -1,49 +1,55 @@
 import { container } from "@sapphire/framework";
 import { MODULE_NAME } from "./keys.js";
 
+// KV layout: one row per mapping — targetId = mapping id, key = KV_KEY.
+// listModuleData filters by `module + key`, so the varying part must be targetId.
+const KV_KEY = "mapping";
+
 export interface ActivityRoleMapping {
-  id: string; // e.g. "type:matchString"
+  id: string; // e.g. "playing:league of legends"
   type: string; // e.g. "Playing", "Listening"
   match: string; // e.g. "Spotify", "League of Legends"
   roleId: string;
 }
 
-export async function getMappings(guildId: string): Promise<ActivityRoleMapping[]> {
-  // Use listModuleData which returns Map<string, any>
-  const data = await container.db.guildKV.listModuleData(guildId, MODULE_NAME, "mappings");
-  
-  const mappings: ActivityRoleMapping[] = [];
-  for (const [key, value] of data.entries()) {
-    mappings.push({
-      id: key,
-      type: value.type,
-      match: value.match,
-      roleId: value.roleId,
-    });
-  }
-  return mappings;
+type StoredMapping = Omit<ActivityRoleMapping, "id">;
+
+export async function getMappings(
+  guildId: string,
+): Promise<ActivityRoleMapping[]> {
+  const rows = await container.db.guildKV.listModuleData<StoredMapping>({
+    module: MODULE_NAME,
+    key: KV_KEY,
+    guildId,
+  });
+  return rows.map((r) => ({ id: r.targetId, ...r.value }));
 }
 
 export async function addMapping(
   guildId: string,
   type: string,
   match: string,
-  roleId: string
+  roleId: string,
 ): Promise<void> {
   const id = `${type.toLowerCase()}:${match.toLowerCase()}`;
-  await container.db.guildKV.setModuleData(guildId, MODULE_NAME, "mappings", id, {
-    type,
-    match,
-    roleId,
-  });
+  await container.db.guildKV.setModuleData<StoredMapping>(
+    guildId,
+    MODULE_NAME,
+    id,
+    KV_KEY,
+    { type, match, roleId },
+  );
 }
 
-export async function removeMapping(guildId: string, id: string): Promise<boolean> {
-  // We can't know for sure if it existed before delete using just deleteModuleData, 
-  // but we can check if it exists first or just delete it.
-  const existing = await container.db.guildKV.getModuleData(guildId, MODULE_NAME, "mappings", id);
-  if (!existing) return false;
-  
-  await container.db.guildKV.deleteModuleData(guildId, MODULE_NAME, "mappings", id);
-  return true;
+export async function removeMapping(
+  guildId: string,
+  id: string,
+): Promise<boolean> {
+  const count = await container.db.guildKV.deleteModuleData(
+    guildId,
+    MODULE_NAME,
+    id,
+    KV_KEY,
+  );
+  return count > 0;
 }

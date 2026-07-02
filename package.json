@@ -1,0 +1,13 @@
+{
+  "name": "lumi-addons",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0",
+  "description": "First-party dynamic addons for the Lumi Discord bot. Not a package — each directory is installed individually by Lumi's downloader.",
+  "scripts": {
+    "setup": "sh scripts/setup.sh",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --ext ts"
+  }
+}

@@ -1,6 +1,7 @@
 import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
 import { handleCaptchaExpiryFire } from "./lib/captcha-expiry-handler.js";
+import { VerifyKeys } from "./keys.js";
 
 @DefineModule({
   name: "verify",
@@ -41,5 +42,19 @@ export class VerifyModule extends Module {
       handleCaptchaExpiryFire,
     );
     return super.onLoad();
+  }
+
+  public override async deleteUserData(
+    userId: string,
+    _requester: import("#core/lib/gdpr.js").RequesterType,
+  ): Promise<void> {
+    // Per-user state lives in Redis: a captcha state key and a pending-set
+    // member per guild. Sweep every guild this process can see.
+    const pipeline = this.container.redis.multi();
+    for (const guildId of this.container.client.guilds.cache.keys()) {
+      pipeline.del(VerifyKeys.seqState(guildId, userId));
+      pipeline.zrem(VerifyKeys.pendingSet(guildId), userId);
+    }
+    await pipeline.exec();
   }
 }
