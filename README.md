@@ -1,50 +1,64 @@
-<h1 align="center">🔥 Ember Addons</h1>
+<h1 align="center">✨ Lumi Addons</h1>
 
-<p align="center">Unified 1st-party modules, dynamic plugins, and extensive addons for the <a href="https://github.com/ember-hq/bot">Ember</a> TypeScript / Sapphire Discord bot.</p>
+<p align="center">First-party dynamic addons for the <a href="https://github.com/lumi-devs/lumi">Lumi</a> TypeScript / Sapphire Discord bot.</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/requires-Ember%202.0%2B-orange.svg" alt="Requires Ember">
   <img src="https://img.shields.io/badge/runtime-Bun-blue.svg" alt="Requires Bun">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue.svg" alt="License GPL-3.0"></a>
 </p>
 
 ---
 
-## 📦 Available Modules
+## 📦 Available Addons
 
-| Module | Description | Commands |
-|--------|-------------|----------|
-| **[emoji-stealer](./emoji-stealer/)** | Steal custom emojis from messages, replies, or direct URLs and upload them instantly. | `,steal` |
+| Addon | Description | Notes |
+|-------|-------------|-------|
+| **[activity-roles](./activity-roles/)** | Auto-assign roles from Discord presence (Playing, Streaming, Listening, …). | Requires `PRESENCE_INTENT=true` on the bot **and** the Presence Intent toggle in the Developer Portal. |
+| **[auto-translate](./auto-translate/)** | Translate messages to English via `/translate`, right-click → Apps → Translate, or `,translate`. | |
+| **[emoji-stealer](./emoji-stealer/)** | Steal custom emojis from messages, replies, or URLs and upload them to your server. | `,steal` |
+| **[rolementions](./rolementions/)** | Role-mention tracking with daily stats + AutoMod-backed protection of sensitive roles. | |
+| **[thread-cleaner](./thread-cleaner/)** | Auto-archive or lock threads after configurable inactivity. | |
+| **[verify](./verify/)** | Emoji-sequence captcha gate for new members: pending role on join, verified role on success, kick on timeout. | |
 
 ---
 
 ## 🚀 Installation & Loading
 
-Ember features a powerful built-in dynamic module downloader. Installing addons takes seconds and requires **no bot restart**!
+Lumi ships a built-in dynamic module downloader. Installing addons takes seconds and requires **no bot restart**.
 
-### 1. Add Repository
-Register this public addons repository with your running Ember instance:
-```bash
-,repo add ember-addons https://github.com/ember-hq/ember-addons.git
+### 1. Add this repository
+
 ```
-*(No branch parameter is needed! It automatically resolves your repository's primary branch.)*
-
-### 2. Download and Hot-Load
-Install the module dynamically in real-time:
-```bash
-,download ember-addons emoji-stealer
+,repo add lumi-addons https://github.com/lumi-devs/lumi-addons.git
 ```
 
-The Downloader will automatically pull the code, dynamically install any dynamic NPM dependencies in an **isolated module sandbox** (`node_modules` inside the module folder), symlink it, and hot-load it into memory.
+*(No branch argument needed — the repo's default branch is used.)*
+
+### 2. Download and hot-load an addon
+
+```
+,download lumi-addons emoji-stealer
+```
+
+The downloader pulls the code, installs any NPM `requirements` into an **isolated per-addon sandbox** (`node_modules` inside the addon folder), symlinks it into `data/installed-modules/`, and hot-loads it. Configure the addon afterwards with `/config`.
 
 ---
 
-## 🤝 Contributing
+## 🛠 Developing addons
 
-We welcome contributions from the community! If you would like to submit a new module or fix an issue, please read our **[Contributing Guidelines](./CONTRIBUTING.md)** first to ensure your code matches Ember's architecture and quality gates.
+Typecheck and lint run against a local Lumi checkout:
+
+```sh
+git clone https://github.com/lumi-devs/lumi ../lumi   # sibling checkout (bun install inside)
+bun run setup        # or: LUMI_PATH=/path/to/lumi bun run setup
+bun run typecheck
+bun run lint
+```
+
+See **[CONTRIBUTING.md](./CONTRIBUTING.md)** for architecture conventions and the addon anatomy.
 
 ---
 
 ## 📄 License
 
-This repository is licensed under the **GNU General Public License v3.0**. See the [LICENSE](./LICENSE) file for the full license text.
+GNU General Public License v3.0 — see [LICENSE](./LICENSE).
