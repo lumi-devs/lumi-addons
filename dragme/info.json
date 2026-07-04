@@ -1,0 +1,7 @@
+{
+  "name": "dragme",
+  "author": ["Antigravity"],
+  "description": "Voice drag requests: ask to be pulled into a voice channel and let the people inside approve with one click. Approvals move you or grant a temporary connect pass.",
+  "short": "Ask to be dragged into a voice channel.",
+  "version": "1.0.0"
+}
