@@ -5,6 +5,23 @@
   "type": "module",
   "license": "GPL-3.0",
   "description": "First-party dynamic addons for the Lumi Discord bot. Not a package — each directory is installed individually by Lumi's downloader.",
+  "imports": {
+    "#lib/commands.js": "./.lumi/packages/core/src/core/lib/commands.ts",
+    "#lib/env.js": "./.lumi/packages/core/src/core/env.ts",
+    "#lib/permissions.js": "./.lumi/packages/core/src/core/permissions/index.ts",
+    "#lib/module-system.js": "./.lumi/packages/core/src/core/module-system/Module.ts",
+    "#lib/rabbit.js": "./.lumi/packages/core/src/core/rabbitmq/index.ts",
+    "#lib/types.js": "./.lumi/packages/core/src/core/types/common.ts",
+    "#lib/guild-transaction.js": "./.lumi/packages/core/src/core/lib/guild-transaction.ts",
+    "#lib/module-check.js": "./.lumi/packages/core/src/core/lib/module-check.ts",
+    "#lib/scheduler-bus.js": "./.lumi/packages/core/src/core/lib/scheduler-bus.ts",
+    "#lib/schedule-task.js": "./.lumi/packages/core/src/core/lib/schedule-task.ts",
+    "#database/*.js": "./.lumi/packages/core/src/database/*.ts",
+    "#utilities/*.js": "./.lumi/packages/core/src/utilities/*.ts",
+    "#core/*.js": "./.lumi/packages/core/src/core/*.ts",
+    "#root/*.js": "./.lumi/packages/core/src/*.ts",
+    "#modules/*.js": "./.lumi/packages/core/src/modules/*.ts"
+  },
   "scripts": {
     "setup": "sh scripts/setup.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
