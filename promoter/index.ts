@@ -9,12 +9,11 @@ import { handlePromoterSweepFire } from "./lib/sweep-handler.js";
   emoji: "📣",
   version: "1.0.0",
   description:
-    "Auto-role for members advertising the server in their custom status.",
+    "Auto-role for members advertising the server — in their custom status or by wearing the native server tag.",
   configSchema: cfg.object({
     promoter_role_id: cfg.role({
       label: "Promoter Role",
-      description:
-        "Role granted while a member's status advertises the server.",
+      description: "Role granted while a member advertises the server.",
     }),
     log_channel_id: cfg.channel({
       label: "Log Channel",
@@ -24,8 +23,14 @@ import { handlePromoterSweepFire } from "./lib/sweep-handler.js";
     match_terms: cfg.string({
       label: "Match Terms",
       description:
-        'Comma-separated invite slugs / tags to look for in statuses, e.g. ".gg/lumi, LUMI".',
+        'Comma-separated invite slugs / tags to look for in statuses, e.g. ".gg/lumi, LUMI". Leave empty to rely on the server tag alone.',
       list: true,
+    }),
+    detect_server_tag: cfg.boolean({
+      label: "Detect Server Tag",
+      description:
+        "Also grant the role to members displaying this server's native tag next to their name.",
+      default: true,
     }),
     sweep_interval_minutes: cfg.number({
       label: "Sweep Interval (minutes)",
