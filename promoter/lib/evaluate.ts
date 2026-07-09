@@ -15,12 +15,13 @@ import {
   PromoterKeys,
   type PromoterStats,
 } from "../keys.js";
-import { statusMatches } from "./matching.js";
+import { statusMatches, wearsServerTag } from "./matching.js";
 
 export interface PromoterConfig {
   roleId: string | null;
   logChannelId: string | null;
   matchTerms: string[];
+  detectServerTag: boolean;
   sweepIntervalMinutes: number;
 }
 
@@ -29,16 +30,18 @@ export async function getPromoterConfig(
 ): Promise<PromoterConfig> {
   const get = (key: string) =>
     container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
-  const [role, log, terms, sweep] = await Promise.all([
+  const [role, log, terms, tag, sweep] = await Promise.all([
     get("promoter_role_id"),
     get("log_channel_id"),
     get("match_terms"),
+    get("detect_server_tag"),
     get("sweep_interval_minutes"),
   ]);
   return {
     roleId: (role as string | null) ?? null,
     logChannelId: (log as string | null) ?? null,
     matchTerms: parseConfigList(terms),
+    detectServerTag: (tag as boolean | null) ?? true,
     sweepIntervalMinutes: (sweep as number | null) ?? 30,
   };
 }
@@ -113,32 +116,48 @@ export async function evaluateMember(
 ): Promise<EvaluateResult> {
   if (member.user.bot) return "unchanged";
   const cfg = await getPromoterConfig(member.guild.id);
-  if (!cfg.roleId || cfg.matchTerms.length === 0) return "unconfigured";
+  // Need a role plus at least one signal to look for (status terms and/or the
+  // native server tag), otherwise there's nothing to evaluate.
+  const hasSignal = cfg.matchTerms.length > 0 || cfg.detectServerTag;
+  if (!cfg.roleId || !hasSignal) return "unconfigured";
   const role = member.guild.roles.cache.get(cfg.roleId);
   if (!role) return "unconfigured";
 
   const hasRole = member.roles.cache.has(role.id);
   const status = customStatusText(member);
-  const matches = statusMatches(status, cfg.matchTerms);
+  const viaStatus = statusMatches(status, cfg.matchTerms);
+  const viaTag =
+    cfg.detectServerTag &&
+    wearsServerTag(member.user.primaryGuild, member.guild.id);
+  const matches = viaStatus || viaTag;
 
   if (matches && !hasRole) {
-    await member.roles.add(role, "Promoter: server advertised in status");
+    await member.roles.add(role, "Promoter: server advertised");
     await bumpStats(member.guild.id, "granted");
+    const detail = viaStatus
+      ? `\n> ${cutText(status, 100)}`
+      : "\n> Displaying the server tag.";
     await log(
       member.guild.id,
       cfg.logChannelId,
       noPingCard(
         makeSuccessCard(
           "Promoter Role Granted",
-          `${userMention(member.id)} is advertising the server.\n> ${cutText(status, 100)}`,
+          `${userMention(member.id)} is advertising the server.${detail}`,
         ),
       ),
     );
     return "granted";
   }
 
-  if (!matches && hasRole && member.presence) {
-    await member.roles.remove(role, "Promoter: status no longer advertises");
+  // Only revoke when we can actually read the member's state. A custom status
+  // needs a presence to read; the server tag is on the user object and is
+  // readable even offline — so in tag-only mode we can revoke without presence.
+  const tagOnly = cfg.matchTerms.length === 0 && cfg.detectServerTag;
+  const readable = member.presence !== null || tagOnly;
+
+  if (!matches && hasRole && readable) {
+    await member.roles.remove(role, "Promoter: no longer advertising");
     await bumpStats(member.guild.id, "revoked");
     await log(
       member.guild.id,
