@@ -2,13 +2,15 @@ import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import { Emojis } from "#utilities/assets.js";
 import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
 import { handleThreadCleanerFire } from "./lib/cleanup-handler.js";
+import { handleThreadSweepFire } from "./lib/sweep-handler.js";
 
 @DefineModule({
   name: "thread-cleaner",
   displayName: "Thread Cleaner",
   emoji: Emojis.CLEANUP,
   version: "1.0.0",
-  description: "Automatically archives threads after a period of inactivity.",
+  description:
+    "Automatically archives/locks threads after inactivity, plus an admin bulk sweep of all existing threads.",
   configSchema: cfg.object({
     enabled_channels: cfg.string({
       label: "Enabled Channels",
@@ -35,6 +37,13 @@ export class ThreadCleanerModule extends Module {
       "thread-cleaner-task",
       "unicast",
       handleThreadCleanerFire,
+    );
+    // Broadcast: the sweep iterates guilds.cache, so only the worker holding the
+    // guild acts.
+    registerTaskFireHandler(
+      "thread-cleaner-sweep",
+      "broadcast",
+      handleThreadSweepFire,
     );
     return super.onLoad();
   }
