@@ -17,7 +17,7 @@ wall of dead channels. Each base scales its own group independently.
 
 ## Setup
 
-Configure via `/config` → **Multi Lounge**:
+Configure via `/lumi` → **Modules** → **Multi Lounge**:
 
 | Field | Default | Meaning |
 |---|---|---|
