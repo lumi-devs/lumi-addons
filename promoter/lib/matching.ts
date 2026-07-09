@@ -7,3 +7,23 @@ export function statusMatches(statusText: string, terms: string[]): boolean {
     return needle.length > 0 && haystack.includes(needle);
   });
 }
+
+/** The subset of `User#primaryGuild` we need to detect a worn server tag. */
+export interface PrimaryGuildLike {
+  identityEnabled: boolean | null;
+  identityGuildId: string | null;
+}
+
+/**
+ * Whether the user is displaying *this* server's native tag (the "server tag"
+ * shown next to their name). True only when they've enabled the identity and it
+ * points at `guildId`.
+ */
+export function wearsServerTag(
+  primaryGuild: PrimaryGuildLike | null | undefined,
+  guildId: string,
+): boolean {
+  return Boolean(
+    primaryGuild?.identityEnabled && primaryGuild.identityGuildId === guildId,
+  );
+}
