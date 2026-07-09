@@ -1,0 +1,7 @@
+{
+  "name": "booster-roles",
+  "author": ["Antigravity"],
+  "description": "Personal custom roles for server boosters — create, recolor, and share a role through an interactive panel, with automatic cleanup (grace period) when a boost lapses, a moderator admin panel, and a blacklist.",
+  "short": "Custom roles for boosters.",
+  "version": "1.0.0"
+}
