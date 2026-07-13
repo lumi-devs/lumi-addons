@@ -4,7 +4,7 @@ import { ThreadChannel } from "discord.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { threadCleanupJobId } from "../lib/keys.js";
 import { parseDuration } from "#utilities/time.js";
-import { parseConfigList } from "#core/module-system/Module.js";
+import { getService } from "#core/module-system/Service.js";
 import { isModuleEnabled } from "#utilities/listeners.js";
 
 @ApplyOptions<Listener.Options>({
@@ -15,12 +15,10 @@ export class ThreadCreateListener extends Listener {
     if (!thread.guild) return;
     if (!(await isModuleEnabled(thread.guild.id, "thread-cleaner"))) return;
 
-    const enabledChannels = parseConfigList(
-      await this.container.db.config.getModuleConfig(
-        thread.guild.id,
-        "thread-cleaner",
-        "enabled_channels",
-      ),
+    const enabledChannels = await getService("config").getConfigList(
+      thread.guild.id,
+      "thread-cleaner",
+      "enabled_channels",
     );
     const parentChannelId = thread.parentId;
 

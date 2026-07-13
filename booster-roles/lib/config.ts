@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { parseConfigList } from "#core/module-system/config-schema.js";
+import { getService } from "#core/module-system/Service.js";
 import { MODULE_NAME } from "../keys.js";
 
 export interface BoosterConfig {
@@ -24,9 +24,13 @@ export async function getBoosterConfig(
 ): Promise<BoosterConfig> {
   const get = (key: string) =>
     container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
-  const [boosterRoles, anchor, showcase, log, maxShares, grace, nameMax] =
+  const [boosterRoleIds, anchor, showcase, log, maxShares, grace, nameMax] =
     await Promise.all([
-      get("booster_role_ids"),
+      getService("config").getConfigList(
+        guildId,
+        MODULE_NAME,
+        "booster_role_ids",
+      ),
       get("anchor_role_id"),
       get("showcase_channel_id"),
       get("log_channel_id"),
@@ -35,7 +39,7 @@ export async function getBoosterConfig(
       get("name_max_length"),
     ]);
   return {
-    boosterRoleIds: parseConfigList(boosterRoles),
+    boosterRoleIds,
     anchorRoleId: (anchor as string | null) ?? null,
     showcaseChannelId: (showcase as string | null) ?? null,
     logChannelId: (log as string | null) ?? null,

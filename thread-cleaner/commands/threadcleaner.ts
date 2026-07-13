@@ -8,7 +8,7 @@ import { PermissionLevel } from "#lib/permissions.js";
 import { ephemeralCard, makeWarningCard } from "#utilities/cards.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
-  name: "thread-cleaner",
+  name: "threadcleaner",
   description: "Bulk-manage this server's threads.",
   preconditions: ["GuildOnly"],
   permissionLevel: PermissionLevel.ADMIN,

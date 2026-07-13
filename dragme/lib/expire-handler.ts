@@ -14,9 +14,14 @@ export async function handleDragmeExpireFire(
 
   await deleteRequest(guildId, userId);
 
-  const guild = container.client.guilds.cache.get(guildId);
-  const channel = guild?.channels.cache.get(req.cardChannelId);
-  if (!channel?.isTextBased()) return;
+  const guild =
+    container.client.guilds.cache.get(guildId) ??
+    (await container.client.guilds.fetch(guildId).catch(() => null));
+  const channel = guild
+    ? (guild.channels.cache.get(req.cardChannelId) ??
+      (await guild.channels.fetch(req.cardChannelId).catch(() => null)))
+    : null;
+  if (!channel || !channel.isTextBased()) return;
 
   const card = noPingCard(
     makeWarningCard(
