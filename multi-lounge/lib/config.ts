@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { parseConfigList } from "#core/module-system/Module.js";
+import { getService } from "#core/module-system/Service.js";
 import { MODULE_NAME } from "../keys.js";
 
 export interface LoungeConfig {
@@ -14,15 +14,20 @@ export interface LoungeConfig {
 export async function getLoungeConfig(guildId: string): Promise<LoungeConfig> {
   const get = (key: string) =>
     container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
-  const [bases, threshold, maxExtras, template, cooldown] = await Promise.all([
-    get("base_channel_ids"),
-    get("busy_threshold"),
-    get("max_extra_lounges"),
-    get("name_template"),
-    get("cooldown_seconds"),
-  ]);
+  const [baseChannelIds, threshold, maxExtras, template, cooldown] =
+    await Promise.all([
+      getService("config").getConfigList(
+        guildId,
+        MODULE_NAME,
+        "base_channel_ids",
+      ),
+      get("busy_threshold"),
+      get("max_extra_lounges"),
+      get("name_template"),
+      get("cooldown_seconds"),
+    ]);
   return {
-    baseChannelIds: parseConfigList(bases),
+    baseChannelIds,
     busyThreshold: (threshold as number | null) ?? 2,
     maxExtras: (maxExtras as number | null) ?? 5,
     nameTemplate:

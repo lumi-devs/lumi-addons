@@ -5,19 +5,41 @@ import {
   MediaGalleryItemBuilder,
   ModalBuilder,
   TextInputBuilder,
+  LabelBuilder,
+  FileUploadBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, TextInputStyle } from "discord.js";
 import { makeCard, type CardReply } from "#utilities/cards.js";
 import { Colors } from "#utilities/branding.js";
 
-const replyButtonRow = (confessionNumber: number) =>
-  new ActionRowBuilder<ButtonBuilder>().addComponents(
+const replyButtonRow = (
+  confessionNumber: number,
+  showConfessButton: boolean,
+) => {
+  const row = new ActionRowBuilder<ButtonBuilder>();
+  if (showConfessButton) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId("confess:new_button")
+        .setLabel("Make a Confession")
+        .setEmoji({ name: "🕊️" })
+        .setStyle(ButtonStyle.Primary),
+    );
+  }
+  row.addComponents(
     new ButtonBuilder()
       .setCustomId(`confess:reply:${confessionNumber}`)
-      .setLabel("Anonymous Reply")
+      .setLabel("Reply")
       .setEmoji({ name: "💬" })
       .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`confess:report:${confessionNumber}`)
+      .setLabel("Report")
+      .setEmoji({ name: "🚨" })
+      .setStyle(ButtonStyle.Danger),
   );
+  return row;
+};
 
 const galleryFor = (imageUrl?: string | null) =>
   imageUrl
@@ -30,10 +52,13 @@ export function buildConfessionCard(
   number: number,
   text: string,
   imageUrl?: string | null,
+  title?: string | null,
+  showConfessButton = true,
 ): CardReply {
-  return makeCard(Colors.PRIMARY, `🕊️ Confession #${number}`, text, {
-    footer: "Anonymous · anyone can reply anonymously",
-    actionRows: [replyButtonRow(number)],
+  const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
+  return makeCard(Colors.PRIMARY, `🕊️ ${displayTitle}`, text, {
+    footer: `Confession #${number} · anyone can reply anonymously`,
+    actionRows: [replyButtonRow(number, showConfessButton)],
     mediaGallery: galleryFor(imageUrl),
   });
 }
@@ -43,10 +68,41 @@ export function buildReplyCard(
   k: number,
   text: string,
   imageUrl?: string | null,
+  isOp = false,
+  parentQuote?: string | null,
+  replyId?: string | number | null,
 ): CardReply {
-  return makeCard(Colors.PRIMARY, `💬 Reply #${confessionNumber}.${k}`, text, {
-    footer: "Anonymous reply",
-    actionRows: [replyButtonRow(confessionNumber)],
+  const bodyText = parentQuote ? `${parentQuote}\n\n${text}` : text;
+  const footerText = isOp ? "👑 OP · Anonymous reply" : "Anonymous reply";
+  const color = isOp ? Colors.WARNING : Colors.PRIMARY; // Gold/warning if OP, primary if not
+
+  const actionRow = new ActionRowBuilder<ButtonBuilder>();
+  if (replyId) {
+    actionRow.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`confess:replyto:${confessionNumber}:${replyId}`)
+        .setLabel("Reply")
+        .setEmoji({ name: "💬" })
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(`confess:reportreply:${confessionNumber}:${replyId}`)
+        .setLabel("Report")
+        .setEmoji({ name: "🚨" })
+        .setStyle(ButtonStyle.Danger),
+    );
+  } else {
+    actionRow.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`confess:reply:${confessionNumber}`)
+        .setLabel("Reply")
+        .setEmoji({ name: "💬" })
+        .setStyle(ButtonStyle.Secondary),
+    );
+  }
+
+  return makeCard(color, `💬 Reply #${confessionNumber}.${k}`, bodyText, {
+    footer: footerText,
+    actionRows: [actionRow],
     mediaGallery: galleryFor(imageUrl),
   });
 }
@@ -68,29 +124,45 @@ function textArea(
   return new ActionRowBuilder<TextInputBuilder>().addComponents(input);
 }
 
+function imageUploadComponent(): LabelBuilder {
+  const fileUpload = new FileUploadBuilder()
+    .setCustomId("image_upload")
+    .setRequired(false)
+    .setMinValues(0)
+    .setMaxValues(1);
+
+  return new LabelBuilder()
+    .setLabel("Attach an image (optional)")
+    .setFileUploadComponent(fileUpload);
+}
+
 export function buildConfessionModal(allowAttachments: boolean): ModalBuilder {
   const modal = new ModalBuilder()
     .setCustomId("confess:new")
-    .setTitle("Anonymous Confession")
-    .addComponents(
-      textArea(
-        "confession",
-        "Your confession",
-        TextInputStyle.Paragraph,
-        true,
-        "This is posted anonymously.",
-      ),
-    );
-  if (allowAttachments)
-    modal.addComponents(
-      textArea(
-        "image_url",
-        "Image URL (optional)",
-        TextInputStyle.Short,
-        false,
-        "https://…",
-      ),
-    );
+    .setTitle("Anonymous Confession");
+
+  const titleInput = textArea(
+    "title",
+    "Title (optional)",
+    TextInputStyle.Short,
+    false,
+    "Give your confession a title...",
+  );
+  titleInput.components[0]?.setMaxLength(100);
+
+  modal.addComponents(
+    titleInput,
+    textArea(
+      "confession",
+      "Your confession",
+      TextInputStyle.Paragraph,
+      true,
+      "This is posted anonymously.",
+    ),
+  );
+  if (allowAttachments) {
+    modal.addComponents(imageUploadComponent());
+  }
   return modal;
 }
 
@@ -110,15 +182,31 @@ export function buildReplyModal(
         "This is posted anonymously.",
       ),
     );
-  if (allowAttachments)
-    modal.addComponents(
+  if (allowAttachments) {
+    modal.addComponents(imageUploadComponent());
+  }
+  return modal;
+}
+
+export function buildReplyToReplyModal(
+  confessionNumber: number,
+  parentReplyId: string,
+  allowAttachments: boolean,
+): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(`confess:replytomodal:${confessionNumber}:${parentReplyId}`)
+    .setTitle(`Reply to Reply`.slice(0, 45))
+    .addComponents(
       textArea(
-        "image_url",
-        "Image URL (optional)",
-        TextInputStyle.Short,
-        false,
-        "https://…",
+        "reply",
+        "Your reply",
+        TextInputStyle.Paragraph,
+        true,
+        "This is posted anonymously.",
       ),
     );
+  if (allowAttachments) {
+    modal.addComponents(imageUploadComponent());
+  }
   return modal;
 }

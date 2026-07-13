@@ -2,7 +2,7 @@ import { container } from "@sapphire/framework";
 import { ActivityType, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { parseConfigList } from "#core/module-system/Module.js";
+import { getService } from "#core/module-system/Service.js";
 import { acquireRedisLock } from "#core/lib/redis-lock.js";
 import {
   makeSuccessCard,
@@ -30,17 +30,17 @@ export async function getPromoterConfig(
 ): Promise<PromoterConfig> {
   const get = (key: string) =>
     container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
-  const [role, log, terms, tag, sweep] = await Promise.all([
+  const [role, log, matchTerms, tag, sweep] = await Promise.all([
     get("promoter_role_id"),
     get("log_channel_id"),
-    get("match_terms"),
+    getService("config").getConfigList(guildId, MODULE_NAME, "match_terms"),
     get("detect_server_tag"),
     get("sweep_interval_minutes"),
   ]);
   return {
     roleId: (role as string | null) ?? null,
     logChannelId: (log as string | null) ?? null,
-    matchTerms: parseConfigList(terms),
+    matchTerms,
     detectServerTag: (tag as boolean | null) ?? true,
     sweepIntervalMinutes: (sweep as number | null) ?? 30,
   };
