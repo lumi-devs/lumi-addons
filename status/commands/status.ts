@@ -5,7 +5,8 @@ import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { Duration, DurationFormatter } from "@sapphire/time-utilities";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { ephemeralCard, makeListCard } from "#utilities/cards.js";
+
+import { paginateList } from "#utilities/pagination.js";
 import type { StatusEntry } from "../keys.js";
 import {
   addEntry,
@@ -155,10 +156,14 @@ export class StatusCommand extends BaseSubcommand {
     const state = settings.enabled ? "enabled" : "disabled";
     const every = new DurationFormatter().format(settings.intervalMs);
     lines.unshift(`Rotation is **${state}**, every **${every}**.`, "");
-    return this.reply(
-      interaction,
-      ephemeralCard(makeListCard("Rotating Statuses", lines)),
-    );
+    await paginateList({
+      interactionOrMessage: interaction,
+      userId: interaction.user.id,
+      title: "Rotating Statuses",
+      items: lines,
+      perPage: 5,
+      ephemeral: true,
+    });
   }
 
   public async chatInputInterval(interaction: ChatInputCommandInteraction) {

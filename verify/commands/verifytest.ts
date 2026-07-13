@@ -4,7 +4,6 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
-  ApplicationIntegrationType,
   GuildMember,
   MessageFlags,
   type ChatInputCommandInteraction,
@@ -79,12 +78,7 @@ function buildRows(
 export default class VerifyTestCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
     registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes([ApplicationIntegrationType.GuildInstall]),
+      builder.setName(this.name).setDescription(this.description),
     );
   }
 

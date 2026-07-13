@@ -13,7 +13,7 @@ import {
   noPingCard,
 } from "#utilities/cards.js";
 import { scheduleTask, cancelTask } from "#lib/schedule-task.js";
-import { dragmeExpireJobId, dragmeRevokeJobId } from "../keys.js";
+import { dragmeExpireJobId, dragmeRevokeJobId, DragmeKeys } from "../keys.js";
 import { getDragmeConfig } from "../lib/config.js";
 import { buildRequestButtons } from "../lib/create-request.js";
 import { deleteRequest, getRequest } from "../lib/requests.js";
@@ -112,20 +112,42 @@ export class DragmeButtonHandler extends InteractionHandler {
       return;
     }
 
+    const cfg = await getDragmeConfig(guildId);
     let outcome: string;
+
     if (requester.voice.channelId) {
+      if (cfg.grantHiddenPerms) {
+        await target.permissionOverwrites.create(
+          requester.id,
+          { Connect: true, ViewChannel: true },
+          { reason: `Drag request accepted by ${presser.user.tag}` },
+        );
+        const key = DragmeKeys.tempPerm(guildId, target.id, userId);
+        await this.container.redis.set(key, "1", "EX", 24 * 3600); // safety fallback TTL (1 day)
+      }
+
       await requester.voice.setChannel(
         target,
         `Drag request accepted by ${presser.user.tag}`,
       );
       outcome = `moved into ${channelMention(target.id)}`;
     } else {
-      const cfg = await getDragmeConfig(guildId);
-      await target.permissionOverwrites.create(
-        requester.id,
-        { Connect: true },
-        { reason: `Drag request accepted by ${presser.user.tag}` },
-      );
+      if (cfg.grantHiddenPerms) {
+        await target.permissionOverwrites.create(
+          requester.id,
+          { Connect: true, ViewChannel: true },
+          { reason: `Drag request accepted by ${presser.user.tag}` },
+        );
+        const key = DragmeKeys.tempPerm(guildId, target.id, userId);
+        await this.container.redis.set(key, "1", "EX", 24 * 3600);
+      } else {
+        await target.permissionOverwrites.create(
+          requester.id,
+          { Connect: true },
+          { reason: `Drag request accepted by ${presser.user.tag}` },
+        );
+      }
+
       await scheduleTask(
         "dragme-revoke",
         { guildId, userId, channelId: target.id },

@@ -38,6 +38,12 @@ import { deleteRequest } from "./lib/requests.js";
       description: "Comma-separated role IDs that may not use drag requests.",
       list: true,
     }),
+    grant_hidden_perms: cfg.boolean({
+      label: "Grant Hidden Permissions",
+      description:
+        "Grant temporary Connect/ViewChannel permissions for hidden channels, and remove them when the user leaves.",
+      default: true,
+    }),
   }),
 })
 export class DragmeModule extends Module {

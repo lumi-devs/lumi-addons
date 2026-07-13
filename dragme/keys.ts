@@ -6,6 +6,9 @@ export const DragmeKeys = {
     `lumi:addon:dragme:req:${guildId}:${userId}`,
   /** Set of user ids with a live request, for `/dragme-admin active`. */
   activeSet: (guildId: string) => `lumi:addon:dragme:active:${guildId}`,
+  /** Temporary permission flag for user in a voice channel. */
+  tempPerm: (guildId: string, channelId: string, userId: string) =>
+    `lumi:addon:dragme:temp-perm:${guildId}:${channelId}:${userId}`,
 } as const;
 
 export const dragmeExpireJobId = (guildId: string, userId: string) =>

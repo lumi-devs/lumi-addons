@@ -16,9 +16,26 @@ import { deleteForUser } from "./lib/data.js";
       channelTypes: [ChannelType.GuildText],
     }),
     log_channel_id: cfg.channel({
-      label: "Moderation Log",
+      label: "Moderator Log Channel",
       description:
-        "Optional channel for ban / delete audit entries (never reveals authors).",
+        "Logs confessions with hashed author IDs (keeps them anonymous to moderators).",
+      channelTypes: [ChannelType.GuildText],
+    }),
+    report_channel_id: cfg.channel({
+      label: "Report Log Channel",
+      description:
+        "Where confession/reply reports submitted by users are sent.",
+      channelTypes: [ChannelType.GuildText],
+    }),
+    report_ping_role_id: cfg.role({
+      label: "Report Ping Role",
+      description:
+        "Optional role to ping in the report log channel when a new report is submitted.",
+    }),
+    media_channel_id: cfg.channel({
+      label: "Media Re-hosting Channel",
+      description:
+        "Optional channel where the bot re-uploads images to generate permanent URLs.",
       channelTypes: [ChannelType.GuildText],
     }),
     auto_thread: cfg.boolean({
@@ -27,9 +44,9 @@ import { deleteForUser } from "./lib/data.js";
       default: true,
     }),
     allow_attachments: cfg.boolean({
-      label: "Allow Image URLs",
+      label: "Allow Image Attachments",
       description:
-        "Let submitters attach an image URL to confessions and replies.",
+        "Allow users to upload images directly to their confessions and replies.",
       default: true,
     }),
     cooldown_minutes: cfg.number({

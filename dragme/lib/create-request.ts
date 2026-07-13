@@ -6,12 +6,8 @@ import {
   TimestampStyles,
   userMention,
 } from "@discordjs/formatters";
-import {
-  ButtonStyle,
-  type GuildMember,
-  type VoiceBasedChannel,
-} from "discord.js";
-import { makeInfoCard, noPingCard } from "#utilities/cards.js";
+import { ButtonStyle, type GuildMember } from "discord.js";
+import { makeInfoCard } from "#utilities/cards.js";
 import { scheduleTask } from "#lib/schedule-task.js";
 import { dragmeExpireJobId, type DragRequest } from "../keys.js";
 import { getDragmeConfig } from "./config.js";
@@ -40,25 +36,21 @@ export function buildRequestButtons(
   ];
 }
 
-/**
- * Validates and posts a drag request for `member` into `target`, storing state
- * and arming the expiry job. All entry points (slash command, request-channel
- * message) funnel through here.
- */
 export async function createDragRequest(
   member: GuildMember,
-  target: VoiceBasedChannel,
+  targetMember: GuildMember,
 ): Promise<CreateResult> {
   const { guild } = member;
-  const cfg = await getDragmeConfig(guild.id);
-
-  if (!cfg.requestChannelId) {
+  const target = targetMember.voice.channel;
+  if (!target) {
     return {
       ok: false,
-      reason:
-        "This server hasn't set a drag-request channel yet — an admin must set `request_channel_id` in `/config`.",
+      reason: "That user isn't in a voice channel right now.",
     };
   }
+
+  const cfg = await getDragmeConfig(guild.id);
+
   if (cfg.blacklistRoleIds.some((id) => member.roles.cache.has(id))) {
     return { ok: false, reason: "You're not allowed to use drag requests." };
   }
@@ -78,29 +70,24 @@ export async function createDragRequest(
     return { ok: false, reason: "You already have a pending drag request." };
   }
 
-  const requestChannel = guild.channels.cache.get(cfg.requestChannelId);
-  if (!requestChannel?.isTextBased()) {
-    return {
-      ok: false,
-      reason: "The configured drag-request channel no longer exists.",
-    };
-  }
-
   const expiresAt = Date.now() + cfg.timeoutMinutes * 60_000;
-  const card = noPingCard(
-    makeInfoCard(
-      "Voice Drag Request",
-      `${userMention(member.id)} wants to be dragged into ${channelMention(target.id)}.\n\nAnyone **inside that channel** can accept or decline. Expires ${time(new Date(expiresAt), TimestampStyles.RelativeTime)}.`,
-      { actionRows: buildRequestButtons(guild.id, member.id) },
-    ),
+  const card = makeInfoCard(
+    "Voice Drag Request",
+    `${userMention(member.id)} wants to be dragged into ${channelMention(target.id)}.\n\nAnyone **inside that channel** can accept or decline. Expires ${time(new Date(expiresAt), TimestampStyles.RelativeTime)}.`,
+    { actionRows: buildRequestButtons(guild.id, member.id) },
   );
-  const message = await requestChannel.send(card);
+
+  const message = await target.send({
+    ...card,
+    content: `${userMention(targetMember.id)}, you have a drag request!`,
+    allowedMentions: { users: [targetMember.id] },
+  });
 
   const req: DragRequest = {
     guildId: guild.id,
     userId: member.id,
     targetChannelId: target.id,
-    cardChannelId: requestChannel.id,
+    cardChannelId: target.id,
     cardMessageId: message.id,
     createdAt: Date.now(),
     expiresAt,

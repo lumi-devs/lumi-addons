@@ -8,10 +8,9 @@ import {
   ephemeralCard,
   makeSuccessCard,
   makeErrorCard,
-  makeListCard,
-  noPingCard,
   type CardReply,
 } from "#utilities/cards.js";
+import { paginateList } from "#utilities/pagination.js";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
   banHash,
@@ -157,10 +156,14 @@ export class ConfessModCommand extends BaseSubcommand {
       (b) =>
         `\`${b.hash.slice(0, 16)}…\` — ${time(new Date(b.record.at), TimestampStyles.RelativeTime)} by ${userMention(b.record.by)}`,
     );
-    return this.reply(
-      interaction,
-      ephemeralCard(noPingCard(makeListCard("Banned Authors", lines))),
-    );
+    await paginateList({
+      interactionOrMessage: interaction,
+      userId: interaction.user.id,
+      title: "Banned Authors",
+      items: lines,
+      perPage: 5,
+      ephemeral: true,
+    });
   }
 
   public async chatInputRunDelete(interaction: ChatInputCommandInteraction) {

@@ -6,7 +6,7 @@
 import { container } from "@sapphire/framework";
 import { ChannelType, type Guild, type ThreadChannel } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { parseConfigList } from "#core/module-system/Module.js";
+import { getService } from "#core/module-system/Service.js";
 import { isModuleEnabled } from "#utilities/listeners.js";
 import { makeSuccessCard, noPingCard } from "#utilities/cards.js";
 import type { ThreadSweepPayload } from "../scheduled-tasks/threadSweep.js";
@@ -34,12 +34,10 @@ export async function handleThreadSweepFire(
   const parentIds =
     payload.scope === "enabled"
       ? new Set(
-          parseConfigList(
-            await container.db.config.getModuleConfig(
-              guildId,
-              "thread-cleaner",
-              "enabled_channels",
-            ),
+          await getService("config").getConfigList(
+            guildId,
+            "thread-cleaner",
+            "enabled_channels",
           ),
         )
       : null; // null = all channels
@@ -151,8 +149,10 @@ async function report(
   payload: ThreadSweepPayload,
   totals: SweepTotals,
 ): Promise<void> {
-  const channel = guild.channels.cache.get(payload.channelId);
-  if (!channel?.isSendable()) return;
+  const channel =
+    guild.channels.cache.get(payload.channelId) ??
+    (await guild.channels.fetch(payload.channelId).catch(() => null));
+  if (!channel || !channel.isSendable()) return;
   const lines = [
     `${userMention(payload.requesterId)}'s thread sweep finished.`,
     "",
