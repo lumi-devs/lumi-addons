@@ -1,13 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import type { Args } from "@sapphire/framework";
-import type { Message } from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
-import {
-  makeErrorCard,
-  makeInfoCard,
-  makeSuccessCard,
-} from "#utilities/cards.js";
+import type { Subcommand } from "@sapphire/plugin-subcommands";
+import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
+import { makeInfoCard, makeSuccessCard } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
 import { MODULE_NAME } from "../lib/keys.js";
 import { getCounts, getRoleCount, resetCounts } from "../lib/store.js";
@@ -21,21 +16,60 @@ import { sendLog } from "../lib/log.js";
   preconditions: ["GuildOnly", "ModuleEnabled"],
   module: MODULE_NAME,
   permissionLevel: PermissionLevel.MOD,
+  prefixEnabled: true,
   subcommands: [
-    { name: "stats", messageRun: "msgStats", default: true },
-    { name: "top", messageRun: "msgTop" },
-    { name: "reset", messageRun: "msgReset" },
+    { name: "stats", run: "stats", default: true },
+    { name: "top", run: "top" },
+    { name: "reset", run: "reset" },
   ],
 })
 export class RoleMentionsCommand extends BaseSubcommand {
-  public async msgStats(message: Message, args: Args): Promise<unknown> {
-    if (!message.inGuild()) return;
-    const { guild } = message;
-    const role = await args.pick("role").catch(() => null);
+  public override registerApplicationCommands(registry: Subcommand.Registry) {
+    registry.registerChatInputCommand((builder) =>
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .addSubcommand((sub) =>
+          sub
+            .setName("stats")
+            .setDescription("Show mention stats for a role or all roles.")
+            .addRoleOption((o) =>
+              o
+                .setName("role")
+                .setDescription("Optional role to filter stats")
+                .setRequired(false),
+            ),
+        )
+        .addSubcommand((sub) =>
+          sub
+            .setName("top")
+            .setDescription("Show top mentioned roles.")
+            .addIntegerOption((o) =>
+              o
+                .setName("limit")
+                .setDescription("Number of roles to show (1-25)")
+                .setRequired(false),
+            ),
+        )
+        .addSubcommand((sub) =>
+          sub
+            .setName("reset")
+            .setDescription("Reset all mention counters to zero."),
+        ),
+    );
+  }
+
+  // --- Subcommands ---
+
+  public async stats(ctx: CommandContext) {
+    const { guild } = ctx;
+    if (!guild) return;
+
+    const role = await ctx.getRole("role");
 
     if (role) {
       const count = await getRoleCount(guild.id, role.id);
-      return message.reply(
+      return ctx.reply(
         makeInfoCard(
           `${Emojis.ANALYTICS} Mention Stats`,
           `${roleLabel(guild, role.id)} was mentioned **${count}** time${count === 1 ? "" : "s"} today.`,
@@ -45,7 +79,7 @@ export class RoleMentionsCommand extends BaseSubcommand {
 
     const counts = await getCounts(guild.id);
     if (counts.size === 0) {
-      return message.reply(
+      return ctx.reply(
         makeInfoCard(
           `${Emojis.ANALYTICS} Mention Stats`,
           "No role mentions recorded yet today.",
@@ -61,7 +95,7 @@ export class RoleMentionsCommand extends BaseSubcommand {
         `**${i + 1}.** ${roleLabel(guild, roleId)} — **${n}**`,
     );
 
-    return message.reply(
+    return ctx.reply(
       makeInfoCard(
         `${Emojis.ANALYTICS} Role Mention Stats`,
         [
@@ -78,17 +112,16 @@ export class RoleMentionsCommand extends BaseSubcommand {
     );
   }
 
-  public async msgTop(message: Message, args: Args): Promise<unknown> {
-    if (!message.inGuild()) return;
-    const { guild } = message;
-    const limit = await args
-      .pick("integer")
-      .then((n) => Math.min(Math.max(n, 1), 25))
-      .catch(() => 5);
+  public async top(ctx: CommandContext) {
+    const { guild } = ctx;
+    if (!guild) return;
+
+    const rawLimit = await ctx.getInteger("limit");
+    const limit = Math.min(Math.max(rawLimit ?? 5, 1), 25);
 
     const counts = await getCounts(guild.id);
     if (counts.size === 0) {
-      return message.reply(
+      return ctx.reply(
         makeInfoCard(
           `${Emojis.ANALYTICS} Top Roles`,
           "No role mentions recorded yet today.",
@@ -104,7 +137,7 @@ export class RoleMentionsCommand extends BaseSubcommand {
         `**${i + 1}.** ${roleLabel(guild, roleId)} — **${n}**`,
     );
 
-    return message.reply(
+    return ctx.reply(
       makeInfoCard(
         `${Emojis.STAR} Top ${top.length} Mentioned Role${top.length === 1 ? "" : "s"}`,
         lines.join("\n"),
@@ -113,29 +146,22 @@ export class RoleMentionsCommand extends BaseSubcommand {
     );
   }
 
-  public async msgReset(message: Message): Promise<unknown> {
-    if (!message.inGuild()) return;
-    const { guild } = message;
+  public async reset(ctx: CommandContext) {
+    const { guild } = ctx;
+    if (!guild) return;
 
-    if ((await resolvePermissionLevel(message)) < PermissionLevel.ADMIN) {
-      return message.reply(
-        makeErrorCard(
-          "Permission Denied",
-          "You need at least **Admin** level to reset counters.",
-        ),
-      );
-    }
+    await ctx.checkPermission(PermissionLevel.ADMIN);
 
     await resetCounts(guild.id);
     await sendLog(
       guild.id,
       makeInfoCard(
         `${Emojis.CLEANUP} Mention Counters Reset`,
-        `Counters were manually reset by ${message.author}.`,
+        `Counters were manually reset by ${ctx.user}.`,
       ),
     );
 
-    return message.reply(
+    return ctx.reply(
       makeSuccessCard(
         "Counters Reset",
         "Today's role mention counters have been cleared.",

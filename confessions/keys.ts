@@ -26,6 +26,9 @@ export interface ConfessionMeta {
   threadId: string | null;
   authorHash: string;
   createdAt: number;
+  title?: string | null;
+  text?: string | null;
+  imageUrl?: string | null;
 }
 
 export interface BanRecord {

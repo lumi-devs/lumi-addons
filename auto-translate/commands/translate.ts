@@ -24,9 +24,6 @@ export class TranslateCommand extends BaseCommand {
       builder
         .setName(this.name)
         .setDescription(this.description)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes)
         .addStringOption((opt) =>
           opt
             .setName("text")
@@ -39,10 +36,7 @@ export class TranslateCommand extends BaseCommand {
     registry.registerContextMenuCommand((builder) =>
       builder
         .setName("Translate to English")
-        .setType(ApplicationCommandType.Message)
-        .setDefaultMemberPermissions(this.defaultMemberPermissions ?? null)
-        .setContexts(...this.contexts)
-        .setIntegrationTypes(this.integrationTypes),
+        .setType(ApplicationCommandType.Message),
     );
   }
 

@@ -9,7 +9,8 @@ import {
 } from "@discordjs/formatters";
 import { BaseSubcommand } from "#lib/commands.js";
 import { PermissionLevel } from "#lib/permissions.js";
-import { ephemeralCard, makeListCard } from "#utilities/cards.js";
+
+import { paginateList } from "#utilities/pagination.js";
 import { cancelTask } from "#lib/schedule-task.js";
 import { dragmeExpireJobId } from "../keys.js";
 import { deleteRequest, listRequests } from "../lib/requests.js";
@@ -49,10 +50,14 @@ export class DragmeAdminCommand extends BaseSubcommand {
       (r) =>
         `${userMention(r.userId)} → ${channelMention(r.targetChannelId)} · expires ${time(new Date(r.expiresAt), TimestampStyles.RelativeTime)}`,
     );
-    return this.reply(
-      interaction,
-      ephemeralCard(makeListCard("Pending Drag Requests", lines)),
-    );
+    await paginateList({
+      interactionOrMessage: interaction,
+      userId: interaction.user.id,
+      title: "Pending Drag Requests",
+      items: lines,
+      perPage: 5,
+      ephemeral: true,
+    });
   }
 
   public async chatInputClear(
