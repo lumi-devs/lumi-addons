@@ -1,0 +1,7 @@
+{
+  "name": "utility",
+  "author": ["Antigravity"],
+  "description": "General utility addons including auto-translate and emoji-stealer.",
+  "short": "General utility tools.",
+  "version": "1.0.0"
+}

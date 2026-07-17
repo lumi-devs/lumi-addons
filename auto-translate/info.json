@@ -1,7 +1,0 @@
-{
-  "name": "auto-translate",
-  "author": ["Antigravity"],
-  "description": "Translate messages to English via slash command, right-click context menu, or prefix command (Google Translate).",
-  "short": "Translate messages on demand.",
-  "version": "1.1.2"
-}

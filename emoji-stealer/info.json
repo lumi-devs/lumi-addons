@@ -1,7 +1,0 @@
-{
-  "name": "emoji-stealer",
-  "author": ["Antigravity"],
-  "description": "Steal custom emojis from messages, replies, or URLs and add them to your server.",
-  "short": "Quickly steal emojis and custom reactions.",
-  "version": "1.0.0"
-}
