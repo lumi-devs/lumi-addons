@@ -43,11 +43,6 @@ import { handlePromoterSweepFire } from "./lib/sweep-handler.js";
 })
 export class PromoterModule extends Module {
   public override onLoad() {
-    registerTaskFireHandler(
-      "promoter-sweep",
-      "broadcast",
-      handlePromoterSweepFire,
-    );
     return super.onLoad();
   }
   // No deleteUserData override: the addon stores only aggregate counters —
