@@ -47,4 +47,9 @@ export class ThreadCleanerModule extends Module {
     );
     return super.onLoad();
   }
+
+  public override onUnload() {
+    this.container.logger.info("[ThreadCleanerModule] Unloaded Thread Cleaner task handlers.");
+    return super.onUnload();
+  }
 }
