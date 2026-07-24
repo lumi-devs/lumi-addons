@@ -15,6 +15,8 @@ import { buildConfessionModal } from "../lib/ui.js";
   name: "confess",
   description: "Submit an anonymous confession.",
   preconditions: ["GuildOnly"],
+  cooldownLimit: 2,
+  cooldownDelay: 5000,
 })
 export class ConfessCommand extends BaseCommand {
   public override registerApplicationCommands(registry: Command.Registry) {
@@ -28,8 +30,7 @@ export class ConfessCommand extends BaseCommand {
     const config = await getConfessionsConfig(guildId);
 
     if (!config.channelId)
-      return this.reply(
-        interaction,
+      return interaction.reply(
         ephemeralCard(
           makeWarningCard(
             "Not Configured",
@@ -40,8 +41,7 @@ export class ConfessCommand extends BaseCommand {
 
     const hash = await authorHashFor(guildId, interaction.user.id);
     if (await isBanned(guildId, hash))
-      return this.reply(
-        interaction,
+      return interaction.reply(
         ephemeralCard(
           makeErrorCard(
             "Blocked",
@@ -51,8 +51,7 @@ export class ConfessCommand extends BaseCommand {
       );
 
     if (await onCooldown(guildId, hash))
-      return this.reply(
-        interaction,
+      return interaction.reply(
         ephemeralCard(
           makeWarningCard(
             "Slow Down",

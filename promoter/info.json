@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Rewards members who advertise the server in their custom status (invite link or server tag) with a configurable role, removed automatically when the status changes. Includes a self-heal sweep, log cards, and a persistent check-me panel.",
   "short": "Auto-role for members advertising the server.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }

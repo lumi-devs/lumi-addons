@@ -22,6 +22,11 @@ export class StatusModule extends Module {
     return super.onLoad();
   }
 
+  public override onUnload() {
+    this.container.logger.info("[StatusModule] Unloaded Status Rotator task handlers.");
+    return super.onUnload();
+  }
+
   public override async deleteUserData(userId: string): Promise<void> {
     // Only per-user data is the `addedBy` audit field on entries.
     const entries = await getEntries();
