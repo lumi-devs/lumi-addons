@@ -109,12 +109,11 @@ export class BoosterRolesCommand extends BaseCommand {
       case "blacklist":
         return this.runBlacklist(interaction);
       default:
-        return this.reply(
-          interaction,
-          ephemeralCard(
+        return interaction.reply({
+          ...ephemeralCard(
             noPingCard(makeErrorCard("Error", "Invalid action specified.")),
           ),
-        );
+        });
     }
   }
 
@@ -123,8 +122,7 @@ export class BoosterRolesCommand extends BaseCommand {
       .guild!.members.fetch(interaction.user.id)
       .catch(() => null);
     if (!member)
-      return this.reply(
-        interaction,
+      return interaction.reply(
         ephemeralCard(
           noPingCard(
             makeErrorCard("Error", "Couldn't resolve your membership."),
@@ -137,8 +135,7 @@ export class BoosterRolesCommand extends BaseCommand {
 
     // Blacklisted members are locked out entirely.
     if (await isBlacklisted(member.guild.id, member.id))
-      return this.reply(
-        interaction,
+      return interaction.reply(
         ephemeralCard(
           makeWarningCard(
             "Blocked",
@@ -149,8 +146,7 @@ export class BoosterRolesCommand extends BaseCommand {
 
     // Non-boosters with no existing role can't do anything useful.
     if (!record && !isEligible(member, config))
-      return this.reply(
-        interaction,
+      return interaction.reply(
         ephemeralCard(
           makeWarningCard(
             "Boosters Only",
@@ -159,7 +155,7 @@ export class BoosterRolesCommand extends BaseCommand {
         ),
       );
 
-    return this.reply(interaction, ephemeralCard(buildPanel(record)));
+    return interaction.reply(ephemeralCard(buildPanel(record)));
   }
 
   private async runStats(interaction: ChatInputCommandInteraction) {
@@ -169,8 +165,7 @@ export class BoosterRolesCommand extends BaseCommand {
       listBlacklist(guildId),
     ]);
     const shares = roles.reduce((n, r) => n + r.sharedWith.length, 0);
-    return this.reply(
-      interaction,
+    return interaction.reply(
       ephemeralCard(
         makeInfoCard("📊 Booster Roles", [
           `**Custom roles:** ${roles.length}`,
@@ -212,8 +207,7 @@ export class BoosterRolesCommand extends BaseCommand {
         `${userMention(user.id)} has no custom role.`,
       );
 
-    return this.reply(
-      interaction,
+    return interaction.reply(
       ephemeralCard(
         noPingCard(
           makeInfoCard("🎨 Custom Role", [
@@ -254,8 +248,7 @@ export class BoosterRolesCommand extends BaseCommand {
       config,
       `deleted by a moderator (${reason})`,
     );
-    return this.reply(
-      interaction,
+    return interaction.reply(
       ephemeralCard(
         makeSuccessCard(
           "Role Deleted",
@@ -318,8 +311,7 @@ export class BoosterRolesCommand extends BaseCommand {
           "the owner was blacklisted",
         );
       }
-      return this.reply(
-        interaction,
+      return interaction.reply(
         ephemeralCard(
           makeSuccessCard(
             "Blacklisted",
@@ -336,8 +328,7 @@ export class BoosterRolesCommand extends BaseCommand {
         interaction,
         `${userMention(user.id)} is not blacklisted.`,
       );
-    return this.reply(
-      interaction,
+    return interaction.reply(
       ephemeralCard(
         makeSuccessCard(
           "Removed",
@@ -352,8 +343,7 @@ export class BoosterRolesCommand extends BaseCommand {
   ): Promise<boolean> {
     const level = await resolvePermissionLevel(interaction);
     if (level < PermissionLevel.MOD) {
-      await this.reply(
-        interaction,
+      await interaction.reply(
         ephemeralCard(
           noPingCard(
             makeErrorCard(
@@ -369,8 +359,7 @@ export class BoosterRolesCommand extends BaseCommand {
   }
 
   private err(interaction: ChatInputCommandInteraction, message: string) {
-    return this.reply(
-      interaction,
+    return interaction.reply(
       ephemeralCard(noPingCard(makeErrorCard("Error", message))),
     );
   }

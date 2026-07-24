@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Anonymous confessions with numbered Components-v2 cards, optional threads, anonymous replies, and hash-based moderation that never exposes author identity.",
   "short": "Anonymous confessions + replies.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }

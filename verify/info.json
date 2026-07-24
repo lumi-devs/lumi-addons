@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Math/emoji captcha verification for new members. Assigns a pending role on join, challenges the user with an interactive captcha, grants a verified role on success, and kicks members who time out.",
   "short": "Captcha verification gate for new members.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }

@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Rotating bot presence managed at runtime by the bot owner: custom statuses with activity type, online status, and live placeholders.",
   "short": "Owner-managed rotating presence.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }

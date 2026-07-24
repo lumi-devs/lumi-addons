@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Automatically archives or locks threads after a configurable period of inactivity. Watches new threads in selected channels and schedules a one-shot cleanup job per thread.",
   "short": "Auto-archive/lock inactive threads.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }

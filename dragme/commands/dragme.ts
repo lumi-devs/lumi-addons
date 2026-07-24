@@ -9,6 +9,8 @@ import { createDragRequest } from "../lib/create-request.js";
   name: "dragme",
   description: "Ask the people in a member's voice channel to drag you in.",
   preconditions: ["GuildOnly"],
+  cooldownLimit: 2,
+  cooldownDelay: 5000,
 })
 export class DragmeCommand extends BaseCommand {
   public override registerApplicationCommands(

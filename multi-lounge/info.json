@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Auto-scaling voice lounges: clones a base channel when every lounge fills up and removes the extras when they empty, keeping numbering contiguous.",
   "short": "Voice lounges that scale with demand.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }
