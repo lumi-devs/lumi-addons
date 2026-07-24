@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Tracks role mentions with daily stats and auto-protects sensitive roles from mention spam via Discord AutoMod rules.",
   "short": "Role-mention tracking + auto-protection.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }

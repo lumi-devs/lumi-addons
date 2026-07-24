@@ -3,5 +3,6 @@
   "author": ["Antigravity"],
   "description": "Auto-assign roles based on users' Discord presence (Playing, Streaming, Listening, Watching, Custom, Competing).",
   "short": "Presence-based role automation.",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "min_bot_version": "1.0.0"
 }
