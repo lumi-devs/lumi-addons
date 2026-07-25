@@ -17,19 +17,70 @@
 
 Here is the current catalog of official addons. Each addon is isolated and runs within its own sandbox.
 
-| Module | Description | Configuration / Notes |
-| :--- | :--- | :--- |
-| 🎮 **[Activity Roles](./activity-roles/)** | Auto-assign roles based on users' Discord presence (Playing, Streaming, Listening, etc). | *Requires `PRESENCE_INTENT=true`* |
-| 💎 **[Booster Roles](./booster-roles/)** | Manage custom booster roles with configurable grace periods for expired server boosts. | |
-| 🕊️ **[Confessions](./confessions/)** | Anonymous confessions via `/confess` with threads, anonymous replies, cooldowns, and mod bans. | |
-| 📞 **[Drag Me](./dragme/)** | Voice drag requests approved by the people already in the channel. | |
-| 🛋️ **[Multi Lounge](./multi-lounge/)** | Auto-scaling voice lounges—clones a base channel when busy and removes extras when empty. | |
-| 📣 **[Promoter](./promoter/)** | Auto-role for members advertising the server in their custom status or native server tag. | |
-| 🛡️ **[Role Mentions](./rolementions/)** | Tracks role mentions with daily stats and auto-protects sensitive roles via AutoMod rules. | |
-| 🔁 **[Status](./status/)** | Rotating bot presence managed by the bot owner via `/status`. | *Global module* |
-| 🧹 **[Thread Cleaner](./thread-cleaner/)** | Automatically archives/locks threads after inactivity, plus an admin bulk sweep. | |
-| ⚙️ **[Utility](./utility/)** | General utility commands including translations and emoji stealing. | *(Replaces auto-translate & emoji-stealer)* |
-| ✅ **[Verify](./verify/)** | Math captcha verification for new members: pending role on join, verified role on success, kick on timeout. | |
+<table width="100%">
+  <tr>
+    <td width="50%" valign="top">
+      <h4>🎮 <a href="./activity-roles/">Activity Roles</a></h4>
+      <p>Auto-assign roles based on users' Discord presence (Playing, Streaming, Listening, etc).</p>
+      <sup><em>Requires PRESENCE_INTENT=true</em></sup>
+    </td>
+    <td width="50%" valign="top">
+      <h4>💎 <a href="./booster-roles/">Booster Roles</a></h4>
+      <p>Manage custom booster roles with configurable grace periods for expired server boosts.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>🕊️ <a href="./confessions/">Confessions</a></h4>
+      <p>Anonymous confessions via <code>/confess</code> with threads, anonymous replies, cooldowns, and mod bans.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h4>📞 <a href="./dragme/">Drag Me</a></h4>
+      <p>Voice drag requests approved by the people already in the channel.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>🛋️ <a href="./multi-lounge/">Multi Lounge</a></h4>
+      <p>Auto-scaling voice lounges—clones a base channel when busy and removes extras when empty.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h4>📣 <a href="./promoter/">Promoter</a></h4>
+      <p>Auto-role for members advertising the server in their custom status or native server tag.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>🛡️ <a href="./rolementions/">Role Mentions</a></h4>
+      <p>Tracks role mentions with daily stats and auto-protects sensitive roles via AutoMod rules.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h4>🔁 <a href="./status/">Status</a></h4>
+      <p>Rotating bot presence managed by the bot owner via <code>/status</code>.</p>
+      <sup><em>Global module</em></sup>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>🧹 <a href="./thread-cleaner/">Thread Cleaner</a></h4>
+      <p>Automatically archives/locks threads after inactivity, plus an admin bulk sweep.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h4>⚙️ <a href="./utility/">Utility</a></h4>
+      <p>General utility commands including translations and emoji stealing.</p>
+      <sup><em>Replaces auto-translate & emoji-stealer</em></sup>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>✅ <a href="./verify/">Verify</a></h4>
+      <p>Math captcha verification for new members: pending role on join, verified role on success, kick on timeout.</p>
+    </td>
+    <td width="50%" valign="top">
+      <!-- Empty cell for grid balance -->
+    </td>
+  </tr>
+</table>
 
 <br>
 
