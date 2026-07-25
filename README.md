@@ -13,12 +13,17 @@
 
 | Addon | Description | Notes |
 |-------|-------------|-------|
-| **[activity-roles](./activity-roles/)** | Auto-assign roles from Discord presence (Playing, Streaming, Listening, …). | Requires `PRESENCE_INTENT=true` on the bot **and** the Presence Intent toggle in the Developer Portal. |
-| **[auto-translate](./auto-translate/)** | Translate messages to English via `/translate`, right-click → Apps → Translate, or `,translate`. | |
-| **[emoji-stealer](./emoji-stealer/)** | Steal custom emojis from messages, replies, or URLs and upload them to your server. | `,steal` |
-| **[rolementions](./rolementions/)** | Role-mention tracking with daily stats + AutoMod-backed protection of sensitive roles. | |
-| **[thread-cleaner](./thread-cleaner/)** | Auto-archive or lock threads after configurable inactivity. | |
-| **[verify](./verify/)** | Emoji-sequence captcha gate for new members: pending role on join, verified role on success, kick on timeout. | |
+| **[activity-roles](./activity-roles/)** | Auto-assign roles based on users' Discord presence (Playing, Streaming, Listening, etc). | Requires `PRESENCE_INTENT=true` on the bot **and** the Presence Intent toggle in the Developer Portal. |
+| **[booster-roles](./booster-roles/)** | Manage custom booster roles with configurable grace periods for expired boosts. | |
+| **[confessions](./confessions/)** | Anonymous confessions via `/confess` with threads, anonymous replies, cooldowns, and mod bans. | |
+| **[dragme](./dragme/)** | Voice drag requests approved by the people already in the channel. | |
+| **[multi-lounge](./multi-lounge/)** | Auto-scaling voice lounges — clones a base channel when busy and removes extras when empty. | |
+| **[promoter](./promoter/)** | Auto-role for members advertising the server in their custom status or by wearing the native server tag. | |
+| **[rolementions](./rolementions/)** | Tracks role mentions with daily stats and auto-protects sensitive roles via Discord AutoMod rules. | |
+| **[status](./status/)** | Rotating bot presence managed by the bot owner via `/status`. | Global module (not per-guild). |
+| **[thread-cleaner](./thread-cleaner/)** | Automatically archives/locks threads after inactivity, plus an admin bulk sweep. | |
+| **[utility](./utility/)** | General utility commands including translations and emoji stealing. | (Replaces standalone auto-translate and emoji-stealer) |
+| **[verify](./verify/)** | Math captcha verification for new members: pending role on join, verified role on success, kick on timeout. | |
 
 ---
 
