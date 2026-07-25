@@ -1,17 +1,10 @@
 import { container } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
 import type { Guild, GuildMember, Role } from "discord.js";
 import type { CardReply } from "#utilities/cards.js";
 import type { BoosterConfig } from "./config.js";
+import { withSerializedWork } from "#utilities/misc.js";
 
-// Serialize role-position edits per guild — Discord renumbers every role on each
-// positional write, so concurrent placements would fight over the hierarchy.
-const positionQueues = new Map<string, AsyncQueue>();
-const positionQueueFor = (guildId: string): AsyncQueue => {
-  let q = positionQueues.get(guildId);
-  if (!q) positionQueues.set(guildId, (q = new AsyncQueue()));
-  return q;
-};
+const positionLock = (guildId: string) => `booster-roles:position:${guildId}`;
 
 /** Whether a member currently qualifies for a custom role. */
 export function isEligible(
@@ -33,13 +26,9 @@ async function positionRole(
   const anchor = guild.roles.cache.get(anchorRoleId);
   if (!anchor) return;
 
-  const q = positionQueueFor(guild.id);
-  await q.wait();
-  try {
+  await withSerializedWork(positionLock(guild.id), async () => {
     await role.setPosition(Math.max(1, anchor.position - 1)).catch(() => null);
-  } finally {
-    q.shift();
-  }
+  });
 }
 
 /** Create a role, place it under the anchor, and assign it to the owner. */

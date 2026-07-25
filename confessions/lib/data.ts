@@ -1,5 +1,4 @@
 import { container } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
 import { randomBytes } from "node:crypto";
 import {
   MODULE_NAME,
@@ -17,17 +16,10 @@ import {
   type BanRecord,
 } from "../keys.js";
 import { hashAuthor } from "./anon.js";
+import { withSerializedWork } from "#utilities/misc.js";
 
 const kv = () => container.db.guildKV;
-
-// Per-guild serialization for the confession + reply counters — increments must
-// not race. KV is Postgres-backed, so the numbers survive cache flushes.
-const counterQueues = new Map<string, AsyncQueue>();
-const queueFor = (guildId: string): AsyncQueue => {
-  let q = counterQueues.get(guildId);
-  if (!q) counterQueues.set(guildId, (q = new AsyncQueue()));
-  return q;
-};
+const counterLock = (guildId: string) => `confessions:counters:${guildId}`;
 
 // ── Anonymity ────────────────────────────────────────────────────────────────
 
@@ -54,9 +46,7 @@ export async function authorHashFor(
 // ── Counters ─────────────────────────────────────────────────────────────────
 
 export async function nextConfessionNumber(guildId: string): Promise<number> {
-  const q = queueFor(guildId);
-  await q.wait();
-  try {
+  return withSerializedWork(counterLock(guildId), async () => {
     const current =
       (await kv().getModuleData<number>(
         guildId,
@@ -73,18 +63,14 @@ export async function nextConfessionNumber(guildId: string): Promise<number> {
       next,
     );
     return next;
-  } finally {
-    q.shift();
-  }
+  });
 }
 
 export async function nextReplyNumber(
   guildId: string,
   confessionNumber: number,
 ): Promise<number> {
-  const q = queueFor(guildId);
-  await q.wait();
-  try {
+  return withSerializedWork(counterLock(guildId), async () => {
     const target = confessionTarget(confessionNumber);
     const current =
       (await kv().getModuleData<number>(
@@ -102,9 +88,7 @@ export async function nextReplyNumber(
       next,
     );
     return next;
-  } finally {
-    q.shift();
-  }
+  });
 }
 
 // ── Confession + reply records ───────────────────────────────────────────────

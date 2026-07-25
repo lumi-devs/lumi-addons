@@ -8,6 +8,7 @@ import {
   makeInfoCard,
 } from "#utilities/cards.js";
 import { Emojis } from "#utilities/assets.js";
+import { resolvePublicHttpUrl } from "../lib/safe-fetch.js";
 
 const EMOJI_REGEX = /<(a?):([a-zA-Z0-9_]+):([0-9]+)>/g;
 
@@ -271,6 +272,16 @@ export class StealCommand extends Command {
         );
       }
 
+      const validatedUrl = await resolvePublicHttpUrl(arg1);
+      if (!validatedUrl) {
+        return message.reply(
+          makeErrorCard(
+            "Invalid URL",
+            "Only public http(s) image URLs are allowed here.",
+          ),
+        );
+      }
+
       const name = sanitizeEmojiName(arg2);
       const feedbackMsg = await message.reply(
         makeInfoCard(
@@ -279,7 +290,7 @@ export class StealCommand extends Command {
         ),
       );
 
-      const result = await createEmoji(message.guild, arg1, name);
+      const result = await createEmoji(message.guild, validatedUrl.toString(), name);
       if (result.success && result.emoji) {
         await feedbackMsg.edit(
           makeSuccessCard(

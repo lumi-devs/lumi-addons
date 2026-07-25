@@ -7,6 +7,9 @@ import {
   type GlobalSettings,
   type StatusEntry,
 } from "../keys.js";
+import { withSerializedWork } from "#utilities/misc.js";
+
+const entriesLock = () => "status:entries";
 
 export async function getEntries(): Promise<StatusEntry[]> {
   return (
@@ -32,20 +35,24 @@ export async function saveEntries(entries: StatusEntry[]): Promise<void> {
 export async function addEntry(
   entry: Omit<StatusEntry, "id">,
 ): Promise<StatusEntry> {
-  const entries = await getEntries();
-  const id = entries.reduce((m, e) => Math.max(m, e.id), 0) + 1;
-  const full: StatusEntry = { id, ...entry };
-  await saveEntries([...entries, full]);
-  return full;
+  return withSerializedWork(entriesLock(), async () => {
+    const entries = await getEntries();
+    const id = entries.reduce((m, e) => Math.max(m, e.id), 0) + 1;
+    const full: StatusEntry = { id, ...entry };
+    await saveEntries([...entries, full]);
+    return full;
+  });
 }
 
 /** Returns true when an entry with that id existed and was removed. */
 export async function removeEntry(id: number): Promise<boolean> {
-  const entries = await getEntries();
-  const next = entries.filter((e) => e.id !== id);
-  if (next.length === entries.length) return false;
-  await saveEntries(next);
-  return true;
+  return withSerializedWork(entriesLock(), async () => {
+    const entries = await getEntries();
+    const next = entries.filter((e) => e.id !== id);
+    if (next.length === entries.length) return false;
+    await saveEntries(next);
+    return true;
+  });
 }
 
 export async function getSettings(): Promise<GlobalSettings> {

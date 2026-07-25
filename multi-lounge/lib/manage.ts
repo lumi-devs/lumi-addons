@@ -1,5 +1,4 @@
 import { container } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
 import {
   ChannelType,
   type Guild,
@@ -17,16 +16,9 @@ import {
   recordDeletion,
   recordPeak,
 } from "./data.js";
+import { withSerializedWork } from "#utilities/misc.js";
 
-// Per-guild serialization so overlapping voice events can't double-create or
-// double-delete. In-process is correct on the monolith; the reconcile task
-// heals any drift on split deployments.
-const queues = new Map<string, AsyncQueue>();
-const queueFor = (guildId: string): AsyncQueue => {
-  let q = queues.get(guildId);
-  if (!q) queues.set(guildId, (q = new AsyncQueue()));
-  return q;
-};
+const manageLock = (guildId: string) => `multi-lounge:manage:${guildId}`;
 
 function asVoice(channel: unknown): VoiceChannel | null {
   return channel &&
@@ -161,9 +153,7 @@ async function cleanupStaleBases(
  * sweep.
  */
 export async function manageLounges(guild: Guild): Promise<void> {
-  const queue = queueFor(guild.id);
-  await queue.wait();
-  try {
+  await withSerializedWork(manageLock(guild.id), async () => {
     const config = await getLoungeConfig(guild.id);
     const bases = new Set(config.baseChannelIds);
     await cleanupStaleBases(guild, bases);
@@ -174,9 +164,7 @@ export async function manageLounges(guild: Guild): Promise<void> {
       totalUsers += await manageBase(guild, baseId, config);
     }
     await recordPeak(guild.id, totalUsers);
-  } catch (err) {
+  }).catch((err) => {
     container.logger.warn(`[multi-lounge] manage failed for ${guild.id}:`, err);
-  } finally {
-    queue.shift();
-  }
+  });
 }

@@ -1,5 +1,4 @@
 import { container } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
 import {
   MODULE_NAME,
   ROLE_KEY,
@@ -7,30 +6,10 @@ import {
   type RoleRecord,
   type BlacklistRecord,
 } from "../keys.js";
+import { withSerializedWork } from "#utilities/misc.js";
 
 const kv = () => container.db.guildKV;
-
-// Serialize record mutations per guild so concurrent share/unshare/create calls
-// don't clobber each other's `sharedWith` array. KV is Postgres-backed.
-const queues = new Map<string, AsyncQueue>();
-const queueFor = (guildId: string): AsyncQueue => {
-  let q = queues.get(guildId);
-  if (!q) queues.set(guildId, (q = new AsyncQueue()));
-  return q;
-};
-
-async function withGuildLock<T>(
-  guildId: string,
-  fn: () => Promise<T>,
-): Promise<T> {
-  const q = queueFor(guildId);
-  await q.wait();
-  try {
-    return await fn();
-  } finally {
-    q.shift();
-  }
-}
+const guildLock = (guildId: string) => `booster-roles:data:${guildId}`;
 
 // ── Role records ─────────────────────────────────────────────────────────────
 
@@ -82,7 +61,7 @@ export async function addShare(
   targetId: string,
   maxShares: number,
 ): Promise<{ ok: true; record: RoleRecord } | { ok: false; reason: string }> {
-  return withGuildLock(guildId, async () => {
+  return withSerializedWork(guildLock(guildId), async () => {
     const record = await getRole(guildId, ownerId);
     if (!record)
       return { ok: false as const, reason: "You don't have a role." };
@@ -107,7 +86,7 @@ export async function removeShare(
   ownerId: string,
   targetId: string,
 ): Promise<boolean> {
-  return withGuildLock(guildId, async () => {
+  return withSerializedWork(guildLock(guildId), async () => {
     const record = await getRole(guildId, ownerId);
     if (!record) return false;
     const next = record.sharedWith.filter((id) => id !== targetId);
@@ -181,7 +160,7 @@ export async function deleteForUser(
 ): Promise<void> {
   await deleteRole(guildId, userId);
   await removeBlacklist(guildId, userId);
-  await withGuildLock(guildId, async () => {
+  await withSerializedWork(guildLock(guildId), async () => {
     const all = await listRoles(guildId);
     for (const record of all) {
       if (!record.sharedWith.includes(userId)) continue;

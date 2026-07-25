@@ -117,7 +117,15 @@ export class ActivityRolesCommand extends BaseSubcommand {
       );
     }
 
-    await addMapping(ctx.guildId!, type, matchString, role.id);
+    const normalizedMatch = matchString.trim();
+    if (normalizedMatch.length === 0) {
+      return ctx.replyError(
+        "Invalid Match",
+        "Please provide a non-empty match string.",
+      );
+    }
+
+    await addMapping(ctx.guildId!, type, normalizedMatch, role.id);
 
     return ctx.reply(
       makeSuccessCard(
@@ -131,7 +139,26 @@ export class ActivityRolesCommand extends BaseSubcommand {
     const typeArg = (await ctx.getString("type", { required: true }))!;
     const matchString = (await ctx.getString("match", { required: true }))!;
 
-    const id = `${typeArg.toLowerCase()}:${matchString.toLowerCase()}`;
+    const type = VALID_TYPES.find(
+      (t) => t.toLowerCase() === typeArg.toLowerCase(),
+    );
+
+    if (!type) {
+      return ctx.replyError(
+        "Invalid Type",
+        `Please provide a valid activity type: \`${VALID_TYPES.join("`, `")}\``,
+      );
+    }
+
+    const normalizedMatch = matchString.trim();
+    if (normalizedMatch.length === 0) {
+      return ctx.replyError(
+        "Invalid Match",
+        "Please provide a non-empty match string.",
+      );
+    }
+
+    const id = `${type.toLowerCase()}:${normalizedMatch.toLowerCase()}`;
     const removed = await removeMapping(ctx.guildId!, id);
 
     if (!removed) {

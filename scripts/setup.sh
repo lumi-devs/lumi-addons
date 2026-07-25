@@ -11,7 +11,7 @@ set -eu
 
 cd "$(dirname "$0")/.."
 
-LUMI_PATH="${LUMI_PATH:-../lumi}"
+LUMI_PATH="${LUMI_PATH:-../app}"
 
 if [ ! -f "$LUMI_PATH/packages/core/package.json" ]; then
   echo "error: no Lumi checkout at '$LUMI_PATH'." >&2
@@ -27,9 +27,10 @@ fi
 
 LUMI_ABS=$(cd "$LUMI_PATH" && pwd)
 
-rm -f .lumi node_modules
-ln -s "$LUMI_ABS" .lumi
+rm -f .lumi node_modules .bun
+ln -s "$LUMI_PATH" .lumi
 ln -s .lumi/node_modules node_modules
+ln -s .lumi/node_modules/.bun .bun
 
 echo "Linked against $LUMI_ABS"
 echo "Now run: bun run typecheck"
