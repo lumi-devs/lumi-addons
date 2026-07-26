@@ -22,8 +22,8 @@
     "noImplicitOverride": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "baseUrl": ".",
     "paths": {
+      "*": ["./*"],
       "#lib/commands.js": ["./.lumi/packages/core/src/core/lib/commands.ts"],
       "#lib/env.js": ["./.lumi/packages/core/src/core/env.ts"],
       "#lib/permissions.js": ["./.lumi/packages/core/src/core/permissions/index.ts"],
