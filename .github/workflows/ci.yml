@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: lumi-devs/lumi
-          path: ../lumi
+          path: lumi-core
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -30,11 +30,11 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Install lumi core dependencies
-        working-directory: ../lumi
+        working-directory: lumi-core
         run: nix-shell --run "bun install --frozen-lockfile"
 
       - name: Link addons against lumi core
-        run: LUMI_PATH=../lumi nix-shell --run "sh scripts/setup.sh"
+        run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
 
       - name: Run Typecheck
         run: nix-shell --run "bun run typecheck"
@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: lumi-devs/lumi
-          path: ../lumi
+          path: lumi-core
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -58,11 +58,11 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Install lumi core dependencies
-        working-directory: ../lumi
+        working-directory: lumi-core
         run: nix-shell --run "bun install --frozen-lockfile"
 
       - name: Link addons against lumi core
-        run: LUMI_PATH=../lumi nix-shell --run "sh scripts/setup.sh"
+        run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
 
       - name: Run Linter
         run: nix-shell --run "bun run lint"

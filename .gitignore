@@ -4,3 +4,7 @@ dist/
 .env
 .DS_Store
 *.log
+.agents/
+lumi-core/
+*.png
+Screenshot_*
