@@ -10,7 +10,7 @@ import { DefineModule, Module } from "#core/module-system/Module.js";
 export class UtilityAddonModule extends Module {
   public override async deleteUserData(
     _userId: string,
-    _requester: import("#core/lib/gdpr.js").RequesterType,
+    _requester?: string,
   ): Promise<void> {
     // No-op: utility addons like translate and emoji-stealer do not store user data
   }

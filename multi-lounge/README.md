@@ -1,39 +1,96 @@
-# Multi Lounge
+# 🛋️ Multi Lounge Addon
 
-Auto-scaling voice lounges. Pick one or more **base** voice channels; when every
-lounge in a group fills up, Multi Lounge clones that group's base to add another,
-and removes the extras once they empty — so there's always a spare and never a
-wall of dead channels. Each base scales its own group independently.
+<p align="center">
+  <img src="https://img.shields.io/badge/Lumi-Addon-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Lumi Addon" />
+  <img src="https://img.shields.io/badge/Module-multi--lounge-teal?style=for-the-badge" alt="Module Name" />
+  <img src="https://img.shields.io/badge/Version-1.0.0-emerald?style=for-the-badge" alt="Version" />
+</p>
 
-## How it works
+> **Auto-scaling dynamic voice channels with automated expansion and cleanup.**
 
-- Per base: when **every** lounge in the group (base + its extras) has at least
-  the **busy threshold** users, a new lounge is cloned from that base (same
-  category, permissions, bitrate, and user limit), named from the template at
-  the lowest free number.
-- When an extra lounge empties, it's removed. A base is never deleted.
-- Numbering stays contiguous per group — gaps are filled by the next new lounge.
-- A per-base creation cooldown prevents churn during rapid join/leave bursts.
+---
 
-## Setup
+## 🌟 Overview
 
-Configure via `/lumi` → **Modules** → **Multi Lounge**:
+The **Multi Lounge** addon keeps your Discord voice channels clean and scalable. Server admins designate one or more **base** voice channels. When every lounge in a group fills up to the configured busy threshold, Multi Lounge automatically clones the base channel to create an extra lounge. When extra lounges empty, they are deleted automatically — ensuring there is always an open lounge without creating dead channel clutter.
 
-| Field | Default | Meaning |
-|---|---|---|
-| Base Lounges | — | Comma-separated voice channel IDs to clone. **Required.** |
-| Busy Threshold | 2 | Users before a lounge counts as busy. |
-| Max Extra Lounges | 5 | Cap on bot-created lounges **per base**. |
-| Name Template | `Lounge {n}` | `{n}` is the lounge number. |
-| Creation Cooldown | 10s | Minimum gap between creations. |
+---
 
-## Commands
+## ✨ Features
 
-- `/lounge stats` *(Moderator)* — live lounge occupancy plus lifetime
-  created / removed / peak-concurrent counts.
+- **Independent Base Scaling**: Each configured base channel scales its own group independently.
+- **Full Settings Cloning**: Cloned channels inherit category, permissions, bitrate, and user limits from the base channel.
+- **Contiguous Numbering**: Name templates dynamically assign the lowest available integer (`Lounge 1`, `Lounge 2`). Gaps are automatically backfilled.
+- **Anti-Churn Cooldown**: Built-in creation cooldown prevents API rate limits during rapid join/leave bursts.
+- **Reconciliation Engine**: Background reconciler heals missing or orphaned voice channels across bot restarts.
 
-## Notes
+---
 
-- Managed extra channels are tracked in module storage, so a restart never
-  orphans a lounge; a background reconcile heals any drift every few minutes.
-- Stores no per-user data.
+## 📥 Installation & Activation
+
+Install the addon via Lumi's dynamic downloader:
+
+```bash
+# Download and activate multi-lounge
+,download lumi-addons multi-lounge
+```
+
+Configure `base_channel_ids` via `/config` under **Multi Lounge**.
+
+---
+
+## ⚙️ Configuration Options
+
+| Option | Type | Default | Description |
+| :--- | :--- | :---: | :--- |
+| `base_channel_ids` | `Channel List` | *Required* | Comma-separated base voice channel IDs to expand dynamically. |
+| `busy_threshold` | `Number` | `2` | Number of occupants required per lounge before expanding. |
+| `max_extra_lounges` | `Number` | `5` | Upper limit on bot-created extra channels per base. |
+| `name_template` | `String` | `"Lounge {n}"` | Naming format for cloned lounges; `{n}` resolves to lounge number. |
+| `cooldown_seconds` | `Number` | `10` | Minimum delay (seconds) between channel creations per base. |
+
+---
+
+## 💻 Commands & Usage
+
+### Moderator Command
+- `/lounge stats` — View real-time voice lounge occupancy, lifetime created/removed counts, and peak concurrent voice metrics.
+
+---
+
+## 📡 Events & Listeners
+
+- **`voiceStateUpdate` Listener** (`listeners/voiceStateUpdate.ts`):
+  Coalesces voice join, move, and leave events to execute dynamic scaling passes across base groups.
+- **Scheduled Tasks**:
+  - `multi-lounge-reconcile`: Broadcast task running periodic background sweeps to clean orphaned empty lounges.
+- **GDPR Standard**:
+  This module stores only channel IDs and aggregate performance metrics. No user data is stored.
+
+---
+
+## 🎨 Code Examples
+
+### Dynamic Scaling Logic
+
+```mermaid
+graph TD
+    A[User Joins Base Lounge] --> B{Are all lounges in group >= busy_threshold?}
+    B -->|Yes & under max_extra_lounges| C[Clone Base Lounge -> Lounge N]
+    B -->|No| D[Do Nothing]
+    E[User Leaves Cloned Lounge] --> F{Is Cloned Lounge Empty?}
+    F -->|Yes| G[Delete Extra Lounge N]
+    F -->|No| H[Maintain Lounge]
+```
+
+### Module Configuration Example
+
+```json
+{
+  "base_channel_ids": ["223344556677889900"],
+  "busy_threshold": 2,
+  "max_extra_lounges": 5,
+  "name_template": "Lounge {n}",
+  "cooldown_seconds": 10
+}
+```

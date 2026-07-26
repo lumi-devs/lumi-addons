@@ -1,52 +1,108 @@
-# Booster Roles
+# 🎨 Booster Roles Addon
 
-Give your server boosters a personal role they fully control — their own name
-and colour, plus the ability to share it with a few friends — all from one
-interactive, ephemeral panel. When a boost lapses, the role is cleaned up
-automatically after a grace period.
+<p align="center">
+  <img src="https://img.shields.io/badge/Lumi-Addon-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Lumi Addon" />
+  <img src="https://img.shields.io/badge/Module-booster--roles-pink?style=for-the-badge" alt="Module Name" />
+  <img src="https://img.shields.io/badge/Version-1.0.0-emerald?style=for-the-badge" alt="Version" />
+</p>
 
-## How it works
+> **Interactive custom role panel, share management, and grace period cleanup for server boosters.**
 
-- `/boosterrole` opens a private panel. Eligible members can **Create** a role,
-  then **Rename**, **Recolour**, **Share**, **Manage Shares**, or **Delete** it.
-- Eligibility = native Discord boost status **or** any of the configured
-  qualifying roles. Blacklisted members are locked out.
-- Created roles are placed just beneath a configurable **anchor** role and
-  assigned to the owner. New roles can be announced in a **showcase** channel.
-- Sharing grants the same role to another member (up to a configurable limit);
-  unsharing or renouncing removes it from them.
-- **Grace period:** when an owner stops boosting, a one-shot cleanup job is armed
-  for the configured number of hours. If they re-boost in time, it's cancelled;
-  otherwise the role is deleted and stripped from everyone. A 12-hour reconcile
-  sweep heals any drift (owner left, role deleted out-of-band, missed events).
+---
 
-## Setup
+## 🌟 Overview
 
-Configure via `/lumi` → **Modules** → **Booster Roles**:
+The **Booster Roles** addon grants Server Boosters (and custom qualifying role holders) full self-serve control over personal custom roles. Boosters can create, rename, recolor, and share their custom role with friends via an ephemeral interactive panel. When boosting status lapses, an automated grace-period scheduler cleans up unused roles seamlessly.
 
-| Field | Default | Meaning |
-|---|---|---|
-| Qualifying Roles | — | Comma-separated role IDs that grant access. Empty = native boost only. |
-| Anchor Role | — | Created roles sit just below this role. |
-| Showcase Channel | — | Optional; announces new roles. |
-| Moderation Log | — | Optional; deletion / cleanup audit. |
-| Max Shares | 3 | How many others an owner can share with. |
-| Grace Period (hours) | 24 | Delay after a boost lapses before deletion. |
-| Max Name Length | 32 | Longest allowed role name. |
+---
 
-## Commands
+## ✨ Features
 
-- `/boosterrole` — open your personal role panel.
-- `/boosterrole-admin stats` *(Admin)* — role / share / blacklist totals.
-- `/boosterrole-admin list` *(Admin)* — every custom role and owner.
-- `/boosterrole-admin info <user>` *(Admin)* — one member's role details.
-- `/boosterrole-admin delete <user> [reason]` *(Admin)* — delete a member's role.
-- `/boosterrole-admin blacklist <add|remove|list> [user] [reason]` *(Admin)* —
-  manage who may use custom roles.
+- **Interactive Control Panel**: Self-serve buttons and modals for creation, renaming, color selection, and role deletion.
+- **Role Sharing Engine**: Boosters can share their custom role with up to `max_shares` friends.
+- **Anchor Positioning**: Automatically creates and anchors custom roles directly underneath a configured role.
+- **Grace Period Cleanup**: Delays role deletion after boost loss by `grace_hours` to allow boost renewals.
+- **Automatic Reconcile Sweeper**: Periodic background task cleans up orphaned roles, left members, or out-of-band role deletions.
+- **Admin Moderation Tools**: Full admin command suite for statistics, audits, role deletion, and blacklist enforcement.
 
-## Privacy & data
+---
 
-- Stores per guild: one record per owner (role id, name, colour, share list) and
-  blacklist entries.
-- Implements GDPR erasure: deleting a user drops their role record, blacklist
-  entry, and their id from every other owner's share list across all guilds.
+## 📥 Installation & Activation
+
+Install the addon via Lumi's dynamic downloader:
+
+```bash
+# Download and activate booster-roles
+,download lumi-addons booster-roles
+```
+
+Configure module options in Discord with `/config` under **Booster Roles**.
+
+---
+
+## ⚙️ Configuration Options
+
+| Option | Type | Default | Description |
+| :--- | :--- | :---: | :--- |
+| `booster_role_ids` | `Role List` | *Empty* | Role IDs granting access. Empty defaults to native Discord boost status. |
+| `anchor_role_id` | `Role` | *None* | Target role below which custom roles are positioned. |
+| `showcase_channel_id` | `Channel` | *None* | Optional channel where new custom roles are announced. |
+| `log_channel_id` | `Channel` | *None* | Optional channel for moderation audit log entries. |
+| `max_shares` | `Number` | `3` | Maximum number of friends a booster can share their role with. |
+| `grace_hours` | `Number` | `24` | Hours to wait after a boost ends before removing the custom role. |
+| `name_max_length` | `Number` | `32` | Maximum character length allowed for custom role names. |
+
+---
+
+## 💻 Commands & Usage
+
+### Member Command
+- `/boosterrole` — Open the private interactive booster role management panel.
+
+### Administrator Commands (`/boosterrole-admin`)
+| Subcommand | Arguments | Description |
+| :--- | :--- | :--- |
+| `stats` | *None* | Display server custom role, active share, and blacklist statistics. |
+| `list` | *None* | List all active custom booster roles and their current owners. |
+| `info` | `user: Member` | View detailed custom role information and share recipients for a member. |
+| `delete` | `user: Member`, `[reason: string]` | Force-delete a member's custom role and clean up assigned shares. |
+| `blacklist` | `action: add/remove/list`, `[user: Member]` | Manage member blacklists from using custom booster roles. |
+
+---
+
+## 📡 Events & Listeners
+
+- **`guildMemberUpdate` Listener** (`listeners/guildMemberUpdate.ts`):
+  Detects boost removal and triggers grace-period timers via BullMQ task fire bus (`booster-grace-delete`).
+- **Scheduled Tasks**:
+  - `booster-grace-delete`: Broadcast task executing delayed role removal upon grace expiry.
+  - `booster-roles-reconcile`: 12-hour periodic background sweep healing configuration or member drift.
+- **GDPR Standard**:
+  `deleteUserData(userId)` purges owner custom roles, blacklist records, and share entries across all guilds.
+
+---
+
+## 🎨 Code Examples
+
+### Lifecycle Flow
+
+```mermaid
+graph TD
+    A[Member Boosts Server] -->|/boosterrole| B[Create & Customize Role]
+    B --> C[Assign Friends via Share]
+    D[Member Stops Boosting] -->|guildMemberUpdate| E[Arm Grace Timer: grace_hours]
+    E -->|Re-boosted| F[Cancel Grace Timer]
+    E -->|Grace Expired| G[Delete Custom Role & Revoke Shares]
+```
+
+### Module Configuration Schema
+
+```json
+{
+  "anchor_role_id": "987654321012345678",
+  "log_channel_id": "112233445566778899",
+  "max_shares": 3,
+  "grace_hours": 24,
+  "name_max_length": 32
+}
+```
