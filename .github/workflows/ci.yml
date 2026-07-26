@@ -15,16 +15,26 @@ jobs:
     name: CI / typecheck
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout addons
         uses: actions/checkout@v7
+
+      - name: Checkout lumi core
+        uses: actions/checkout@v7
+        with:
+          repository: lumi-devs/lumi
+          path: ../lumi
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Install Dependencies
+      - name: Install lumi core dependencies
+        working-directory: ../lumi
         run: nix-shell --run "bun install --frozen-lockfile"
+
+      - name: Link addons against lumi core
+        run: LUMI_PATH=../lumi nix-shell --run "sh scripts/setup.sh"
 
       - name: Run Typecheck
         run: nix-shell --run "bun run typecheck"
@@ -33,16 +43,26 @@ jobs:
     name: CI / lint
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout addons
         uses: actions/checkout@v7
+
+      - name: Checkout lumi core
+        uses: actions/checkout@v7
+        with:
+          repository: lumi-devs/lumi
+          path: ../lumi
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Install Dependencies
+      - name: Install lumi core dependencies
+        working-directory: ../lumi
         run: nix-shell --run "bun install --frozen-lockfile"
+
+      - name: Link addons against lumi core
+        run: LUMI_PATH=../lumi nix-shell --run "sh scripts/setup.sh"
 
       - name: Run Linter
         run: nix-shell --run "bun run lint"
