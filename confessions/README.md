@@ -1,52 +1,113 @@
-# Confessions
+# 🕊️ Confessions Addon
 
-Anonymous confessions for your server. Members run `/confess`, type into a modal,
-and the bot posts it as a numbered card — no name attached. Anyone can reply
-anonymously from a button, optionally inside a per-confession thread. Moderators
-can ban a confession's author or delete a confession without ever learning who
-wrote it.
+<p align="center">
+  <img src="https://img.shields.io/badge/Lumi-Addon-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Lumi Addon" />
+  <img src="https://img.shields.io/badge/Module-confessions-purple?style=for-the-badge" alt="Module Name" />
+  <img src="https://img.shields.io/badge/Version-1.0.0-emerald?style=for-the-badge" alt="Version" />
+</p>
 
-## Anonymity
+> **Cryptographically anonymous confession system with threads, replies, and moderator tools.**
 
-Authors are never stored in the clear. Each guild gets a random 32-byte salt; an
-author is only ever recorded as `SHA-256(salt : userId)`. Bans and cooldowns key
-off that hash, so moderation works without de-anonymising anyone, and the salt
-never leaves the database. Confession and reply messages suppress all mentions.
+---
 
-## How it works
+## 🌟 Overview
 
-- `/confess` opens a modal; the confession is posted as **Confession #N** in the
-  configured channel.
-- With **Auto-Thread** on, a thread opens under each confession; anonymous
-  replies land there as **#N.k**. With it off, replies post in the main channel.
-- A per-author cooldown throttles submissions.
-- Banning an author (by confession number) blocks all future confessions and
-  replies from that hash until unbanned.
+The **Confessions** addon enables server members to submit anonymous confessions via modal forms. Submissions are published as sequentially numbered cards (`Confession #N`). Members can reply anonymously inside auto-created threads (`#N.k`), while moderators maintain full safety and ban controls using salted cryptographic hashes — without ever unmasking author identities.
 
-## Setup
+---
 
-Configure via `/lumi` → **Modules** → **Confessions**:
+## ✨ Features
 
-| Field | Default | Meaning |
-|---|---|---|
-| Confession Channel | — | Where confessions are posted. **Required.** |
-| Moderation Log | — | Optional audit channel for bans / deletes. |
-| Auto-Thread | on | Open a reply thread under each confession. |
-| Allow Image URLs | on | Permit an optional image URL on confessions/replies. |
-| Cooldown (minutes) | 5 | Minimum gap between an author's confessions. |
+- **Cryptographic Anonymity**: User IDs are hashed per-guild (`SHA-256(guild_salt : userId)`). User identities are never stored in cleartext.
+- **Auto-Threading**: Optional automatic thread creation under each posted confession for organized anonymous discussions.
+- **Anonymous Replies**: Members can reply anonymously via buttons or `/reply` commands.
+- **Media Re-hosting**: Optional media re-hosting channel strips metadata and generates safe image URLs.
+- **Per-Author Cooldowns**: Configurable cooldowns limit submission frequency per hashed author.
+- **Moderation & Safety Controls**: Moderators can ban problematic author hashes, delete confessions, and receive user report logs.
 
-## Commands
+---
 
-- `/confess` — submit an anonymous confession.
-- `/confessmod ban <number>` *(Moderator)* — ban a confession's anonymous author.
-- `/confessmod unban <number | hash>` *(Moderator)* — lift a ban.
-- `/confessmod list` *(Moderator)* — list banned author hashes.
-- `/confessmod delete <number> [reason]` *(Moderator)* — remove a confession and its thread.
+## 📥 Installation & Activation
 
-## Privacy & data
+Install the module via Lumi's dynamic downloader:
 
-- Stores per guild: the salt, a confession counter, per-confession metadata
-  (number, message/thread IDs, **author hash**), per-reply author hashes, and
-  ban records — all keyed by hash, never by user ID.
-- Implements GDPR erasure: deleting a user drops their ban, cooldown, authored
-  confessions, and reply rows across every guild.
+```bash
+# Download and activate confessions
+,download lumi-addons confessions
+```
+
+Configure `confession_channel_id` and options via `/config` under **Confessions**.
+
+---
+
+## ⚙️ Configuration Options
+
+| Option | Type | Default | Description |
+| :--- | :--- | :---: | :--- |
+| `confession_channel_id` | `Channel` | *Required* | Text channel where confessions are published. |
+| `log_channel_id` | `Channel` | *None* | Audit channel for hashed moderation ban and delete logs. |
+| `report_channel_id` | `Channel` | *None* | Channel where user report flags land. |
+| `report_ping_role_id` | `Role` | *None* | Role pinged when a confession or reply is reported. |
+| `media_channel_id` | `Channel` | *None* | Private channel used for re-hosting attachments to strip metadata. |
+| `auto_thread` | `Boolean` | `true` | Open a thread under each confession card for replies. |
+| `allow_attachments` | `Boolean` | `true` | Permit image attachment uploads in confessions and replies. |
+| `cooldown_minutes` | `Number` | `5` | Required delay (in minutes) between confessions by the same author. |
+
+---
+
+## 💻 Commands & Usage
+
+### User Commands
+- `/confess` — Open modal form to submit an anonymous confession.
+- `/reply` — Submit an anonymous reply to a specific confession or thread.
+
+### Moderator Commands (`/confessmod`)
+| Subcommand | Arguments | Description |
+| :--- | :--- | :--- |
+| `ban` | `number: Integer` | Ban the anonymous author of confession #N from future submissions. |
+| `unban` | `target: string` | Lift a ban using a confession number or author hash. |
+| `list` | *None* | List all active banned author hashes in the guild. |
+| `delete` | `number: Integer`, `[reason: string]` | Delete confession card #N and its associated discussion thread. |
+
+---
+
+## 📡 Events & Listeners
+
+- **Modal & Button Interaction Handlers** (`interaction-handlers/modals.ts`):
+  Processes `/confess` modal submissions, computes salted hashes, re-hosts media attachments, and manages auto-threads.
+- **GDPR Standard**:
+  `deleteUserData(userId)` purges author hashes, active cooldowns, bans, and reply records across all guild databases.
+
+---
+
+## 🎨 Code Examples
+
+### Anonymity & Submission Pipeline
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Member
+    participant Modal as Confession Modal
+    participant Engine as Hashing Engine
+    participant Channel as Confession Channel
+    participant Thread as Auto-Thread
+
+    User->>Modal: Submit text + image
+    Modal->>Engine: Hash userId with Guild Salt
+    Engine-->>Modal: SHA-256 Hashed Identifier
+    Modal->>Channel: Post "Confession #104"
+    Modal->>Thread: Create thread "#104 Discussion"
+```
+
+### Configuration Snippet
+
+```json
+{
+  "confession_channel_id": "100000000000000001",
+  "log_channel_id": "100000000000000002",
+  "auto_thread": true,
+  "allow_attachments": true,
+  "cooldown_minutes": 5
+}
+```

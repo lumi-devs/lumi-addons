@@ -33,7 +33,7 @@ import { Emojis } from "#utilities/assets.js";
 export class RoleMentionsModule extends Module {
   public override async deleteUserData(
     _userId: string,
-    _requester: import("#core/lib/gdpr.js").RequesterType,
+    _requester?: string,
   ): Promise<void> {
     // No per-user data: counters and blocks are keyed by role, not user.
   }

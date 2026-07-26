@@ -1,0 +1,29 @@
+name: Addons CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    name: Typecheck & Lint Addons
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Install Dependencies
+        run: nix-shell --run "bun install --frozen-lockfile"
+
+      - name: Run Typecheck
+        run: nix-shell --run "bun run typecheck"
+
+      - name: Run Linter
+        run: nix-shell --run "bun run lint"
