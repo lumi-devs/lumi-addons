@@ -13,7 +13,7 @@ export class ActivityRolesModule extends Module {
 
   public override async deleteUserData(
     _userId: string,
-    _requester: import("#core/lib/gdpr.js").RequesterType,
+    _requester?: string,
   ): Promise<void> {
     // This module does not store any user-specific data that falls under GDPR.
     // It only stores guild configuration.
