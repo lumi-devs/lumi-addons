@@ -32,7 +32,6 @@ jobs:
   typecheck:
     name: CI / typecheck
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout addons
         uses: actions/checkout@v7
@@ -42,7 +41,6 @@ jobs:
         with:
           repository: lumi-devs/lumi
           path: lumi-core
-          token: ${{ secrets.LUMI_CORE_TOKEN }}
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
