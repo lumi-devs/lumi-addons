@@ -11,9 +11,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: CI / lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Install dependencies
+        run: nix-shell --run "bun install --frozen-lockfile"
+
+      - name: Run Linter
+        run: nix-shell --run "bun run lint"
+
   typecheck:
     name: CI / typecheck
     runs-on: ubuntu-latest
+    # Requires a PAT with read access to lumi-devs/lumi (private)
+    if: ${{ secrets.LUMI_CORE_TOKEN != '' }}
     steps:
       - name: Checkout addons
         uses: actions/checkout@v7
@@ -23,6 +43,7 @@ jobs:
         with:
           repository: lumi-devs/lumi
           path: lumi-core
+          token: ${{ secrets.LUMI_CORE_TOKEN }}
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
@@ -42,35 +63,3 @@ jobs:
 
       - name: Run Typecheck
         run: nix-shell --run "bun run typecheck"
-
-  lint:
-    name: CI / lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout addons
-        uses: actions/checkout@v7
-
-      - name: Checkout lumi core
-        uses: actions/checkout@v7
-        with:
-          repository: lumi-devs/lumi
-          path: lumi-core
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Install lumi core dependencies
-        working-directory: lumi-core
-        run: nix-shell --run "bun install --frozen-lockfile"
-
-      - name: Generate Prisma client
-        working-directory: lumi-core
-        run: nix-shell --run "bun run db:generate"
-
-      - name: Link addons against lumi core
-        run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
-
-      - name: Run Linter
-        run: nix-shell --run "bun run lint"
