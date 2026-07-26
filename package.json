@@ -27,6 +27,6 @@
   "scripts": {
     "setup": "sh scripts/setup.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint . --ext ts"
+    "lint": "eslint ."
   }
 }

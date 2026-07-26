@@ -33,6 +33,10 @@ jobs:
         working-directory: lumi-core
         run: nix-shell --run "bun install --frozen-lockfile"
 
+      - name: Generate Prisma client
+        working-directory: lumi-core
+        run: nix-shell --run "bun run db:generate"
+
       - name: Link addons against lumi core
         run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
 
@@ -60,6 +64,10 @@ jobs:
       - name: Install lumi core dependencies
         working-directory: lumi-core
         run: nix-shell --run "bun install --frozen-lockfile"
+
+      - name: Generate Prisma client
+        working-directory: lumi-core
+        run: nix-shell --run "bun run db:generate"
 
       - name: Link addons against lumi core
         run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"

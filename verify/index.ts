@@ -46,7 +46,7 @@ export class VerifyModule extends Module {
 
   public override async deleteUserData(
     userId: string,
-    _requester: import("#core/lib/gdpr.js").RequesterType,
+    _requester?: string,
   ): Promise<void> {
     // Per-user state lives in Redis: a captcha state key and a pending-set
     // member per guild. Sweep every guild this process can see.

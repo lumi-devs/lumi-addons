@@ -1,7 +1,5 @@
 import { ChannelType } from "discord.js";
 import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
-import { handlePromoterSweepFire } from "./lib/sweep-handler.js";
 
 @DefineModule({
   name: "promoter",
