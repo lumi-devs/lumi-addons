@@ -1,110 +1,53 @@
-# 🧩 Lumi Addons Ecosystem
+# Lumi Addons
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Lumi-Addons-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Lumi Addons" />
-  <img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Bun-1.3+-000000?style=for-the-badge&logo=bun&logoColor=white" alt="Bun" />
-  <img src="https://img.shields.io/badge/Modules-11%20Official-emerald?style=for-the-badge" alt="Modules Count" />
-  <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="License" />
+  <a href="https://github.com/lumi-devs/lumi-addons/actions"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi-addons/ci.yml?style=flat-square&label=CI" alt="CI"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
+  <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-black?style=flat-square&logo=bun" alt="Bun"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-green?style=flat-square" alt="AGPL v3"></a>
 </p>
 
-> **Hot-loadable, sandboxed, and zero-downtime extension modules for the [Lumi Discord Platform](https://github.com/rebizzz/lumi).**
+Optional addon modules for [Lumi](https://github.com/lumi-devs/lumi). Drop them into your bot to add extra features without touching core.
 
 ---
 
-## 🌟 Overview
+## Available Addons
 
-**Lumi Addons** provides a modular plugin ecosystem designed to extend your Discord bot dynamically with zero downtime. Each addon is an isolated plugin loaded via Sapphire framework sub-stores and instantly configurable through `/config` or interactive Discord controls.
+| Addon | What it does |
+| :--- | :--- |
+| [`activity-roles`](./activity-roles) | Auto-assigns roles based on Discord Rich Presence |
+| [`booster-roles`](./booster-roles) | Custom booster role creation with color picker |
+| [`confessions`](./confessions) | Anonymous confessions with thread discussions |
+| [`dragme`](./dragme) | Consent-based voice move requests |
+| [`multi-lounge`](./multi-lounge) | Auto-scaling dynamic voice channels |
+| [`promoter`](./promoter) | Rewards members who feature the server tag in their status |
+| [`rolementions`](./rolementions) | Mention tracking & ghost-ping logging |
+| [`status`](./status) | Rotating bot presence switcher |
+| [`thread-cleaner`](./thread-cleaner) | Automated stale thread archiver/locker |
+| [`utility`](./utility) | Auto-translation, emoji stealer |
+| [`verify`](./verify) | Captcha verification with raid protection |
 
-> [!NOTE]
-> All official addons obey the **Zero Cross-Module Import Law**, utilizing shared `@lumi/*` container services (`container.db.guildKV`, Redis key invalidations, and BullMQ relays) for maximum stability and modularity.
+## Installing an Addon
 
----
+Run these commands inside Discord (with Lumi running):
 
-## 🗺️ Addon Module Catalog & Sitemap
-
-| Addon Module | Category | Description | Hot Loadable | Configuration |
-| :--- | :--- | :--- | :---: | :--- |
-| 🎮 [`activity-roles`](./activity-roles) | Engagement | Auto-assigns roles based on Discord Rich Presence & custom status | ✅ | `/activityroles` |
-| 🎨 [`booster-roles`](./booster-roles) | Community | Custom booster role creation, color picker, max shares, and grace cleanup | ✅ | `/config` |
-| 🕊️ [`confessions`](./confessions) | Moderation | Anonymous confessions system with thread discussions and log masking | ✅ | `/config` |
-| 🫳 [`dragme`](./dragme) | Voice | Consent-based voice move requests with interactive button prompts | ✅ | `/config` |
-| 🛋️ [`multi-lounge`](./multi-lounge) | Dynamic Voice | Auto-scaling dynamic voice channels with custom bitrates and limits | ✅ | `/config` |
-| 📣 [`promoter`](./promoter) | Rewards | Auto-rewards members featuring server tags or vanity links in custom status | ✅ | `/config` |
-| 🛡️ [`rolementions`](./rolementions) | Protection | Mention tracking, ghost-ping logging, and sensitive role AutoMod protection | ✅ | `/config` |
-| 🔁 [`status`](./status) | Core | Global rotating bot presence and dynamic activity switcher | ✅ | `/status` |
-| 🧹 [`thread-cleaner`](./thread-cleaner) | Utility | Automated archiver, auto-locker, and stale thread cleanup scheduler | ✅ | `/config` |
-| ⚙️ [`utility`](./utility) | Utility | Essential server utilities (auto-translation, emoji stealer) | ✅ | Dynamic |
-| ✅ [`verify`](./verify) | Security | Interactive Captcha verification with timeout handling & raid protection | ✅ | `/config` |
-
----
-
-## 🏗️ Architecture Overview
-
-```mermaid
-graph TD
-    SubGraph1[Lumi Core Bot Engine] -->|ModuleStore Hot-Load| SubGraph2[Addon Registry]
-
-    subgraph SubGraph2[Addon Registry]
-        AR[activity-roles]
-        BR[booster-roles]
-        CF[confessions]
-        DM[dragme]
-        ML[multi-lounge]
-        PR[promoter]
-        RM[rolementions]
-        ST[status]
-        TC[thread-cleaner]
-        UT[utility]
-        VF[verify]
-    end
-
-    SubGraph2 -->|State & Persistence| DB[(container.db.guildKV)]
-    SubGraph2 -->|Caching & PubSub| RD[(container.redis / InvalidationBus)]
-    SubGraph2 -->|Scheduled Tasks| BQ[BullMQ Task Fire Bus]
+```
+,repo add lumi-addons https://github.com/lumi-devs/lumi-addons.git
+,download lumi-addons <addon-name>
 ```
 
----
+No restart needed. The addon loads hot.
 
-## 📥 Installation & Activation
-
-Lumi features a built-in dynamic downloader and hot-reloading module manager. Addons can be installed directly without restarting the bot process:
+## Local Development
 
 ```bash
-# 1. Register the official Lumi Addons repository in Lumi
-,repo add lumi-addons https://github.com/rebizzz/lumi-addons.git
-
-# 2. Download and activate target modules
-,download lumi-addons activity-roles
-,download lumi-addons booster-roles
-,download lumi-addons confessions
-,download lumi-addons verify
-```
-
-> [!TIP]
-> Installed addons automatically register commands, listeners, interaction handlers, and scheduled tasks in Sapphire stores without requiring a bot restart.
-
----
-
-## 💻 Local Development & Verification
-
-To develop or contribute to Lumi Addons locally:
-
-```bash
-# 1. Clone alongside the main Lumi Core repository
-git clone https://github.com/rebizzz/lumi ../lumi
-git clone https://github.com/rebizzz/lumi-addons .
-
-# 2. Run setup script to link local dependencies
-bun run setup
-
-# 3. Validate TypeScript types & code style
+git clone https://github.com/lumi-devs/lumi-addons.git
+cd lumi-addons
+bun install
 bun run typecheck
 bun run lint
 ```
 
----
+## License
 
-## 📄 License
-
-Distributed under the **GPL-3.0 License**. See [`LICENSE`](./LICENSE) for full details.
+[AGPL v3](LICENSE) — modified versions run publicly must share source.
