@@ -10,7 +10,7 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle, TextInputStyle } from "discord.js";
 import { makeCard, type CardReply } from "#utilities/cards.js";
-import { Colors } from "#utilities/branding.js";
+import { BotConfig } from "#utilities/config.js";
 
 const replyButtonRow = (
   confessionNumber: number,
@@ -56,7 +56,7 @@ export function buildConfessionCard(
   showConfessButton = true,
 ): CardReply {
   const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
-  return makeCard(Colors.PRIMARY, `🕊️ ${displayTitle}`, text, {
+  return makeCard(BotConfig.branding.colors.PRIMARY, `🕊️ ${displayTitle}`, text, {
     footer: `Confession #${number} · anyone can reply anonymously`,
     actionRows: [replyButtonRow(number, showConfessButton)],
     mediaGallery: galleryFor(imageUrl),
@@ -74,7 +74,7 @@ export function buildReplyCard(
 ): CardReply {
   const bodyText = parentQuote ? `${parentQuote}\n\n${text}` : text;
   const footerText = isOp ? "👑 OP · Anonymous reply" : "Anonymous reply";
-  const color = isOp ? Colors.WARNING : Colors.PRIMARY; // Gold/warning if OP, primary if not
+  const color = isOp ? BotConfig.branding.colors.WARNING : BotConfig.branding.colors.PRIMARY; // Gold/warning if OP, primary if not
 
   const actionRow = new ActionRowBuilder<ButtonBuilder>();
   if (replyId) {
