@@ -3,13 +3,9 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { ChannelType } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import {
-  ephemeralCard,
-  makeInfoCard,
-  makeWarningCard,
-} from "#utilities/cards.js";
+import { BaseSubcommand } from "lumi/commands";
+import { PermissionLevel } from "lumi/permissions";
+import { ephemeralCard, makeInfoCard, makeWarningCard } from "lumi/ui";
 import { MODULE_NAME } from "../keys.js";
 import { getLoungeConfig } from "../lib/config.js";
 import { getExtras, getStats } from "../lib/data.js";

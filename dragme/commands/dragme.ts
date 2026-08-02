@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { type ChatInputCommandInteraction, type GuildMember } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand } from "lumi/commands";
 import { createDragRequest } from "../lib/create-request.js";
 
 @ApplyOptions<BaseCommand.Options>({

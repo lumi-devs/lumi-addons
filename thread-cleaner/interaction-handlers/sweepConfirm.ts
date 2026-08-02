@@ -4,8 +4,8 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { ButtonInteraction } from "discord.js";
-import { scheduleTask } from "#lib/schedule-task.js";
-import { makeInfoCard, makeSuccessCard } from "#utilities/cards.js";
+import { scheduleTask } from "lumi/scheduling";
+import { makeInfoCard, makeSuccessCard } from "lumi/ui";
 
 interface Parsed {
   minMessages: number;

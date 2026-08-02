@@ -5,11 +5,7 @@ import {
 } from "@sapphire/framework";
 import type { ModalSubmitInteraction } from "discord.js";
 import { roleMention, userMention } from "@discordjs/formatters";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-} from "#utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard } from "lumi/ui";
 import { getBoosterConfig } from "../lib/config.js";
 import { getRole, setRole } from "../lib/data.js";
 import { accessDenial } from "../lib/access.js";

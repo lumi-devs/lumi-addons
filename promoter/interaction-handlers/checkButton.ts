@@ -4,14 +4,14 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { ButtonInteraction } from "discord.js";
-import { isModuleEnabled } from "#utilities/listeners.js";
+import { isModuleEnabled } from "lumi/permissions";
 import {
   ephemeralCard,
   makeErrorCard,
   makeInfoCard,
   makeSuccessCard,
   makeWarningCard,
-} from "#utilities/cards.js";
+} from "lumi/ui";
 import { MODULE_NAME } from "../keys.js";
 import { evaluateMember } from "../lib/evaluate.js";
 

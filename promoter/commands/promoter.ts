@@ -3,9 +3,9 @@ import type { Subcommand } from "@sapphire/plugin-subcommands";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle, type ChatInputCommandInteraction } from "discord.js";
 import { roleMention } from "@discordjs/formatters";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { makeInfoCard } from "#utilities/cards.js";
+import { BaseSubcommand } from "lumi/commands";
+import { PermissionLevel } from "lumi/permissions";
+import { makeInfoCard } from "lumi/ui";
 import { getPromoterConfig, getStats } from "../lib/evaluate.js";
 
 @ApplyOptions<BaseSubcommand.Options>({

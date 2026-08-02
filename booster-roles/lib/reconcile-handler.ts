@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { isModuleEnabled } from "#utilities/listeners.js";
+import { isModuleEnabled } from "lumi/permissions";
 import { MODULE_NAME } from "../keys.js";
 import { getBoosterConfig } from "./config.js";
 import { listRoles, deleteRole } from "./data.js";

@@ -1,6 +1,6 @@
 import { container } from "@sapphire/framework";
 import { channelMention, userMention } from "@discordjs/formatters";
-import { makeWarningCard, noPingCard } from "#utilities/cards.js";
+import { makeWarningCard, noPingCard } from "lumi/ui";
 import type { DragmeExpirePayload } from "../scheduled-tasks/dragmeExpire.js";
 import { buildRequestButtons } from "./create-request.js";
 import { deleteRequest, getRequest } from "./requests.js";

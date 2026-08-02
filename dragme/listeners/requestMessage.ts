@@ -1,9 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember } from "discord.js";
-import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
-import type { GuildMessage } from "#lib/types.js";
-import { makeWarningCard } from "#utilities/cards.js";
+import { GuildMessageListener, ModuleListener } from "lumi";
+import type { GuildMessage } from "lumi/utils";
+import { makeWarningCard } from "lumi/ui";
 import { MODULE_NAME } from "../keys.js";
 import { getDragmeConfig } from "../lib/config.js";
 import { createDragRequest } from "../lib/create-request.js";
