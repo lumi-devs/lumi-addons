@@ -23,8 +23,19 @@ Then, before submitting a Pull Request:
    ```sh
    bun run lint
    ```
+3. **Unit tests** (no Lumi checkout needed — pure `lib/*.ts` logic only):
+   ```sh
+   bun run test
+   ```
 
-All PRs must have **zero compile errors** and **zero lint errors** before they can be merged.
+All PRs must have **zero compile errors**, **zero lint errors**, and a **passing test suite** before they can be merged.
+
+If you add a pure, side-effect-free helper to a `lib/` directory (validation,
+formatting, matching, scaling decisions — no `container`, no Discord.js API
+calls, no DB/Redis), add a sibling `*.test.ts` for it using
+[Vitest](https://vitest.dev). See `booster-roles/lib/engine.test.ts` for the
+established style. Functions that touch Discord's API or persistence aren't
+good candidates — cover those manually instead.
 
 ---
 
