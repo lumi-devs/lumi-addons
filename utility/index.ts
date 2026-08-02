@@ -1,4 +1,4 @@
-import { DefineModule, Module } from "#core/module-system/Module.js";
+import { DefineModule, Module } from "lumi";
 
 @DefineModule({
   name: "utility",

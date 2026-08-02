@@ -1,7 +1,7 @@
 import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Presence } from "discord.js";
-import { checkModulesEnabled } from "#lib/module-check.js";
+import { checkModulesEnabled } from "lumi/permissions";
 import { MODULE_NAME } from "../lib/keys.js";
 import { getMappings } from "../lib/store.js";
 import { matchActivities } from "../lib/matcher.js";

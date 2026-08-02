@@ -1,6 +1,6 @@
 import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { Module, DefineModule, cfg } from "lumi";
+import { registerTaskFireHandler } from "lumi/scheduling";
 import { handleDragmeExpireFire } from "./lib/expire-handler.js";
 import { handleDragmeRevokeFire } from "./lib/revoke-handler.js";
 import { deleteRequest } from "./lib/requests.js";

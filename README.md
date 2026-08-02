@@ -84,7 +84,7 @@ my-addon/
 └── scheduled-tasks/      # BullMQ tasks (extend RelayTask)
 ```
 
-See an existing addon like [`verify/`](verify/) for a full example.
+See an existing addon like [`booster-roles/`](booster-roles/) for a full example.
 
 ## Contributing
 
