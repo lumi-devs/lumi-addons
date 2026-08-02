@@ -1,11 +1,11 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener, Events } from "@sapphire/framework";
 import { ThreadChannel } from "discord.js";
-import { scheduleTask } from "lumi/scheduling";
+import { scheduleTask } from "#lib/schedule-task.js";
 import { threadCleanupJobId } from "../lib/keys.js";
-import { parseDuration } from "lumi/utils";
-import { getService } from "lumi";
-import { isModuleEnabled } from "lumi/permissions";
+import { parseDuration } from "#utilities/time.js";
+import { getService } from "#core/module-system/Service.js";
+import { isModuleEnabled } from "#utilities/listeners.js";
 
 @ApplyOptions<Listener.Options>({
   event: Events.ThreadCreate,

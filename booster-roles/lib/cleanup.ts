@@ -1,6 +1,6 @@
 import type { Guild } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { makeInfoCard } from "lumi/ui";
+import { makeInfoCard } from "#utilities/cards.js";
 import type { RoleRecord } from "../keys.js";
 import type { BoosterConfig } from "./config.js";
 import { deleteRole } from "./data.js";

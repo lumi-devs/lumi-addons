@@ -1,5 +1,5 @@
 import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "lumi";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 
 @DefineModule({
   name: "promoter",

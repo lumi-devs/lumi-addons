@@ -1,7 +1,8 @@
 import { container } from "@sapphire/framework";
 import type { Guild, Role } from "discord.js";
-import { makeWarningCard, makeSuccessCard, Emojis } from "lumi/ui";
-import { relativeTimestamp } from "lumi/utils";
+import { makeWarningCard, makeSuccessCard } from "#utilities/cards.js";
+import { Emojis } from "#utilities/assets.js";
+import { relativeTimestamp } from "#utilities/time.js";
 import { getBlock, removeBlock, setBlock, type ActiveBlock } from "./store.js";
 import { syncRule } from "./automod.js";
 import { sendLog } from "./log.js";

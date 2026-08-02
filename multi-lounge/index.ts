@@ -1,5 +1,5 @@
-import { Module, DefineModule, cfg } from "lumi";
-import { registerTaskFireHandler } from "lumi/scheduling";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
 import { handleLoungeReconcileFire } from "./lib/reconcile-handler.js";
 
 @DefineModule({

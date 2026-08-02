@@ -9,8 +9,8 @@ import {
   FileUploadBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, TextInputStyle } from "discord.js";
-import { makeCard, type CardReply } from "lumi/ui";
-import { BotConfig } from "lumi/utils";
+import { makeCard, type CardReply } from "#utilities/cards.js";
+import { BotConfig } from "#utilities/config.js";
 
 const replyButtonRow = (
   confessionNumber: number,

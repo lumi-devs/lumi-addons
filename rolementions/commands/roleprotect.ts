@@ -1,9 +1,10 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Subcommand } from "@sapphire/plugin-subcommands";
-import { BaseSubcommand, CommandContext } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
-import { makeInfoCard, makeSuccessCard, Emojis } from "lumi/ui";
-import { relativeTimestamp } from "lumi/utils";
+import { BaseSubcommand, CommandContext } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
+import { makeInfoCard, makeSuccessCard } from "#utilities/cards.js";
+import { Emojis } from "#utilities/assets.js";
+import { relativeTimestamp } from "#utilities/time.js";
 import { MODULE_NAME } from "../lib/keys.js";
 import {
   getBlock,

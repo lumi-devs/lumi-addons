@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { noPingCard, type CardReply } from "lumi/ui";
+import { noPingCard, type CardReply } from "#utilities/cards.js";
 import { MODULE_NAME } from "./keys.js";
 
 /**

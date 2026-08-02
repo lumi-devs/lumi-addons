@@ -3,9 +3,9 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { BaseSubcommand } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
-import { ephemeralCard, makeWarningCard } from "lumi/ui";
+import { BaseSubcommand } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
+import { ephemeralCard, makeWarningCard } from "#utilities/cards.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "threadcleaner",

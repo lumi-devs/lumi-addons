@@ -9,8 +9,8 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle, TextInputStyle } from "discord.js";
 import { roleMention, userMention } from "@discordjs/formatters";
-import { makeInfoCard, makeCard, type CardReply } from "lumi/ui";
-import { BotConfig } from "lumi/utils";
+import { makeInfoCard, makeCard, type CardReply } from "#utilities/cards.js";
+import { BotConfig } from "#utilities/config.js";
 import { colorToHex } from "./engine.js";
 import type { RoleRecord } from "../keys.js";
 

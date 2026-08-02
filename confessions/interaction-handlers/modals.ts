@@ -20,7 +20,7 @@ import {
   makeWarningCard,
   noPingCard,
   type CardReply,
-} from "lumi/ui";
+} from "#utilities/cards.js";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
   authorHashFor,

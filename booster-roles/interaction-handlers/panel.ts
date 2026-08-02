@@ -4,7 +4,11 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import type { ButtonInteraction, GuildMember } from "discord.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "lumi/ui";
+import {
+  ephemeralCard,
+  makeErrorCard,
+  makeSuccessCard,
+} from "#utilities/cards.js";
 import { getBoosterConfig } from "../lib/config.js";
 import { getRole } from "../lib/data.js";
 import { accessDenial } from "../lib/access.js";

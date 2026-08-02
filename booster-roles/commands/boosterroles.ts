@@ -7,8 +7,8 @@ import {
   time,
   TimestampStyles,
 } from "@discordjs/formatters";
-import { BaseCommand } from "lumi/commands";
-import { PermissionLevel, resolvePermissionLevel } from "lumi/permissions";
+import { BaseCommand } from "#lib/commands.js";
+import { PermissionLevel, resolvePermissionLevel } from "#lib/permissions.js";
 import {
   ephemeralCard,
   makeSuccessCard,
@@ -16,8 +16,8 @@ import {
   makeInfoCard,
   makeWarningCard,
   noPingCard,
-  paginateList,
-} from "lumi/ui";
+} from "#utilities/cards.js";
+import { paginateList } from "#utilities/pagination.js";
 import { getBoosterConfig } from "../lib/config.js";
 import {
   addBlacklist,

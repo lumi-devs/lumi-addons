@@ -7,8 +7,8 @@ import {
   userMention,
 } from "@discordjs/formatters";
 import { ButtonStyle, type GuildMember } from "discord.js";
-import { makeInfoCard } from "lumi/ui";
-import { scheduleTask } from "lumi/scheduling";
+import { makeInfoCard } from "#utilities/cards.js";
+import { scheduleTask } from "#lib/schedule-task.js";
 import { dragmeExpireJobId, type DragRequest } from "../keys.js";
 import { getDragmeConfig } from "./config.js";
 import { getRequest, setRequest } from "./requests.js";

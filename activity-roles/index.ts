@@ -1,4 +1,4 @@
-import { Module, DefineModule } from "lumi";
+import { Module, DefineModule } from "#core/module-system/Module.js";
 
 @DefineModule({
   name: "activity-roles",

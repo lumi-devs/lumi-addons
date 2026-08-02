@@ -3,10 +3,10 @@ import type { Subcommand } from "@sapphire/plugin-subcommands";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { Duration, DurationFormatter } from "@sapphire/time-utilities";
-import { BaseSubcommand } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
+import { BaseSubcommand } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
 
-import { paginateList } from "lumi/ui";
+import { paginateList } from "#utilities/pagination.js";
 import type { StatusEntry } from "../keys.js";
 import {
   addEntry,

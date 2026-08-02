@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { VoiceState } from "discord.js";
-import { ModuleListener } from "lumi";
+import { ModuleListener } from "#core/module-system/ModuleListener.js";
 import { MODULE_NAME } from "../keys.js";
 import { getLoungeConfig } from "../lib/config.js";
 import { manageLounges } from "../lib/manage.js";

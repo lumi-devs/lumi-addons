@@ -1,8 +1,12 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Command } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
-import { BaseCommand } from "lumi/commands";
-import { ephemeralCard, makeErrorCard, makeWarningCard } from "lumi/ui";
+import { BaseCommand } from "#lib/commands.js";
+import {
+  ephemeralCard,
+  makeErrorCard,
+  makeWarningCard,
+} from "#utilities/cards.js";
 import { getConfessionsConfig } from "../lib/config.js";
 import { authorHashFor, isBanned, onCooldown } from "../lib/data.js";
 import { buildConfessionModal } from "../lib/ui.js";

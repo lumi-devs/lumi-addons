@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { publishTaskFire } from "lumi/scheduling";
+import { publishTaskFire } from "#lib/scheduler-bus.js";
 
 // Fires every 60s; the handler applies the *configured* interval itself via a
 // Redis rotated-at timestamp, so changing `/status interval` needs no job

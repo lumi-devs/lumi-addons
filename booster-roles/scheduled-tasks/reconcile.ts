@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { publishTaskFire } from "lumi/scheduling";
+import { publishTaskFire } from "#lib/scheduler-bus.js";
 
 // Every 12 hours: heal drift — remove records whose owner left, whose Discord
 // role was deleted out-of-band, or whose boost lapsed while the bot was down and

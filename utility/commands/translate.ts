@@ -7,8 +7,8 @@ import {
   ApplicationCommandType,
 } from "discord.js";
 import { fetch as sfetch, FetchResultTypes } from "@sapphire/fetch";
-import { BaseCommand } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
+import { BaseCommand } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "translate",

@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { publishTaskFire } from "lumi/scheduling";
+import { publishTaskFire } from "#lib/scheduler-bus.js";
 
 // One-shot background job for the admin "sweep all prior threads" action. It's
 // enqueued with no delay from the confirmation button; the Discord-touching work

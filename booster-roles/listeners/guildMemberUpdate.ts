@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember, PartialGuildMember } from "discord.js";
-import { ModuleListener } from "lumi";
-import { scheduleTask, cancelTask } from "lumi/scheduling";
+import { ModuleListener } from "#core/module-system/ModuleListener.js";
+import { scheduleTask, cancelTask } from "#lib/schedule-task.js";
 import { MODULE_NAME, graceJobId } from "../keys.js";
 import { getBoosterConfig } from "../lib/config.js";
 import { getRole } from "../lib/data.js";

@@ -6,9 +6,9 @@
 import { container } from "@sapphire/framework";
 import { ChannelType, type Guild, type ThreadChannel } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { getService } from "lumi";
-import { isModuleEnabled } from "lumi/permissions";
-import { makeSuccessCard, noPingCard } from "lumi/ui";
+import { getService } from "#core/module-system/Service.js";
+import { isModuleEnabled } from "#utilities/listeners.js";
+import { makeSuccessCard, noPingCard } from "#utilities/cards.js";
 import type { ThreadSweepPayload } from "../scheduled-tasks/threadSweep.js";
 import { sweepVerdict, emptyTotals, type SweepTotals } from "./sweep.js";
 

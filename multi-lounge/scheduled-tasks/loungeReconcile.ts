@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { publishTaskFire } from "lumi/scheduling";
+import { publishTaskFire } from "#lib/scheduler-bus.js";
 
 // Every 5 minutes: heal registry drift (channels deleted out-of-band, orphaned
 // empty extras) and settle each guild's lounge count. Broadcast so every worker

@@ -1,8 +1,9 @@
 import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Message } from "discord.js";
-import { checkModulesEnabled } from "lumi/permissions";
-import { makeInfoCard, Emojis } from "lumi/ui";
+import { checkModulesEnabled } from "#lib/module-check.js";
+import { makeInfoCard } from "#utilities/cards.js";
+import { Emojis } from "#utilities/assets.js";
 import { MODULE_NAME } from "../lib/keys.js";
 import {
   getBlocks,

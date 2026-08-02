@@ -2,15 +2,15 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Guild } from "discord.js";
 import { userMention, time, TimestampStyles } from "@discordjs/formatters";
-import { BaseSubcommand } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
+import { BaseSubcommand } from "#lib/commands.js";
+import { PermissionLevel } from "#lib/permissions.js";
 import {
   ephemeralCard,
   makeSuccessCard,
   makeErrorCard,
   type CardReply,
-  paginateList,
-} from "lumi/ui";
+} from "#utilities/cards.js";
+import { paginateList } from "#utilities/pagination.js";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
   banHash,

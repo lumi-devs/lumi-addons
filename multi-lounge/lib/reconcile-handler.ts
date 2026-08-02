@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { isModuleEnabled } from "lumi/permissions";
+import { isModuleEnabled } from "#utilities/listeners.js";
 import { MODULE_NAME } from "../keys.js";
 import { manageLounges } from "./manage.js";
 

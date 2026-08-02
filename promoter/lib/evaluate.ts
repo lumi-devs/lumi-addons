@@ -2,9 +2,13 @@ import { container } from "@sapphire/framework";
 import { ActivityType, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { getService } from "lumi";
-import { acquireRedisLock } from "lumi/utils";
-import { makeSuccessCard, makeWarningCard, noPingCard } from "lumi/ui";
+import { getService } from "#core/module-system/Service.js";
+import { acquireRedisLock } from "#core/lib/redis-lock.js";
+import {
+  makeSuccessCard,
+  makeWarningCard,
+  noPingCard,
+} from "#utilities/cards.js";
 import {
   MODULE_NAME,
   PromoterData,

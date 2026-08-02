@@ -1,6 +1,6 @@
-import { Module, DefineModule, cfg } from "lumi";
+import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 import { ChannelType } from "discord.js";
-import { Emojis } from "lumi/ui";
+import { Emojis } from "#utilities/assets.js";
 
 @DefineModule({
   name: "rolementions",

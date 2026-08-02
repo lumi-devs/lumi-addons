@@ -5,7 +5,11 @@ import {
 } from "@sapphire/framework";
 import type { AnySelectMenuInteraction } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "lumi/ui";
+import {
+  ephemeralCard,
+  makeErrorCard,
+  makeSuccessCard,
+} from "#utilities/cards.js";
 import { getBoosterConfig } from "../lib/config.js";
 import { addShare, getRole, removeShare } from "../lib/data.js";
 import { grantRole, revokeRole } from "../lib/roles.js";
