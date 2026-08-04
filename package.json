@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "license": "GPL-3.0",
+  "license": "AGPL-3.0-only",
   "description": "First-party dynamic addons for the Lumi Discord bot. Not a package — each directory is installed individually by Lumi's downloader.",
   "imports": {
     "#lib/commands.js": "./.lumi/packages/core/src/lib/commands.ts",
