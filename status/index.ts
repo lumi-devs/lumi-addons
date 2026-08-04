@@ -1,5 +1,5 @@
-import { Module, DefineModule } from "#core/module-system/Module.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { Module, DefineModule } from "lumi";
+import { registerTaskFireHandler } from "lumi/scheduling";
 import { handleStatusRotateFire } from "./lib/rotate-handler.js";
 import { getEntries, saveEntries } from "./lib/data.js";
 

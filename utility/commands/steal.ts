@@ -6,8 +6,8 @@ import {
   makeErrorCard,
   makeWarningCard,
   makeInfoCard,
-} from "#utilities/cards.js";
-import { Emojis } from "#utilities/assets.js";
+  Emojis,
+} from "lumi/ui";
 
 const EMOJI_REGEX = /<(a?):([a-zA-Z0-9_]+):([0-9]+)>/g;
 

@@ -1,6 +1,6 @@
 import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { Module, DefineModule, cfg } from "lumi";
+import { registerTaskFireHandler } from "lumi/scheduling";
 import { deleteForUser } from "./lib/data.js";
 import { handleBoosterGraceFire } from "./lib/grace-handler.js";
 import { handleBoosterReconcileFire } from "./lib/reconcile-handler.js";

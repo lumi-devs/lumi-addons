@@ -11,8 +11,8 @@ import {
   makeSuccessCard,
   makeWarningCard,
   noPingCard,
-} from "#utilities/cards.js";
-import { scheduleTask, cancelTask } from "#lib/schedule-task.js";
+} from "lumi/ui";
+import { scheduleTask, cancelTask } from "lumi/scheduling";
 import { dragmeExpireJobId, dragmeRevokeJobId, DragmeKeys } from "../keys.js";
 import { getDragmeConfig } from "../lib/config.js";
 import { buildRequestButtons } from "../lib/create-request.js";

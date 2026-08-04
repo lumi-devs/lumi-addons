@@ -7,7 +7,7 @@ import {
   type AutoModerationRule,
   type Guild,
 } from "discord.js";
-import { swallow } from "#utilities/errors.js";
+import { swallow } from "lumi/utils";
 import { getBlocks, getRuleId, setRuleId, clearRuleId } from "./store.js";
 
 export const RULE_NAME = "🛡️ Role Mention Protection";

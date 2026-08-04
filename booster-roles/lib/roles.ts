@@ -1,7 +1,7 @@
 import { container } from "@sapphire/framework";
 import { AsyncQueue } from "@sapphire/async-queue";
 import type { Guild, GuildMember, Role } from "discord.js";
-import type { CardReply } from "#utilities/cards.js";
+import type { CardReply } from "lumi/ui";
 import type { BoosterConfig } from "./config.js";
 
 // Serialize role-position edits per guild — Discord renumbers every role on each

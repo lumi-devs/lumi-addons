@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { getService } from "#core/module-system/Service.js";
+import { getService } from "lumi";
 import { MODULE_NAME } from "../keys.js";
 
 export interface LoungeConfig {

@@ -7,11 +7,11 @@ import {
   TimestampStyles,
   userMention,
 } from "@discordjs/formatters";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
+import { BaseSubcommand } from "lumi/commands";
+import { PermissionLevel } from "lumi/permissions";
 
-import { paginateList } from "#utilities/pagination.js";
-import { cancelTask } from "#lib/schedule-task.js";
+import { paginateList } from "lumi/ui";
+import { cancelTask } from "lumi/scheduling";
 import { dragmeExpireJobId } from "../keys.js";
 import { deleteRequest, listRequests } from "../lib/requests.js";
 
