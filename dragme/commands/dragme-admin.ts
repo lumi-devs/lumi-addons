@@ -7,8 +7,7 @@ import {
   TimestampStyles,
   userMention,
 } from "@discordjs/formatters";
-import { BaseSubcommand } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
+import { BaseSubcommand, replySuccess } from "lumi/commands";
 
 import { paginateList } from "lumi/ui";
 import { cancelTask } from "lumi/scheduling";
@@ -18,7 +17,7 @@ import { deleteRequest, listRequests } from "../lib/requests.js";
 @ApplyOptions<BaseSubcommand.Options>({
   name: "dragme-admin",
   description: "Moderate voice drag requests.",
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   preconditions: ["GuildOnly"],
   subcommands: [
     { name: "active", chatInputRun: "chatInputActive" },
@@ -70,7 +69,7 @@ export class DragmeAdminCommand extends BaseSubcommand {
         () => null,
       );
     }
-    return this.replySuccess(
+    return replySuccess(
       interaction,
       "Requests Cleared",
       `Removed **${requests.length}** pending request(s).`,

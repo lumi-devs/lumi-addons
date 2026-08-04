@@ -2,14 +2,13 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { ChatInputCommandInteraction, Guild } from "discord.js";
 import { userMention, time, TimestampStyles } from "@discordjs/formatters";
-import { BaseSubcommand } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
+import { BaseSubcommand, sendReply } from "lumi/commands";
 import {
   ephemeralCard,
   makeSuccessCard,
   makeErrorCard,
-  type CardReply,
   paginateList,
+  type CardReply,
 } from "lumi/ui";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
@@ -26,7 +25,7 @@ const HASH_RE = /^[0-9a-f]{64}$/i;
   name: "confessmod",
   description: "Moderate anonymous confessions (identity is never revealed).",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   subcommands: [
     { name: "ban", chatInputRun: "chatInputRunBan" },
     { name: "unban", chatInputRun: "chatInputRunUnban" },
@@ -101,7 +100,7 @@ export class ConfessModCommand extends BaseSubcommand {
         `The author of **Confession #${number}** was banned by ${userMention(interaction.user.id)}.`,
       ),
     );
-    return this.reply(
+    return sendReply(
       interaction,
       ephemeralCard(
         makeSuccessCard(
@@ -116,12 +115,12 @@ export class ConfessModCommand extends BaseSubcommand {
     const guild = interaction.guild!;
     const target = interaction.options.getString("target", true).trim();
 
-    let hash: string | null = null;
+    let hash: string;
     if (/^\d+$/.test(target)) {
       const meta = await getConfession(guild.id, Number(target));
-      hash = meta?.authorHash ?? null;
-      if (!hash)
+      if (!meta?.authorHash)
         return this.#err(interaction, `Confession #${target} was not found.`);
+      hash = meta.authorHash;
     } else if (HASH_RE.test(target)) {
       hash = target.toLowerCase();
     } else {
@@ -142,7 +141,7 @@ export class ConfessModCommand extends BaseSubcommand {
         `An author was unbanned by ${userMention(interaction.user.id)}.`,
       ),
     );
-    return this.reply(
+    return sendReply(
       interaction,
       ephemeralCard(
         makeSuccessCard("Unbanned", "The author can participate again."),
@@ -194,7 +193,7 @@ export class ConfessModCommand extends BaseSubcommand {
         `**Confession #${number}** was deleted by ${userMention(interaction.user.id)}.\nReason: ${reason}`,
       ),
     );
-    return this.reply(
+    return sendReply(
       interaction,
       ephemeralCard(
         makeSuccessCard(
@@ -206,7 +205,7 @@ export class ConfessModCommand extends BaseSubcommand {
   }
 
   #err(interaction: ChatInputCommandInteraction, message: string) {
-    return this.reply(
+    return sendReply(
       interaction,
       ephemeralCard(makeErrorCard("Error", message)),
     );

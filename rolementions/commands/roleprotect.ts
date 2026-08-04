@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Subcommand } from "@sapphire/plugin-subcommands";
 import { BaseSubcommand, CommandContext } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
 import { makeInfoCard, makeSuccessCard, Emojis } from "lumi/ui";
 import { relativeTimestamp } from "lumi/utils";
 import { MODULE_NAME } from "../lib/keys.js";
@@ -28,7 +27,7 @@ const DEFAULT_FALLBACK_MINUTES = 120;
   description: "Manage role mention protection.",
   preconditions: ["GuildOnly", "ModuleEnabled"],
   module: MODULE_NAME,
-  permissionLevel: PermissionLevel.ADMIN,
+  requiredPermit: "admin.*",
   prefixEnabled: true,
   subcommands: [
     { name: "add", run: "add" },
@@ -114,15 +113,16 @@ export class RoleProtectCommand extends BaseSubcommand {
     const role = (await ctx.getRole("role", { required: true }))!;
     const rawDuration = await ctx.getString("duration");
 
-    let resolvedDuration: number | null = null;
+    let resolvedDuration: number;
     if (rawDuration) {
-      resolvedDuration = parseMinutes(rawDuration);
-      if (resolvedDuration === null) {
+      const parsed = parseMinutes(rawDuration);
+      if (parsed === null) {
         return ctx.replyError(
           "Invalid Duration",
           "Use a value like `90m`, `2h`, or `1d`.",
         );
       }
+      resolvedDuration = parsed;
     } else {
       const configured = await this.container.db.config.getModuleConfig(
         ctx.guildId!,
@@ -205,15 +205,16 @@ export class RoleProtectCommand extends BaseSubcommand {
     }
 
     const rawDuration = await ctx.getString("duration");
-    let resolvedDuration: number | null = null;
+    let resolvedDuration: number;
     if (rawDuration) {
-      resolvedDuration = parseMinutes(rawDuration);
-      if (resolvedDuration === null) {
+      const parsed = parseMinutes(rawDuration);
+      if (parsed === null) {
         return ctx.replyError(
           "Invalid Duration",
           "Use a value like `90m`, `2h`, or `1d`.",
         );
       }
+      resolvedDuration = parsed;
     } else {
       const configured = await this.container.db.config.getModuleConfig(
         guild.id,
@@ -226,7 +227,13 @@ export class RoleProtectCommand extends BaseSubcommand {
           : DEFAULT_FALLBACK_MINUTES;
     }
 
-    const block = await applyBlock(guild, role, resolvedDuration, true);
+    const { block, synced } = await applyBlock(guild, role, resolvedDuration, true);
+    if (!synced) {
+      return ctx.replyError(
+        "AutoMod Sync Failed",
+        `The block was recorded, but Discord's AutoMod rule couldn't be updated, so ${roleLabel(guild, role.id)} may not actually be blocked yet. Verify the bot has Manage Server permission and try again.`,
+      );
+    }
     return ctx.reply(
       makeSuccessCard(
         "Role Blocked",
