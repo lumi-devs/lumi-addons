@@ -43,8 +43,6 @@ import { handlePromoterSweepFire } from "./lib/sweep-handler.js";
 })
 export class PromoterModule extends Module {
   public override onLoad() {
-    // Broadcast: every worker sweeps its own guilds.cache; the handler itself
-    // throttles per guild against `sweep_interval_minutes`.
     registerTaskFireHandler("promoter-sweep", "broadcast", handlePromoterSweepFire);
     return super.onLoad();
   }

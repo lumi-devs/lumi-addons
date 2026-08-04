@@ -52,10 +52,6 @@ export class BoosterModalHandler extends InteractionHandler {
     );
     if (!check.ok) return this.#err(interaction, check.reason!);
 
-    // Guarded by the guild lock end-to-end: without it, two near-simultaneous
-    // submits (double-click, retry) could both pass the "no role yet" check
-    // and each create a real Discord role, leaving one of them orphaned —
-    // untracked in KV and invisible to the reconcile sweep.
     const record = await withGuildLock(member.guild.id, async () => {
       if (await getRole(member.guild.id, member.id)) return null;
       const role = await createBoosterRole(member, check.value!, 0, config);

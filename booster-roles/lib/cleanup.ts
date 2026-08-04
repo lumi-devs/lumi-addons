@@ -9,11 +9,7 @@ import { deleteBoosterRole, postToChannel, revokeRole } from "./roles.js";
 /**
  * Fully retire an owner's custom role: strip it from everyone it was shared
  * with, delete the Discord role, drop the stored record, and log it. Used by
- * both the grace-expiry handler and the periodic reconcile sweep — and can
- * legitimately race a moderator's `/boosterroles delete` or the owner's own
- * "Delete" button, so the KV drop is guarded by the guild lock and re-checks
- * the record still exists. Whoever wins the race does the Discord-side
- * cleanup and logs it; the loser is a silent no-op.
+ * both the grace-expiry handler and the periodic reconcile sweep.
  */
 export async function removeOwnerRole(
   guild: Guild,

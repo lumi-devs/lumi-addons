@@ -53,12 +53,6 @@ async function ensureRule(guild: Guild): Promise<AutoModerationRule | null> {
     await clearRuleId(guild.id);
   }
 
-  // No cached rule yet — this is the "first ever" path for the guild. Two
-  // mentions of protected roles landing at nearly the same instant could
-  // otherwise both reach here concurrently and each create their own
-  // "🛡️ Role Mention Protection" rule, leaking an orphaned, unmanaged rule
-  // that permanently eats one of the guild's limited AutoMod rule slots. A
-  // short-lived lock serializes first-time creation per guild.
   const release = await acquireRedisLock(
     container.redis,
     `ember:rolementions:rule-lock:${guild.id}`,
@@ -72,8 +66,6 @@ async function ensureRule(guild: Guild): Promise<AutoModerationRule | null> {
   });
 
   try {
-    // Re-check now that we hold the lock — a racing caller may have already
-    // created and cached the rule while we were waiting.
     const racedId = await getRuleId(guild.id);
     if (racedId) {
       const existing = await guild.autoModerationRules
@@ -124,10 +116,6 @@ async function ensureRule(guild: Guild): Promise<AutoModerationRule | null> {
  * Rebuild the rule's keyword filter from the guild's currently active blocks.
  * Only the raw mention form `<@&id>` is used as a keyword — role *names* are
  * intentionally excluded so plain text containing a name is never blocked.
- *
- * Returns whether the rule was actually created/updated. Callers that report
- * "protection activated" to a user or log must check this — a `false` here
- * means the block record exists but Discord isn't actually enforcing it yet.
  */
 export async function syncRule(guild: Guild): Promise<boolean> {
   const rule = await ensureRule(guild);

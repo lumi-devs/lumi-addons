@@ -36,12 +36,7 @@ async function scheduleExpiry(
     );
 }
 
-/**
- * Add a role to the active block list, sync AutoMod, schedule expiry, and log.
- * `synced` reports whether the AutoMod rule update actually succeeded — the
- * block record is written regardless, so callers that surface success to a
- * user should check it rather than assume enforcement took effect.
- */
+/** Add a role to the active block list, sync AutoMod, schedule expiry, and log. */
 export async function applyBlock(
   guild: Guild,
   role: Role,
@@ -62,12 +57,6 @@ export async function applyBlock(
   const synced = await syncRule(guild);
   await scheduleExpiry(guild.id, role.id, durationMinutes * 60_000);
 
-  // `syncRule` can fail silently (missing Manage Server permission, a
-  // transient API error) while the block record above is written either
-  // way. Without this caveat, mods would see "Protection Activated" and
-  // assume the role is actually blocked when Discord-side enforcement
-  // never got applied — the false sense of security is worse than no
-  // block at all.
   await sendLog(
     guild.id,
     makeWarningCard(

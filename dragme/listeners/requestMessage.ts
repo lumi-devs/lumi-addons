@@ -43,10 +43,6 @@ export class DragmeRequestMessageListener extends GuildMessageListener {
       return;
     }
 
-    // Only the configured request channel triggers the drag flow — everywhere
-    // else, a message that happens to match the pattern is just a normal
-    // mention and must be left alone (already returned above if it didn't
-    // match at all).
     if (!isRequestChannel) return;
 
     const targetUserId = match[1] ?? match[2]!;
@@ -55,8 +51,6 @@ export class DragmeRequestMessageListener extends GuildMessageListener {
       .catch(() => null);
     const targetChannel = targetMember?.voice.channel ?? null;
 
-    // Target not in voice — show an error and delete the trigger message
-    // (we're inside the request channel past the guard above).
     if (!targetChannel) {
       await message.delete().catch(() => null);
       const card = makeWarningCard(
