@@ -36,11 +36,6 @@ jobs:
       - name: Checkout addons
         uses: actions/checkout@v7
 
-      # Addon modules import discord.js (and other Lumi core deps) directly,
-      # same as a real install - there's no local discord.js dependency in
-      # this repo's own package.json by design (see package.json's
-      # description: "not a package"). Without linking against a real Lumi
-      # checkout, any test that touches such a module fails to resolve it.
       - name: Checkout lumi core
         uses: actions/checkout@v7
         with:
@@ -54,7 +49,7 @@ jobs:
 
       - name: Install lumi core dependencies
         working-directory: lumi-core
-        run: nix-shell --run "bun install --frozen-lockfile"
+        run: nix develop --command bash -c "bun install --frozen-lockfile"
 
       - name: Link addons against lumi core
         run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
@@ -82,11 +77,11 @@ jobs:
 
       - name: Install lumi core dependencies
         working-directory: lumi-core
-        run: nix-shell --run "bun install --frozen-lockfile"
+        run: nix develop --command bash -c "bun install --frozen-lockfile"
 
       - name: Generate Prisma client
         working-directory: lumi-core
-        run: nix-shell --run "bun run db:generate"
+        run: nix develop --command bash -c "bun run db:generate"
 
       - name: Link addons against lumi core
         run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
