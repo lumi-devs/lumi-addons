@@ -1,8 +1,7 @@
 import { container } from "@sapphire/framework";
 import type { Guild, Role } from "discord.js";
-import { makeWarningCard, makeSuccessCard } from "#utilities/cards.js";
-import { Emojis } from "#utilities/assets.js";
-import { relativeTimestamp } from "#utilities/time.js";
+import { makeWarningCard, makeSuccessCard, Emojis } from "lumi/ui";
+import { relativeTimestamp } from "lumi/utils";
 import { getBlock, removeBlock, setBlock, type ActiveBlock } from "./store.js";
 import { syncRule } from "./automod.js";
 import { sendLog } from "./log.js";
@@ -37,13 +36,18 @@ async function scheduleExpiry(
     );
 }
 
-/** Add a role to the active block list, sync AutoMod, schedule expiry, and log. */
+/**
+ * Add a role to the active block list, sync AutoMod, schedule expiry, and log.
+ * `synced` reports whether the AutoMod rule update actually succeeded — the
+ * block record is written regardless, so callers that surface success to a
+ * user should check it rather than assume enforcement took effect.
+ */
 export async function applyBlock(
   guild: Guild,
   role: Role,
   durationMinutes: number,
   manual: boolean,
-): Promise<ActiveBlock> {
+): Promise<{ block: ActiveBlock; synced: boolean }> {
   const now = Date.now();
   const block: ActiveBlock = {
     roleId: role.id,
@@ -55,9 +59,15 @@ export async function applyBlock(
   };
 
   await setBlock(guild.id, block);
-  await syncRule(guild);
+  const synced = await syncRule(guild);
   await scheduleExpiry(guild.id, role.id, durationMinutes * 60_000);
 
+  // `syncRule` can fail silently (missing Manage Server permission, a
+  // transient API error) while the block record above is written either
+  // way. Without this caveat, mods would see "Protection Activated" and
+  // assume the role is actually blocked when Discord-side enforcement
+  // never got applied — the false sense of security is worse than no
+  // block at all.
   await sendLog(
     guild.id,
     makeWarningCard(
@@ -69,12 +79,17 @@ export async function applyBlock(
           `**Expires:** ${relativeTimestamp(block.expiresAt)}`,
           `**Trigger:** ${manual ? "Manual" : "Mention spam"}`,
         ].join("\n"),
+        ...(synced
+          ? []
+          : [
+              `${Emojis.WARNING_SIGN} **AutoMod rule could not be updated** — mentions may not actually be blocked yet. Verify the bot has Manage Server permission.`,
+            ]),
       ],
       { footer: "Protection auto-removes when it expires." },
     ),
   );
 
-  return block;
+  return { block, synced };
 }
 
 /**

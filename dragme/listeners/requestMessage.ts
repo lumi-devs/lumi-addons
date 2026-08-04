@@ -1,9 +1,8 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { GuildMember } from "discord.js";
-import { GuildMessageListener } from "#core/module-system/GuildMessageListener.js";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
-import type { GuildMessage } from "#lib/types.js";
-import { makeWarningCard } from "#utilities/cards.js";
+import { GuildMessageListener, ModuleListener } from "lumi";
+import type { GuildMessage } from "lumi/utils";
+import { makeWarningCard } from "lumi/ui";
 import { MODULE_NAME } from "../keys.js";
 import { getDragmeConfig } from "../lib/config.js";
 import { createDragRequest } from "../lib/create-request.js";
@@ -44,29 +43,29 @@ export class DragmeRequestMessageListener extends GuildMessageListener {
       return;
     }
 
+    // Only the configured request channel triggers the drag flow — everywhere
+    // else, a message that happens to match the pattern is just a normal
+    // mention and must be left alone (already returned above if it didn't
+    // match at all).
+    if (!isRequestChannel) return;
+
     const targetUserId = match[1] ?? match[2]!;
     const targetMember: GuildMember | null = await message.guild.members
       .fetch(targetUserId)
       .catch(() => null);
     const targetChannel = targetMember?.voice.channel ?? null;
 
-    // If the target is not in voice:
-    // - In request channel: show error and delete message.
-    // - In other channels: ignore completely (let the normal ping proceed).
+    // Target not in voice — show an error and delete the trigger message
+    // (we're inside the request channel past the guard above).
     if (!targetChannel) {
-      if (isRequestChannel) {
-        await message.delete().catch(() => null);
-        const card = makeWarningCard(
-          "Drag Request",
-          "That user isn't in a voice channel right now.",
-        );
-        const reply = await message.channel.send(card).catch(() => null);
-        if (reply) {
-          setTimeout(
-            () => void reply.delete().catch(() => null),
-            HINT_DELETE_MS,
-          );
-        }
+      await message.delete().catch(() => null);
+      const card = makeWarningCard(
+        "Drag Request",
+        "That user isn't in a voice channel right now.",
+      );
+      const reply = await message.channel.send(card).catch(() => null);
+      if (reply) {
+        setTimeout(() => void reply.delete().catch(() => null), HINT_DELETE_MS);
       }
       return;
     }

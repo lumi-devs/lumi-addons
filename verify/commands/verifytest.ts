@@ -9,12 +9,12 @@ import {
   type ChatInputCommandInteraction,
   type Message,
 } from "discord.js";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand } from "lumi/commands";
 import {
   makeInfoCard,
   makeSuccessCard,
   makeErrorCard,
-} from "#utilities/cards.js";
+} from "lumi/ui";
 import { VerifyKeys, EMOJI_POOL, type SeqState } from "../keys.js";
 
 const SEQ_LENGTH = 4;

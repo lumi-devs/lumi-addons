@@ -2,8 +2,8 @@ import { Listener, Events } from "@sapphire/framework";
 import { ApplyOptions } from "@sapphire/decorators";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle, type GuildMember } from "discord.js";
-import { makeInfoCard } from "#utilities/cards.js";
-import { isModuleEnabled } from "#utilities/listeners.js";
+import { makeInfoCard } from "lumi/ui";
+import { isModuleEnabled } from "lumi/permissions";
 import { VerifyKeys, EMOJI_POOL, type SeqState } from "../keys.js";
 
 const SEQ_LENGTH = 4;

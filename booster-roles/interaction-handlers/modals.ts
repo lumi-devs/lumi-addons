@@ -5,13 +5,9 @@ import {
 } from "@sapphire/framework";
 import type { ModalSubmitInteraction } from "discord.js";
 import { roleMention, userMention } from "@discordjs/formatters";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeInfoCard,
-} from "#utilities/cards.js";
+import { ephemeralCard, makeErrorCard, makeInfoCard } from "lumi/ui";
 import { getBoosterConfig } from "../lib/config.js";
-import { getRole, setRole } from "../lib/data.js";
+import { getRole, setRole, withGuildLock } from "../lib/data.js";
 import { accessDenial } from "../lib/access.js";
 import { createBoosterRole, postToChannel } from "../lib/roles.js";
 import { validateRoleName, parseHexColor, colorToHex } from "../lib/engine.js";
@@ -49,8 +45,6 @@ export class BoosterModalHandler extends InteractionHandler {
 
     const denial = await accessDenial(member, config);
     if (denial) return this.#err(interaction, denial);
-    if (await getRole(member.guild.id, member.id))
-      return this.#err(interaction, "You already have a custom role.");
 
     const check = validateRoleName(
       interaction.fields.getTextInputValue("name"),
@@ -58,23 +52,33 @@ export class BoosterModalHandler extends InteractionHandler {
     );
     if (!check.ok) return this.#err(interaction, check.reason!);
 
-    const role = await createBoosterRole(member, check.value!, 0, config);
-    const record: RoleRecord = {
-      roleId: role.id,
-      ownerId: member.id,
-      name: check.value!,
-      color: role.color,
-      createdAt: Date.now(),
-      sharedWith: [],
-    };
-    await setRole(member.guild.id, record);
+    // Guarded by the guild lock end-to-end: without it, two near-simultaneous
+    // submits (double-click, retry) could both pass the "no role yet" check
+    // and each create a real Discord role, leaving one of them orphaned —
+    // untracked in KV and invisible to the reconcile sweep.
+    const record = await withGuildLock(member.guild.id, async () => {
+      if (await getRole(member.guild.id, member.id)) return null;
+      const role = await createBoosterRole(member, check.value!, 0, config);
+      const rec: RoleRecord = {
+        roleId: role.id,
+        ownerId: member.id,
+        name: check.value!,
+        color: role.color,
+        createdAt: Date.now(),
+        sharedWith: [],
+      };
+      await setRole(member.guild.id, rec);
+      return rec;
+    });
+    if (!record)
+      return this.#err(interaction, "You already have a custom role.");
 
     await postToChannel(
       member.guild,
       config.showcaseChannelId,
       makeInfoCard(
         "✨ New Booster Role",
-        `${userMention(member.id)} just created ${roleMention(role.id)}. Boost the server to make your own!`,
+        `${userMention(member.id)} just created ${roleMention(record.roleId)}. Boost the server to make your own!`,
       ),
     );
 

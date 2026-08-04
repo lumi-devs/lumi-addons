@@ -1,6 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
 import { liftBlock } from "../lib/protection.js";
+import { removeBlock } from "../lib/store.js";
 
 export interface RoleBlockExpirePayload {
   guildId: string;
@@ -17,8 +18,13 @@ declare module "@sapphire/plugin-scheduled-tasks" {
 export class RoleBlockExpireTask extends ScheduledTask<"rolementions-expire"> {
   public async run(payload: RoleBlockExpirePayload): Promise<void> {
     const guild = this.container.client.guilds.cache.get(payload.guildId);
-    // Guild gone (kicked) — the block dies with it; nothing to clean up here.
-    if (!guild) return;
+    // Guild gone (kicked) — there's no Guild to sync the AutoMod rule
+    // against, but still drop the stale block record so it doesn't linger
+    // in Redis forever (the blocks hash has no TTL of its own).
+    if (!guild) {
+      await removeBlock(payload.guildId, payload.roleId);
+      return;
+    }
 
     // Idempotent: liftBlock no-ops if the block was already removed manually.
     await liftBlock(guild, payload.roleId, "expired");

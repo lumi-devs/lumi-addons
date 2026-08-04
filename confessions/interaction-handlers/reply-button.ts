@@ -9,7 +9,7 @@ import {
   makeErrorCard,
   makeSuccessCard,
   makeWarningCard,
-} from "#utilities/cards.js";
+} from "lumi/ui";
 import { getConfessionsConfig } from "../lib/config.js";
 import { authorHashFor, getConfession, isBanned } from "../lib/data.js";
 import {

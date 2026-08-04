@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Events } from "@sapphire/framework";
 import type { Presence } from "discord.js";
-import { ModuleListener } from "#core/module-system/ModuleListener.js";
+import { ModuleListener } from "lumi";
 import { MODULE_NAME } from "../keys.js";
 import { evaluateMember } from "../lib/evaluate.js";
 

@@ -3,15 +3,20 @@ import type { Subcommand } from "@sapphire/plugin-subcommands";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle, type ChatInputCommandInteraction } from "discord.js";
 import { roleMention } from "@discordjs/formatters";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { makeInfoCard } from "#utilities/cards.js";
+import {
+  BaseSubcommand,
+  assertPermit,
+  replyError,
+  replySuccess,
+  replyInfo,
+} from "lumi/commands";
+import { makeInfoCard } from "lumi/ui";
 import { getPromoterConfig, getStats } from "../lib/evaluate.js";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "promoter",
   description: "Promoter-role tools.",
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   preconditions: ["GuildOnly"],
   subcommands: [
     { name: "panel", chatInputRun: "chatInputPanel" },
@@ -39,10 +44,10 @@ export class PromoterCommand extends BaseSubcommand {
     interaction: ChatInputCommandInteraction<"cached">,
   ) {
     // Panel posting changes the channel for everyone — gate at ADMIN.
-    await this.checkPermission(interaction, PermissionLevel.ADMIN);
+    await assertPermit(interaction, "admin.*");
     const cfg = await getPromoterConfig(interaction.guildId);
     if (!cfg.roleId || cfg.matchTerms.length === 0) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Not Configured",
         "Set `promoter_role_id` and `match_terms` in `/config` first.",
@@ -61,7 +66,7 @@ export class PromoterCommand extends BaseSubcommand {
       { actionRows: [row] },
     );
     await interaction.channel?.send(card);
-    return this.replySuccess(
+    return replySuccess(
       interaction,
       "Panel Posted",
       "The promoter panel is live.",
@@ -72,7 +77,7 @@ export class PromoterCommand extends BaseSubcommand {
     interaction: ChatInputCommandInteraction<"cached">,
   ) {
     const stats = await getStats(interaction.guildId);
-    return this.replyInfo(
+    return replyInfo(
       interaction,
       "Promoter Stats",
       `**${stats.granted}** roles granted · **${stats.revoked}** roles revoked (all-time).`,

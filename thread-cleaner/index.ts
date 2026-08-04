@@ -1,6 +1,6 @@
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import { Emojis } from "#utilities/assets.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { Module, DefineModule, cfg } from "lumi";
+import { Emojis } from "lumi/ui";
+import { registerTaskFireHandler } from "lumi/scheduling";
 import { handleThreadCleanerFire } from "./lib/cleanup-handler.js";
 import { handleThreadSweepFire } from "./lib/sweep-handler.js";
 

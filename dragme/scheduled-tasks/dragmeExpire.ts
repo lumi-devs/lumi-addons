@@ -1,7 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { shouldRunNow, type CatchUpMeta } from "#core/lib/scheduled-tasks.js";
-import { publishTaskFire } from "#lib/scheduler-bus.js";
+import { shouldRunNow, publishTaskFire, type CatchUpMeta } from "lumi/scheduling";
 
 export interface DragmeExpirePayload extends CatchUpMeta {
   guildId: string;

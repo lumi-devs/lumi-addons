@@ -1,5 +1,7 @@
 import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "lumi";
+import { registerTaskFireHandler } from "lumi/scheduling";
+import { handlePromoterSweepFire } from "./lib/sweep-handler.js";
 
 @DefineModule({
   name: "promoter",
@@ -41,6 +43,9 @@ import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
 })
 export class PromoterModule extends Module {
   public override onLoad() {
+    // Broadcast: every worker sweeps its own guilds.cache; the handler itself
+    // throttles per guild against `sweep_interval_minutes`.
+    registerTaskFireHandler("promoter-sweep", "broadcast", handlePromoterSweepFire);
     return super.onLoad();
   }
   // No deleteUserData override: the addon stores only aggregate counters —

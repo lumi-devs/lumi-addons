@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { publishTaskFire } from "#lib/scheduler-bus.js";
+import { publishTaskFire } from "lumi/scheduling";
 
 @ApplyOptions<ScheduledTask.Options>({
   name: "captcha-expiry",

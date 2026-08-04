@@ -16,7 +16,7 @@ import {
   makeInfoCard,
   makeWarningCard,
   ephemeralCard,
-} from "#utilities/cards.js";
+} from "lumi/ui";
 import { VerifyKeys, EMOJI_POOL, type SeqState } from "../keys.js";
 
 function buildRows(

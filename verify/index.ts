@@ -1,5 +1,5 @@
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-import { registerTaskFireHandler } from "#core/lib/task-fire-registry.js";
+import { Module, DefineModule, cfg } from "lumi";
+import { registerTaskFireHandler } from "lumi/scheduling";
 import { handleCaptchaExpiryFire } from "./lib/captcha-expiry-handler.js";
 import { VerifyKeys } from "./keys.js";
 
