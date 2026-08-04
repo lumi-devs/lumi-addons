@@ -25,12 +25,7 @@
     "paths": {
       "*": ["./*"],
       "lumi": ["./.lumi/packages/core/src/lib/addon-sdk/index.ts"],
-      "lumi/commands": ["./.lumi/packages/core/src/lib/addon-sdk/commands.ts"],
-      "lumi/permissions": ["./.lumi/packages/core/src/lib/addon-sdk/permissions.ts"],
-      "lumi/scheduling": ["./.lumi/packages/core/src/lib/addon-sdk/scheduling.ts"],
-      "lumi/ui": ["./.lumi/packages/core/src/lib/addon-sdk/ui.ts"],
-      "lumi/utils": ["./.lumi/packages/core/src/lib/addon-sdk/utils.ts"],
-      "@prisma/client": ["./.lumi/prisma/generated/client"],
+      "lumi/*": ["./.lumi/packages/core/src/lib/addon-sdk/*.ts"],
       "@lumi/contracts": ["./.lumi/packages/contracts/src/index.ts"],
       "@lumi/event-bus": ["./.lumi/packages/event-bus/src/index.ts"],
       "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"]

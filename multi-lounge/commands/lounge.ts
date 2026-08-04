@@ -4,11 +4,7 @@ import type { ChatInputCommandInteraction } from "discord.js";
 import { ChannelType } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
 import { BaseSubcommand, sendReply } from "lumi/commands";
-import {
-  ephemeralCard,
-  makeInfoCard,
-  makeWarningCard,
-} from "lumi/ui";
+import { ephemeralCard, makeInfoCard, makeWarningCard } from "lumi/ui";
 import { MODULE_NAME } from "../keys.js";
 import { getLoungeConfig } from "../lib/config.js";
 import { getExtras, getStats } from "../lib/data.js";

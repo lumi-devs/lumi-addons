@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { shouldRunNow, publishTaskFire, type CatchUpMeta } from "lumi/scheduling";
+import { shouldRunNow, type CatchUpMeta, publishTaskFire } from "lumi/scheduling";
 
 // One delayed job per tracked thread, scheduled at creation to fire exactly
 // when the thread's inactivity window elapses (jobId = thread-cleaner:<id>).

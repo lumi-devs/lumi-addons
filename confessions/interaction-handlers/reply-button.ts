@@ -4,12 +4,7 @@ import {
   InteractionHandlerTypes,
 } from "@sapphire/framework";
 import { ButtonInteraction, roleMention } from "discord.js";
-import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-  makeWarningCard,
-} from "lumi/ui";
+import { ephemeralCard, makeErrorCard, makeSuccessCard, makeWarningCard } from "lumi/ui";
 import { getConfessionsConfig } from "../lib/config.js";
 import { authorHashFor, getConfession, isBanned } from "../lib/data.js";
 import {
