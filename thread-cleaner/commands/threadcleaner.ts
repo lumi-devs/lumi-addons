@@ -3,15 +3,14 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { ephemeralCard, makeWarningCard } from "#utilities/cards.js";
+import { BaseSubcommand, sendReply } from "lumi/commands";
+import { ephemeralCard, makeWarningCard } from "lumi/ui";
 
 @ApplyOptions<BaseSubcommand.Options>({
   name: "threadcleaner",
   description: "Bulk-manage this server's threads.",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.ADMIN,
+  requiredPermit: "admin.*",
   subcommands: [{ name: "sweep", chatInputRun: "chatInputRunSweep" }],
 })
 export class ThreadCleanerCommand extends BaseSubcommand {
@@ -88,7 +87,7 @@ export class ThreadCleanerCommand extends BaseSubcommand {
       "Deleted threads cannot be recovered. Proceed?",
     ];
 
-    return this.reply(
+    return sendReply(
       interaction,
       ephemeralCard(
         makeWarningCard("⚠️ Confirm Thread Sweep", summary, {

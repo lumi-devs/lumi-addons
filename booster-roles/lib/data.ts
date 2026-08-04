@@ -19,7 +19,7 @@ const queueFor = (guildId: string): AsyncQueue => {
   return q;
 };
 
-async function withGuildLock<T>(
+export async function withGuildLock<T>(
   guildId: string,
   fn: () => Promise<T>,
 ): Promise<T> {

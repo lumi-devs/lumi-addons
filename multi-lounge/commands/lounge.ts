@@ -3,13 +3,8 @@ import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { ChannelType } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { BaseSubcommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import {
-  ephemeralCard,
-  makeInfoCard,
-  makeWarningCard,
-} from "#utilities/cards.js";
+import { BaseSubcommand, sendReply } from "lumi/commands";
+import { ephemeralCard, makeInfoCard, makeWarningCard } from "lumi/ui";
 import { MODULE_NAME } from "../keys.js";
 import { getLoungeConfig } from "../lib/config.js";
 import { getExtras, getStats } from "../lib/data.js";
@@ -18,7 +13,7 @@ import { getExtras, getStats } from "../lib/data.js";
   name: "lounge",
   description: "Auto-scaling voice lounge controls.",
   preconditions: ["GuildOnly"],
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   subcommands: [{ name: "stats", chatInputRun: "chatInputRunStats" }],
 })
 export class LoungeCommand extends BaseSubcommand {
@@ -42,7 +37,7 @@ export class LoungeCommand extends BaseSubcommand {
     const config = await getLoungeConfig(guild.id);
 
     if (config.baseChannelIds.length === 0) {
-      return this.reply(
+      return sendReply(
         interaction,
         ephemeralCard(
           makeWarningCard(
@@ -82,7 +77,7 @@ export class LoungeCommand extends BaseSubcommand {
       `Created **${stats.creations}** · Removed **${stats.deletions}** · Peak **${stats.peakUsers}** concurrent`,
     ];
 
-    return this.reply(
+    return sendReply(
       interaction,
       ephemeralCard(makeInfoCard("🛋️ Multi Lounge", body)),
     );

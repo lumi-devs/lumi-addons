@@ -1,9 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import type { Subcommand } from "@sapphire/plugin-subcommands";
-import { BaseSubcommand, CommandContext } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
-import { makeInfoCard, makeSuccessCard } from "#utilities/cards.js";
-import { Emojis } from "#utilities/assets.js";
+import { BaseSubcommand, CommandContext } from "lumi/commands";
+import { makeInfoCard, makeSuccessCard, Emojis } from "lumi/ui";
 import { MODULE_NAME } from "../lib/keys.js";
 import { getCounts, getRoleCount, resetCounts } from "../lib/store.js";
 import { roleLabel } from "../lib/format.js";
@@ -15,7 +13,7 @@ import { sendLog } from "../lib/log.js";
   description: "Role mention statistics for this server.",
   preconditions: ["GuildOnly", "ModuleEnabled"],
   module: MODULE_NAME,
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
     { name: "stats", run: "stats", default: true },
@@ -150,7 +148,7 @@ export class RoleMentionsCommand extends BaseSubcommand {
     const { guild } = ctx;
     if (!guild) return;
 
-    await ctx.checkPermission(PermissionLevel.ADMIN);
+    await ctx.checkPermit("admin.*");
 
     await resetCounts(guild.id);
     await sendLog(

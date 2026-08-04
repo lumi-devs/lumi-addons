@@ -1,5 +1,5 @@
 import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
+import { Module, DefineModule, cfg } from "lumi";
 import { deleteForUser } from "./lib/data.js";
 
 @DefineModule({

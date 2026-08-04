@@ -7,7 +7,7 @@ import {
   type AutoModerationRule,
   type Guild,
 } from "discord.js";
-import { swallow } from "#utilities/errors.js";
+import { swallow, acquireRedisLock } from "lumi/utils";
 import { getBlocks, getRuleId, setRuleId, clearRuleId } from "./store.js";
 
 export const RULE_NAME = "🛡️ Role Mention Protection";
@@ -53,38 +53,63 @@ async function ensureRule(guild: Guild): Promise<AutoModerationRule | null> {
     await clearRuleId(guild.id);
   }
 
-  const all = await guild.autoModerationRules.fetch().catch(() => null);
-  const byName = all?.find((r) => r.name === RULE_NAME) ?? null;
-  if (byName) {
-    await setRuleId(guild.id, byName.id);
-    return byName;
+  const release = await acquireRedisLock(
+    container.redis,
+    `ember:rolementions:rule-lock:${guild.id}`,
+    { ttlMs: 10_000, acquireTimeoutMs: 10_000 },
+  ).catch((err: unknown) => {
+    container.logger.warn(
+      `[rolementions] Failed to acquire AutoMod rule lock in ${guild.id}; proceeding unlocked:`,
+      err,
+    );
+    return null;
+  });
+
+  try {
+    const racedId = await getRuleId(guild.id);
+    if (racedId) {
+      const existing = await guild.autoModerationRules
+        .fetch(racedId)
+        .catch(() => null);
+      if (existing) return existing;
+      await clearRuleId(guild.id);
+    }
+
+    const all = await guild.autoModerationRules.fetch().catch(() => null);
+    const byName = all?.find((r) => r.name === RULE_NAME) ?? null;
+    if (byName) {
+      await setRuleId(guild.id, byName.id);
+      return byName;
+    }
+
+    const created = await guild.autoModerationRules
+      .create({
+        name: RULE_NAME,
+        eventType: AutoModerationRuleEventType.MessageSend,
+        triggerType: AutoModerationRuleTriggerType.Keyword,
+        triggerMetadata: { keywordFilter: [PLACEHOLDER_KEYWORD] },
+        actions: [
+          {
+            type: AutoModerationActionType.BlockMessage,
+            metadata: { customMessage: blockMessageFor(1) },
+          },
+        ],
+        enabled: true,
+        reason: "Role mention protection",
+      })
+      .catch((err: unknown) => {
+        container.logger.error(
+          `[rolementions] Failed to create AutoMod rule in ${guild.id}:`,
+          err,
+        );
+        return null;
+      });
+
+    if (created) await setRuleId(guild.id, created.id);
+    return created;
+  } finally {
+    await release?.();
   }
-
-  const created = await guild.autoModerationRules
-    .create({
-      name: RULE_NAME,
-      eventType: AutoModerationRuleEventType.MessageSend,
-      triggerType: AutoModerationRuleTriggerType.Keyword,
-      triggerMetadata: { keywordFilter: [PLACEHOLDER_KEYWORD] },
-      actions: [
-        {
-          type: AutoModerationActionType.BlockMessage,
-          metadata: { customMessage: blockMessageFor(1) },
-        },
-      ],
-      enabled: true,
-      reason: "Role mention protection",
-    })
-    .catch((err: unknown) => {
-      container.logger.error(
-        `[rolementions] Failed to create AutoMod rule in ${guild.id}:`,
-        err,
-      );
-      return null;
-    });
-
-  if (created) await setRuleId(guild.id, created.id);
-  return created;
 }
 
 /**
@@ -92,9 +117,9 @@ async function ensureRule(guild: Guild): Promise<AutoModerationRule | null> {
  * Only the raw mention form `<@&id>` is used as a keyword — role *names* are
  * intentionally excluded so plain text containing a name is never blocked.
  */
-export async function syncRule(guild: Guild): Promise<void> {
+export async function syncRule(guild: Guild): Promise<boolean> {
   const rule = await ensureRule(guild);
-  if (!rule) return;
+  if (!rule) return false;
 
   const blocks = await getBlocks(guild.id);
   const keywords =
@@ -102,7 +127,7 @@ export async function syncRule(guild: Guild): Promise<void> {
       ? [...blocks.keys()].map(keywordFor)
       : [PLACEHOLDER_KEYWORD];
 
-  await rule
+  const edited = await rule
     .edit({
       triggerMetadata: { keywordFilter: keywords },
       actions: [
@@ -114,4 +139,6 @@ export async function syncRule(guild: Guild): Promise<void> {
       reason: "Role mention protection — block list changed",
     })
     .catch(swallow("rolementions: sync AutoMod rule"));
+
+  return edited !== null;
 }

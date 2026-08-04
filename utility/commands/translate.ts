@@ -7,14 +7,12 @@ import {
   ApplicationCommandType,
 } from "discord.js";
 import { fetch as sfetch, FetchResultTypes } from "@sapphire/fetch";
-import { BaseCommand } from "#lib/commands.js";
-import { PermissionLevel } from "#lib/permissions.js";
+import { BaseCommand, replyError } from "lumi/commands";
 
 @ApplyOptions<BaseCommand.Options>({
   name: "translate",
   aliases: ["t"],
   description: "Translate text to English",
-  permissionLevel: PermissionLevel.USER,
   generateDashLessAliases: true,
 })
 export class TranslateCommand extends BaseCommand {
@@ -47,7 +45,7 @@ export class TranslateCommand extends BaseCommand {
 
     const translated = await this.fetchTranslation(text);
     if (!translated) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Failed",
         "Could not translate text.",
@@ -65,12 +63,12 @@ export class TranslateCommand extends BaseCommand {
     const message = interaction.targetMessage;
 
     if (!message.content) {
-      return this.replyError(interaction, "Failed", "No text to translate.");
+      return replyError(interaction, "Failed", "No text to translate.");
     }
 
     const translated = await this.fetchTranslation(message.content);
     if (!translated) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Failed",
         "Could not translate text.",

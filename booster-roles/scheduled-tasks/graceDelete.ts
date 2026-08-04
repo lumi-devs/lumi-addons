@@ -1,6 +1,6 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { ScheduledTask } from "@sapphire/plugin-scheduled-tasks";
-import { RelayTask, type CatchUpMeta } from "#core/lib/scheduled-tasks.js";
+import { RelayTask, type CatchUpMeta } from "lumi/scheduling";
 
 // One-shot boost-loss cleanup. `catchUp` is left at its default (true): if the
 // bot was down when the grace elapsed, the role should still be removed on the

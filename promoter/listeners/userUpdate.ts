@@ -1,7 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
 import { Listener, Events } from "@sapphire/framework";
 import type { User } from "discord.js";
-import { isModuleEnabled } from "#utilities/listeners.js";
+import { isModuleEnabled } from "lumi/permissions";
 import { evaluateMember } from "../lib/evaluate.js";
 import { MODULE_NAME } from "../keys.js";
 

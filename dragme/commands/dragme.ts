@@ -2,7 +2,7 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { type ChatInputCommandInteraction, type GuildMember } from "discord.js";
 import { channelMention } from "@discordjs/formatters";
-import { BaseCommand } from "#lib/commands.js";
+import { BaseCommand, replySuccess, replyError } from "lumi/commands";
 import { createDragRequest } from "../lib/create-request.js";
 
 @ApplyOptions<BaseCommand.Options>({
@@ -37,7 +37,7 @@ export class DragmeCommand extends BaseCommand {
       .fetch(targetUser.id)
       .catch(() => null);
     if (!targetMember) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Can't Do That",
         "Could not find that member in the server.",
@@ -45,7 +45,7 @@ export class DragmeCommand extends BaseCommand {
     }
     const targetChannel = targetMember.voice.channel;
     if (!targetChannel) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Can't Do That",
         "That user isn't in a voice channel right now.",
@@ -57,11 +57,11 @@ export class DragmeCommand extends BaseCommand {
       targetMember,
     );
     return result.ok
-      ? this.replySuccess(
+      ? replySuccess(
           interaction,
           "Request Posted",
           `Asked the members of ${channelMention(targetChannel.id)} to drag you in.`,
         )
-      : this.replyError(interaction, "Can't Do That", result.reason);
+      : replyError(interaction, "Can't Do That", result.reason);
   }
 }
