@@ -33,16 +33,31 @@ jobs:
     name: CI / test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout addons
         uses: actions/checkout@v7
+
+      # Addon modules import discord.js (and other Lumi core deps) directly,
+      # same as a real install - there's no local discord.js dependency in
+      # this repo's own package.json by design (see package.json's
+      # description: "not a package"). Without linking against a real Lumi
+      # checkout, any test that touches such a module fails to resolve it.
+      - name: Checkout lumi core
+        uses: actions/checkout@v7
+        with:
+          repository: lumi-devs/lumi
+          path: lumi-core
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
-      - name: Install dependencies
+      - name: Install lumi core dependencies
+        working-directory: lumi-core
         run: nix-shell --run "bun install --frozen-lockfile"
+
+      - name: Link addons against lumi core
+        run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
 
       - name: Run Tests
         run: nix-shell --run "bun run test"
