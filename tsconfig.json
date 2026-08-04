@@ -26,7 +26,6 @@
       "*": ["./*"],
       "lumi": ["./.lumi/packages/core/src/lib/addon-sdk/index.ts"],
       "lumi/*": ["./.lumi/packages/core/src/lib/addon-sdk/*.ts"],
-      "@prisma/client": ["./.lumi/prisma/generated/client"],
       "@lumi/contracts": ["./.lumi/packages/contracts/src/index.ts"],
       "@lumi/event-bus": ["./.lumi/packages/event-bus/src/index.ts"],
       "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"]

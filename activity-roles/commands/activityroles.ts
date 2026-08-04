@@ -2,7 +2,6 @@ import { ApplyOptions } from "@sapphire/decorators";
 import type { ApplicationCommandRegistry } from "@sapphire/framework";
 import { roleMention } from "discord.js";
 import { BaseSubcommand, CommandContext } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
 import { makeInfoCard, makeSuccessCard, Emojis } from "lumi/ui";
 import { MODULE_NAME } from "../lib/keys.js";
 import { addMapping, getMappings, removeMapping } from "../lib/store.js";
@@ -22,7 +21,7 @@ const VALID_TYPES = [
   description: "Configure activity-based role assignment.",
   preconditions: ["GuildOnly", "ModuleEnabled"],
   module: MODULE_NAME,
-  permissionLevel: PermissionLevel.MOD,
+  requiredPermit: "mod.*",
   prefixEnabled: true,
   subcommands: [
     { name: "add", run: "add" },

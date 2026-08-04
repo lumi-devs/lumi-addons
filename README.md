@@ -6,7 +6,7 @@
   <p>
     <a href="https://github.com/lumi-devs/lumi-addons/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi-addons/ci.yml?branch=main&style=flat-square&label=CI&logo=github" alt="CI"></a>
     <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-black?style=flat-square&logo=bun" alt="Bun"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-green?style=flat-square" alt="GPL v3"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-green?style=flat-square" alt="AGPL v3"></a>
     <a href="https://github.com/lumi-devs/lumi"><img src="https://img.shields.io/badge/requires-lumi%20core-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Requires Lumi"></a>
   </p>
 
@@ -116,4 +116,4 @@ Pull requests are welcome. Please:
 
 ## License
 
-[GPL v3](LICENSE) © Lumi Developers
+[AGPL v3](LICENSE) © Lumi Developers
