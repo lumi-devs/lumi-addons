@@ -3,7 +3,7 @@ import { userMention } from "@discordjs/formatters";
 import { makeInfoCard } from "lumi/ui";
 import type { RoleRecord } from "../keys.js";
 import type { BoosterConfig } from "./config.js";
-import { deleteRole } from "./data.js";
+import { deleteRole, getRole, withGuildLock } from "./data.js";
 import { deleteBoosterRole, postToChannel, revokeRole } from "./roles.js";
 
 /**
@@ -18,10 +18,16 @@ export async function removeOwnerRole(
   config: BoosterConfig,
   note: string,
 ): Promise<void> {
+  const won = await withGuildLock(guild.id, async () => {
+    if (!(await getRole(guild.id, record.ownerId))) return false;
+    await deleteRole(guild.id, record.ownerId);
+    return true;
+  });
+  if (!won) return;
+
   for (const sharedId of record.sharedWith)
     await revokeRole(guild, record.roleId, sharedId, reason);
   await deleteBoosterRole(guild, record.roleId, reason);
-  await deleteRole(guild.id, record.ownerId);
   await postToChannel(
     guild,
     config.logChannelId,

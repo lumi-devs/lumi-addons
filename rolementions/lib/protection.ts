@@ -42,7 +42,7 @@ export async function applyBlock(
   role: Role,
   durationMinutes: number,
   manual: boolean,
-): Promise<ActiveBlock> {
+): Promise<{ block: ActiveBlock; synced: boolean }> {
   const now = Date.now();
   const block: ActiveBlock = {
     roleId: role.id,
@@ -54,7 +54,7 @@ export async function applyBlock(
   };
 
   await setBlock(guild.id, block);
-  await syncRule(guild);
+  const synced = await syncRule(guild);
   await scheduleExpiry(guild.id, role.id, durationMinutes * 60_000);
 
   await sendLog(
@@ -68,12 +68,17 @@ export async function applyBlock(
           `**Expires:** ${relativeTimestamp(block.expiresAt)}`,
           `**Trigger:** ${manual ? "Manual" : "Mention spam"}`,
         ].join("\n"),
+        ...(synced
+          ? []
+          : [
+              `${Emojis.WARNING_SIGN} **AutoMod rule could not be updated** — mentions may not actually be blocked yet. Verify the bot has Manage Server permission.`,
+            ]),
       ],
       { footer: "Protection auto-removes when it expires." },
     ),
   );
 
-  return block;
+  return { block, synced };
 }
 
 /**

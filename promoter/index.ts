@@ -1,5 +1,7 @@
 import { ChannelType } from "discord.js";
 import { Module, DefineModule, cfg } from "lumi";
+import { registerTaskFireHandler } from "lumi/scheduling";
+import { handlePromoterSweepFire } from "./lib/sweep-handler.js";
 
 @DefineModule({
   name: "promoter",
@@ -41,6 +43,7 @@ import { Module, DefineModule, cfg } from "lumi";
 })
 export class PromoterModule extends Module {
   public override onLoad() {
+    registerTaskFireHandler("promoter-sweep", "broadcast", handlePromoterSweepFire);
     return super.onLoad();
   }
   // No deleteUserData override: the addon stores only aggregate counters —

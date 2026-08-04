@@ -43,29 +43,23 @@ export class DragmeRequestMessageListener extends GuildMessageListener {
       return;
     }
 
+    if (!isRequestChannel) return;
+
     const targetUserId = match[1] ?? match[2]!;
     const targetMember: GuildMember | null = await message.guild.members
       .fetch(targetUserId)
       .catch(() => null);
     const targetChannel = targetMember?.voice.channel ?? null;
 
-    // If the target is not in voice:
-    // - In request channel: show error and delete message.
-    // - In other channels: ignore completely (let the normal ping proceed).
     if (!targetChannel) {
-      if (isRequestChannel) {
-        await message.delete().catch(() => null);
-        const card = makeWarningCard(
-          "Drag Request",
-          "That user isn't in a voice channel right now.",
-        );
-        const reply = await message.channel.send(card).catch(() => null);
-        if (reply) {
-          setTimeout(
-            () => void reply.delete().catch(() => null),
-            HINT_DELETE_MS,
-          );
-        }
+      await message.delete().catch(() => null);
+      const card = makeWarningCard(
+        "Drag Request",
+        "That user isn't in a voice channel right now.",
+      );
+      const reply = await message.channel.send(card).catch(() => null);
+      if (reply) {
+        setTimeout(() => void reply.delete().catch(() => null), HINT_DELETE_MS);
       }
       return;
     }

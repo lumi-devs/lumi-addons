@@ -3,8 +3,7 @@ import type { Subcommand } from "@sapphire/plugin-subcommands";
 import type { ChatInputCommandInteraction } from "discord.js";
 import { time, TimestampStyles, userMention } from "@discordjs/formatters";
 import { Duration, DurationFormatter } from "@sapphire/time-utilities";
-import { BaseSubcommand } from "lumi/commands";
-import { PermissionLevel } from "lumi/permissions";
+import { BaseSubcommand, replySuccess, replyError } from "lumi/commands";
 
 import { paginateList } from "lumi/ui";
 import type { StatusEntry } from "../keys.js";
@@ -29,7 +28,7 @@ const PRESENCES: StatusEntry["presence"][] = ["online", "idle", "dnd"];
 @ApplyOptions<BaseSubcommand.Options>({
   name: "status",
   description: "Manage the bot's rotating presence.",
-  permissionLevel: PermissionLevel.BOT_OWNER,
+  requiredPermit: "owner.*",
   subcommands: [
     { name: "add", chatInputRun: "chatInputAdd" },
     { name: "remove", chatInputRun: "chatInputRemove" },
@@ -121,7 +120,7 @@ export class StatusCommand extends BaseSubcommand {
       addedBy: interaction.user.id,
       addedAt: Date.now(),
     });
-    return this.replySuccess(
+    return replySuccess(
       interaction,
       "Status Added",
       `**#${entry.id}** — ${type === "Custom" ? "" : `${type} `}${text} *(${presence})*`,
@@ -132,12 +131,12 @@ export class StatusCommand extends BaseSubcommand {
     const id = interaction.options.getInteger("id", true);
     const removed = await removeEntry(id);
     return removed
-      ? this.replySuccess(
+      ? replySuccess(
           interaction,
           "Status Removed",
           `Entry **#${id}** deleted.`,
         )
-      : this.replyError(
+      : replyError(
           interaction,
           "Not Found",
           `No status with id **#${id}** — check \`/status list\`.`,
@@ -170,7 +169,7 @@ export class StatusCommand extends BaseSubcommand {
     const raw = interaction.options.getString("duration", true);
     const ms = new Duration(raw).offset;
     if (!Number.isFinite(ms) || ms < 30_000) {
-      return this.replyError(
+      return replyError(
         interaction,
         "Invalid Duration",
         "Provide a duration of at least 30 seconds, e.g. `2m` or `1h30m`.",
@@ -178,7 +177,7 @@ export class StatusCommand extends BaseSubcommand {
     }
     const settings = await getSettings();
     await saveSettings({ ...settings, intervalMs: ms });
-    return this.replySuccess(
+    return replySuccess(
       interaction,
       "Interval Updated",
       `Statuses now rotate every **${new DurationFormatter().format(ms)}**.`,
@@ -189,7 +188,7 @@ export class StatusCommand extends BaseSubcommand {
     const settings = await getSettings();
     const enabled = !settings.enabled;
     await saveSettings({ ...settings, enabled });
-    return this.replySuccess(
+    return replySuccess(
       interaction,
       enabled ? "Rotation Enabled" : "Rotation Disabled",
       enabled
@@ -201,12 +200,12 @@ export class StatusCommand extends BaseSubcommand {
   public async chatInputPreview(interaction: ChatInputCommandInteraction) {
     const applied = await applyNextStatus(true);
     return applied
-      ? this.replySuccess(
+      ? replySuccess(
           interaction,
           "Status Applied",
           `Now showing **#${applied.id}** — ${applied.text}`,
         )
-      : this.replyError(
+      : replyError(
           interaction,
           "Nothing to Apply",
           "Add at least one status with `/status add` first.",
