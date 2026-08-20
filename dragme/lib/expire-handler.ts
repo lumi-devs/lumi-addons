@@ -16,7 +16,7 @@ export async function handleDragmeExpireFire(
     DragmeKeys.requestLock(guildId, userId),
     { ttlMs: 5_000, acquireTimeoutMs: 10_000 },
   );
-  let req: DragRequest | null = null;
+  let req: DragRequest | null;
   try {
     req = await getRequest(guildId, userId);
     if (!req) return; // Already accepted/declined/cleared.
