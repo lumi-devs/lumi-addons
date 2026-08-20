@@ -13,6 +13,7 @@ import {
   noPingCard,
 } from "lumi/ui";
 import { scheduleTask, cancelTask } from "lumi/scheduling";
+import { acquireRedisLock } from "lumi/utils";
 import { dragmeExpireJobId, dragmeRevokeJobId, DragmeKeys } from "../keys.js";
 import { getDragmeConfig } from "../lib/config.js";
 import { buildRequestButtons } from "../lib/create-request.js";
@@ -41,45 +42,57 @@ export class DragmeButtonHandler extends InteractionHandler {
   ): Promise<void> {
     if (!interaction.inCachedGuild() || interaction.guildId !== guildId) return;
 
-    const req = await getRequest(guildId, userId);
-    if (!req) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard("Gone", "This drag request is no longer active."),
-        ),
-      );
-      return;
-    }
-
-    const target = interaction.guild.channels.cache.get(req.targetChannelId);
-    if (!target?.isVoiceBased()) {
-      await deleteRequest(guildId, userId);
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Gone",
-            "The requested voice channel no longer exists.",
-          ),
-        ),
-      );
-      return;
-    }
-
+    const release = await acquireRedisLock(
+      this.container.redis,
+      DragmeKeys.requestLock(guildId, userId),
+      { ttlMs: 5_000, acquireTimeoutMs: 10_000 },
+    );
+    let req: Awaited<ReturnType<typeof getRequest>>;
+    let target: ReturnType<typeof interaction.guild.channels.cache.get>;
     const presser = interaction.member;
-    if (presser.voice.channelId !== target.id) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Not Your Call",
-            `Only members currently in ${channelMention(target.id)} can respond to this request.`,
+    try {
+      req = await getRequest(guildId, userId);
+      if (!req) {
+        await interaction.reply(
+          ephemeralCard(
+            makeErrorCard("Gone", "This drag request is no longer active."),
           ),
-        ),
-      );
-      return;
-    }
+        );
+        return;
+      }
 
-    await deleteRequest(guildId, userId);
-    await cancelTask(dragmeExpireJobId(guildId, userId)).catch(() => null);
+      target = interaction.guild.channels.cache.get(req.targetChannelId);
+      if (!target?.isVoiceBased()) {
+        await interaction.reply(
+          ephemeralCard(
+            makeErrorCard(
+              "Gone",
+              "The requested voice channel no longer exists.",
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (presser.voice.channelId !== target.id) {
+        await interaction.reply(
+          ephemeralCard(
+            makeErrorCard(
+              "Not Your Call",
+              `Only members currently in ${channelMention(target.id)} can respond to this request.`,
+            ),
+          ),
+        );
+        return;
+      }
+
+      await deleteRequest(guildId, userId);
+      await cancelTask(dragmeExpireJobId(guildId, userId)).catch(() => null);
+    } finally {
+      await release();
+    }
+    if (!target?.isVoiceBased()) return;
+
     const disabledRows = buildRequestButtons(guildId, userId, true);
 
     if (verb === "dec") {

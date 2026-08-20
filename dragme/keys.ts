@@ -9,6 +9,9 @@ export const DragmeKeys = {
   /** Temporary permission flag for user in a voice channel. */
   tempPerm: (guildId: string, channelId: string, userId: string) =>
     `lumi:addon:dragme:temp-perm:${guildId}:${channelId}:${userId}`,
+  /** Guards concurrent expire/accept/decline handling of the same request. */
+  requestLock: (guildId: string, userId: string) =>
+    `lumi:addon:dragme:req-lock:${guildId}:${userId}`,
 } as const;
 
 export const dragmeExpireJobId = (guildId: string, userId: string) =>
