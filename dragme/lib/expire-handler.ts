@@ -1,6 +1,8 @@
 import { container } from "@sapphire/framework";
 import { channelMention, userMention } from "@discordjs/formatters";
 import { makeWarningCard, noPingCard } from "lumi/ui";
+import { acquireRedisLock } from "lumi/utils";
+import { DragmeKeys, type DragRequest } from "../keys.js";
 import type { DragmeExpirePayload } from "../scheduled-tasks/dragmeExpire.js";
 import { buildRequestButtons } from "./create-request.js";
 import { deleteRequest, getRequest } from "./requests.js";
@@ -9,10 +11,20 @@ export async function handleDragmeExpireFire(
   payload: DragmeExpirePayload,
 ): Promise<void> {
   const { guildId, userId } = payload;
-  const req = await getRequest(guildId, userId);
-  if (!req) return; // Already accepted/declined/cleared.
-
-  await deleteRequest(guildId, userId);
+  const release = await acquireRedisLock(
+    container.redis,
+    DragmeKeys.requestLock(guildId, userId),
+    { ttlMs: 5_000, acquireTimeoutMs: 10_000 },
+  );
+  let req: DragRequest | null = null;
+  try {
+    req = await getRequest(guildId, userId);
+    if (!req) return; // Already accepted/declined/cleared.
+    await deleteRequest(guildId, userId);
+  } finally {
+    await release();
+  }
+  if (!req) return;
 
   const guild =
     container.client.guilds.cache.get(guildId) ??
