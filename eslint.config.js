@@ -2,7 +2,7 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['lumi-core/**', '.lumi/**', 'node_modules/**', 'dist/**', '**/*.js', '**/*.mjs'] },
+  { ignores: ['lumi-core/**', '.lumi/**', 'node_modules/**', 'dist/**', 'docs/**', '**/*.js', '**/*.mjs'] },
   { files: ['**/*.ts'] },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

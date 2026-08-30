@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "changeset": "bunx @changesets/cli",
-    "version:sync": "bunx @changesets/cli version && bun scripts/version-sync.ts"
+    "version:sync": "bunx @changesets/cli version && bun scripts/version-sync.ts",
+    "check:loader": "bun scripts/mock-lumi-check.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.12",

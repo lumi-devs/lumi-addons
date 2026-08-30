@@ -35,5 +35,5 @@
   // Core src is included so its scattered module augmentations (Sapphire
   // Preconditions, ScheduledTasks, i18n keys) are visible to addon files.
   "include": ["*/**/*.ts", "./.lumi/packages/core/src/**/*.ts"],
-  "exclude": ["node_modules", ".lumi/node_modules"]
+  "exclude": ["node_modules", ".lumi/node_modules", ".lumi/packages/core/src/lib/client/setup.ts", "docs", "dist", "coverage"]
 }

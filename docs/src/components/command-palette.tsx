@@ -56,7 +56,9 @@ export function CommandPalette({
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        isOpen ? onClose() : onClose(); // toggle handled by parent
+        if (isOpen) {
+          onClose();
+        }
       }
       if (!isOpen) return;
       if (e.key === "Escape") {
