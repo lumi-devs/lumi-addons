@@ -37,4 +37,11 @@ export class RoleMentionsModule extends Module {
   ): Promise<void> {
     // No per-user data: counters and blocks are keyed by role, not user.
   }
+
+  public override async exportUserData(
+    _userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    // Same as deleteUserData: no per-user data stored.
+    return null;
+  }
 }

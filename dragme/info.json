@@ -4,5 +4,6 @@
   "description": "Voice drag requests: ask to be pulled into a voice channel and let the people inside approve with one click. Approvals move you or grant a temporary connect pass.",
   "short": "Ask to be dragged into a voice channel.",
   "version": "1.0.0",
-  "min_bot_version": "1.0.0"
+  "min_bot_version": "1.0.0",
+  "end_user_data_statement": "Temporarily stores voice drag request metadata (requesting user ID, target channel ID, timestamp) in Redis with automatic TTL expiration. Cleared immediately upon request completion, rejection, or expiration."
 }

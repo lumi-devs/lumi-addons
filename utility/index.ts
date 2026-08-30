@@ -14,4 +14,11 @@ export class UtilityAddonModule extends Module {
   ): Promise<void> {
     // No-op: utility addons like translate and emoji-stealer do not store user data
   }
+
+  public override async exportUserData(
+    _userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    // Same as deleteUserData: no per-user data stored.
+    return null;
+  }
 }

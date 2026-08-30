@@ -57,7 +57,7 @@ export async function bumpStats(
   guildId: string,
   field: keyof PromoterStats,
 ): Promise<void> {
-  const release = await acquireRedisLock(
+  const lock = await acquireRedisLock(
     container.redis,
     PromoterKeys.statsLock(guildId),
     { ttlMs: 5_000, acquireTimeoutMs: 10_000 },
@@ -73,7 +73,7 @@ export async function bumpStats(
       stats,
     );
   } finally {
-    await release();
+    await lock.release();
   }
 }
 

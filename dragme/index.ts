@@ -3,7 +3,8 @@ import { Module, DefineModule, cfg } from "lumi";
 import { registerTaskFireHandler } from "lumi/scheduling";
 import { handleDragmeExpireFire } from "./lib/expire-handler.js";
 import { handleDragmeRevokeFire } from "./lib/revoke-handler.js";
-import { deleteRequest } from "./lib/requests.js";
+import { deleteRequest, getRequest } from "./lib/requests.js";
+import type { DragRequest } from "./keys.js";
 
 @DefineModule({
   name: "dragme",
@@ -57,5 +58,16 @@ export class DragmeModule extends Module {
     for (const guildId of this.container.client.guilds.cache.keys()) {
       await deleteRequest(guildId, userId);
     }
+  }
+
+  public override async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const requests: DragRequest[] = [];
+    for (const guildId of this.container.client.guilds.cache.keys()) {
+      const req = await getRequest(guildId, userId);
+      if (req) requests.push(req);
+    }
+    return requests.length > 0 ? { activeDragRequests: requests } : null;
   }
 }

@@ -4,5 +4,6 @@
   "description": "Auto-assign roles based on users' Discord presence (Playing, Streaming, Listening, Watching, Custom, Competing).",
   "short": "Presence-based role automation.",
   "version": "1.0.0",
-  "min_bot_version": "1.0.0"
+  "min_bot_version": "1.0.0",
+  "end_user_data_statement": "This module does not collect, persist, or store any personal end-user data. It operates strictly on Discord presence events to manage guild role assignments based on administrator-configured rules."
 }

@@ -1,7 +1,8 @@
 import { ChannelType } from "discord.js";
 import { Module, DefineModule, cfg } from "lumi";
 import { registerTaskFireHandler } from "lumi/scheduling";
-import { deleteForUser } from "./lib/data.js";
+import { deleteForUser, getRole, isBlacklisted, listRoles } from "./lib/data.js";
+import type { RoleRecord } from "./keys.js";
 import { handleBoosterGraceFire } from "./lib/grace-handler.js";
 import { handleBoosterReconcileFire } from "./lib/reconcile-handler.js";
 
@@ -78,5 +79,36 @@ export class BoosterRolesModule extends Module {
   public override async deleteUserData(userId: string): Promise<void> {
     for (const guildId of this.container.client.guilds.cache.keys())
       await deleteForUser(guildId, userId);
+  }
+
+  public override async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const ownedRoles: RoleRecord[] = [];
+    const sharedRoles: RoleRecord[] = [];
+    const blacklistedIn: string[] = [];
+
+    for (const guildId of this.container.client.guilds.cache.keys()) {
+      const owned = await getRole(guildId, userId);
+      if (owned) ownedRoles.push(owned);
+
+      const all = await listRoles(guildId);
+      for (const record of all) {
+        if (record.ownerId !== userId && record.sharedWith.includes(userId)) {
+          sharedRoles.push(record);
+        }
+      }
+
+      if (await isBlacklisted(guildId, userId)) blacklistedIn.push(guildId);
+    }
+
+    if (
+      ownedRoles.length === 0 &&
+      sharedRoles.length === 0 &&
+      blacklistedIn.length === 0
+    ) {
+      return null;
+    }
+    return { ownedRoles, sharedRoles, blacklistedIn };
   }
 }

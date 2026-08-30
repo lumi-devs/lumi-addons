@@ -4,5 +4,6 @@
   "description": "Anonymous confessions with numbered Components-v2 cards, optional threads, anonymous replies, and hash-based moderation that never exposes author identity.",
   "short": "Anonymous confessions + replies.",
   "version": "1.0.0",
-  "min_bot_version": "1.0.0"
+  "min_bot_version": "1.0.0",
+  "end_user_data_statement": "Stores cryptographic one-way hashes of author IDs per guild for moderation purposes (banning abusers, managing replies) without storing plaintext user identities. Author mappings can be purged via GDPR deletion."
 }

@@ -11,9 +11,12 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "changeset": "bunx @changesets/cli",
+    "version:sync": "bunx @changesets/cli version && bun scripts/version-sync.ts"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.12",
     "@eslint/js": "^10",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^10",

@@ -8,7 +8,7 @@ import {
   TimestampStyles,
 } from "@discordjs/formatters";
 import { BaseCommand } from "lumi/commands";
-import { PermissionLevel, resolvePermissionLevel } from "lumi/permissions";
+import { hasRequiredPermit } from "lumi/permissions";
 import {
   ephemeralCard,
   makeSuccessCard,
@@ -341,8 +341,11 @@ export class BoosterRolesCommand extends BaseCommand {
   private async assertMod(
     interaction: ChatInputCommandInteraction,
   ): Promise<boolean> {
-    const level = await resolvePermissionLevel(interaction);
-    if (level < PermissionLevel.MOD) {
+    const isAllowed =
+      (await hasRequiredPermit(interaction, "mod.*")) ||
+      (await hasRequiredPermit(interaction, "admin.*")) ||
+      (await hasRequiredPermit(interaction, "boosterroles.admin"));
+    if (!isAllowed) {
       await interaction.reply(
         ephemeralCard(
           noPingCard(

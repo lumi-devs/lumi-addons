@@ -1,6 +1,6 @@
 import { ChannelType } from "discord.js";
 import { Module, DefineModule, cfg } from "lumi";
-import { deleteForUser } from "./lib/data.js";
+import { deleteForUser, exportForUser } from "./lib/data.js";
 
 @DefineModule({
   name: "confessions",
@@ -67,5 +67,17 @@ export class ConfessionsModule extends Module {
   public override async deleteUserData(userId: string): Promise<void> {
     for (const guildId of this.container.client.guilds.cache.keys())
       await deleteForUser(guildId, userId);
+  }
+
+  /** Mirrors deleteUserData's per-guild hash lookup, but reads instead of erasing. */
+  public override async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const perGuild: Record<string, unknown> = {};
+    for (const guildId of this.container.client.guilds.cache.keys()) {
+      const data = await exportForUser(guildId, userId);
+      if (data) perGuild[guildId] = data;
+    }
+    return Object.keys(perGuild).length > 0 ? perGuild : null;
   }
 }

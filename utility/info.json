@@ -4,5 +4,6 @@
   "description": "General utility addons including auto-translate and emoji-stealer.",
   "short": "General utility tools.",
   "version": "1.0.0",
-  "min_bot_version": "1.0.0"
+  "min_bot_version": "1.0.0",
+  "end_user_data_statement": "Processes transient translation and emoji extraction requests in real-time. Does not collect, persist, or retain any personal user data or message content."
 }

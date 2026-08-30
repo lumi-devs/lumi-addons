@@ -9,3 +9,7 @@ coverage/
 lumi-core/
 *.png
 Screenshot_*
+.next/
+docs/.next/
+docs/dist/
+docs/node_modules/

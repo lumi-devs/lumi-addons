@@ -56,6 +56,16 @@ export class MultiLoungeModule extends Module {
     return super.onLoad();
   }
 
-  // No deleteUserData override: the addon stores only channel IDs and aggregate
-  // counters — no data keyed by a user ID.
+  public override async deleteUserData(
+    _userId: string,
+    _requester?: string,
+  ): Promise<void> {
+    // No-op: multi-lounge stores only channel IDs and aggregate counters.
+  }
+
+  public override async exportUserData(
+    _userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    return null;
+  }
 }

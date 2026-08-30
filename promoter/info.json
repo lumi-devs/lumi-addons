@@ -4,5 +4,6 @@
   "description": "Rewards members who advertise the server in their custom status (invite link or server tag) with a configurable role, removed automatically when the status changes. Includes a self-heal sweep, log cards, and a persistent check-me panel.",
   "short": "Auto-role for members advertising the server.",
   "version": "1.0.0",
-  "min_bot_version": "1.0.0"
+  "min_bot_version": "1.0.0",
+  "end_user_data_statement": "Processes Discord user presence text in real-time to check for server promotions. Stores aggregated guild reward statistics; does not store personal user identifiers or profile data."
 }

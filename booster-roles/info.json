@@ -4,5 +4,6 @@
   "description": "Personal custom roles for server boosters — create, recolor, and share a role through an interactive panel, with automatic cleanup (grace period) when a boost lapses, a moderator admin panel, and a blacklist.",
   "short": "Custom roles for boosters.",
   "version": "1.0.0",
-  "min_bot_version": "1.0.0"
+  "min_bot_version": "1.0.0",
+  "end_user_data_statement": "Stores custom booster role definitions (role ID, owner user ID, role name, hex color, and optional shared user IDs) in guild configuration storage for managing server booster perks. Data is deleted upon role deletion or GDPR user purge request."
 }

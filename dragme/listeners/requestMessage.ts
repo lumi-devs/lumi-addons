@@ -10,6 +10,14 @@ import { createDragRequest } from "../lib/create-request.js";
 const HINT_DELETE_MS = 10_000;
 const USER_REF = /<@!?(\d{17,20})>|^(\d{17,20})$/;
 
+function scheduleAutoDelete(reply: { delete: () => Promise<unknown> }) {
+  const timer = setTimeout(() => {
+    clearTimeout(timer);
+    void reply.delete().catch(() => null);
+  }, HINT_DELETE_MS);
+  timer.unref?.();
+}
+
 /**
  * Message-driven flow in the configured request channel: post a user mention
  * or ID and be dragged to wherever that user currently is. The trigger message
@@ -34,10 +42,7 @@ export class DragmeRequestMessageListener extends GuildMessageListener {
         );
         const reply = await message.channel.send(card).catch(() => null);
         if (reply) {
-          setTimeout(
-            () => void reply.delete().catch(() => null),
-            HINT_DELETE_MS,
-          );
+          scheduleAutoDelete(reply);
         }
       }
       return;
@@ -59,7 +64,7 @@ export class DragmeRequestMessageListener extends GuildMessageListener {
       );
       const reply = await message.channel.send(card).catch(() => null);
       if (reply) {
-        setTimeout(() => void reply.delete().catch(() => null), HINT_DELETE_MS);
+        scheduleAutoDelete(reply);
       }
       return;
     }
@@ -77,7 +82,7 @@ export class DragmeRequestMessageListener extends GuildMessageListener {
       const card = makeWarningCard("Drag Request", result.reason);
       const reply = await message.channel.send(card).catch(() => null);
       if (reply) {
-        setTimeout(() => void reply.delete().catch(() => null), HINT_DELETE_MS);
+        scheduleAutoDelete(reply);
       }
     }
   }

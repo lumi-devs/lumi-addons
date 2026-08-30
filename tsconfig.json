@@ -14,6 +14,7 @@
     "emitDecoratorMetadata": true,
     "useDefineForClassFields": true,
     "preserveConstEnums": true,
+    "types": ["bun"],
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,

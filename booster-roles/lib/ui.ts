@@ -9,8 +9,7 @@ import {
 } from "@discordjs/builders";
 import { ButtonStyle, TextInputStyle } from "discord.js";
 import { roleMention, userMention } from "@discordjs/formatters";
-import { makeInfoCard, makeCard, type CardReply } from "lumi/ui";
-import { BotConfig } from "lumi/utils";
+import { makeInfoCard, makeCard, resolveCardColor, defaultCardColors, type CardReply } from "lumi/ui";
 import { colorToHex } from "./engine.js";
 import type { RoleRecord } from "../keys.js";
 
@@ -87,7 +86,7 @@ export function buildPanel(record: RoleRecord | null): CardReply {
   );
 
   return makeCard(
-    record.color || BotConfig.branding.colors.PRIMARY,
+    record.color || resolveCardColor("primary") || defaultCardColors.primary,
     "🎨 Your Booster Role",
     body,
     {
@@ -189,7 +188,7 @@ export function buildDeleteConfirm(record: RoleRecord): CardReply {
       .setStyle(ButtonStyle.Danger),
   );
   return makeCard(
-    BotConfig.branding.colors.WARNING,
+    resolveCardColor("warning") || defaultCardColors.warning,
     "⚠️ Delete Your Role",
     `This permanently deletes ${roleMention(record.roleId)} and removes it from everyone. This can't be undone.`,
     { actionRows: [row] },

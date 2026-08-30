@@ -4,5 +4,6 @@
   "description": "Automatically archives or locks threads after a configurable period of inactivity. Watches new threads in selected channels and schedules a one-shot cleanup job per thread.",
   "short": "Auto-archive/lock inactive threads.",
   "version": "1.0.0",
-  "min_bot_version": "1.0.0"
+  "min_bot_version": "1.0.0",
+  "end_user_data_statement": "Does not collect or store any personal end-user data. Evaluates thread channel activity timestamps to automate thread archiving and locking according to guild configuration."
 }

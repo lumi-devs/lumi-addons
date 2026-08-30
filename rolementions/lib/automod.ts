@@ -53,9 +53,9 @@ async function ensureRule(guild: Guild): Promise<AutoModerationRule | null> {
     await clearRuleId(guild.id);
   }
 
-  const release = await acquireRedisLock(
+  const lock = await acquireRedisLock(
     container.redis,
-    `ember:rolementions:rule-lock:${guild.id}`,
+    `lumi:rolementions:rule-lock:${guild.id}`,
     { ttlMs: 10_000, acquireTimeoutMs: 10_000 },
   ).catch((err: unknown) => {
     container.logger.warn(
@@ -108,7 +108,7 @@ async function ensureRule(guild: Guild): Promise<AutoModerationRule | null> {
     if (created) await setRuleId(guild.id, created.id);
     return created;
   } finally {
-    await release?.();
+    await lock?.release();
   }
 }
 

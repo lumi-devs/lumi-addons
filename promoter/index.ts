@@ -46,6 +46,16 @@ export class PromoterModule extends Module {
     registerTaskFireHandler("promoter-sweep", "broadcast", handlePromoterSweepFire);
     return super.onLoad();
   }
-  // No deleteUserData override: the addon stores only aggregate counters —
-  // no per-user rows.
+  public override async deleteUserData(
+    _userId: string,
+    _requester?: string,
+  ): Promise<void> {
+    // No-op: promoter stores only aggregate counters.
+  }
+
+  public override async exportUserData(
+    _userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    return null;
+  }
 }

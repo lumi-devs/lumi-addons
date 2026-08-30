@@ -18,4 +18,11 @@ export class ActivityRolesModule extends Module {
     // This module does not store any user-specific data that falls under GDPR.
     // It only stores guild configuration.
   }
+
+  public override async exportUserData(
+    _userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    // Same as deleteUserData: no per-user data stored.
+    return null;
+  }
 }

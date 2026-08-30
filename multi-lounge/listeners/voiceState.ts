@@ -16,6 +16,14 @@ const pending = new Map<string, ReturnType<typeof setTimeout>>();
   module: MODULE_NAME,
 })
 export class LoungeVoiceListener extends ModuleListener<"voiceStateUpdate"> {
+  public override onUnload() {
+    for (const timer of pending.values()) {
+      clearTimeout(timer);
+    }
+    pending.clear();
+    return super.onUnload();
+  }
+
   protected override resolveGuildId(
     oldState: VoiceState,
     newState: VoiceState,
@@ -53,12 +61,10 @@ export class LoungeVoiceListener extends ModuleListener<"voiceStateUpdate"> {
 
     const existing = pending.get(guild.id);
     if (existing) clearTimeout(existing);
-    pending.set(
-      guild.id,
-      setTimeout(() => {
-        pending.delete(guild.id);
-        void manageLounges(guild);
-      }, DEBOUNCE_MS),
-    );
+    const timer = setTimeout(() => {
+      pending.delete(guild.id);
+      void manageLounges(guild);
+    }, DEBOUNCE_MS);
+    pending.set(guild.id, timer);
   }
 }

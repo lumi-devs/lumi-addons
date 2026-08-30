@@ -9,8 +9,7 @@ import {
   FileUploadBuilder,
 } from "@discordjs/builders";
 import { ButtonStyle, TextInputStyle } from "discord.js";
-import { makeCard, type CardReply } from "lumi/ui";
-import { BotConfig } from "lumi/utils";
+import { makeCard, resolveCardColor, defaultCardColors, type CardReply } from "lumi/ui";
 
 const replyButtonRow = (
   confessionNumber: number,
@@ -56,7 +55,7 @@ export function buildConfessionCard(
   showConfessButton = true,
 ): CardReply {
   const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
-  return makeCard(BotConfig.branding.colors.PRIMARY, `🕊️ ${displayTitle}`, text, {
+  return makeCard(resolveCardColor("primary") || defaultCardColors.primary, `🕊️ ${displayTitle}`, text, {
     footer: `Confession #${number} · anyone can reply anonymously`,
     actionRows: [replyButtonRow(number, showConfessButton)],
     mediaGallery: galleryFor(imageUrl),
@@ -74,7 +73,9 @@ export function buildReplyCard(
 ): CardReply {
   const bodyText = parentQuote ? `${parentQuote}\n\n${text}` : text;
   const footerText = isOp ? "👑 OP · Anonymous reply" : "Anonymous reply";
-  const color = isOp ? BotConfig.branding.colors.WARNING : BotConfig.branding.colors.PRIMARY; // Gold/warning if OP, primary if not
+  const color = isOp
+    ? resolveCardColor("warning") || defaultCardColors.warning
+    : resolveCardColor("primary") || defaultCardColors.primary;
 
   const actionRow = new ActionRowBuilder<ButtonBuilder>();
   if (replyId) {

@@ -1,6 +1,7 @@
 import { ApplyOptions } from "@sapphire/decorators";
-import { Command, Args } from "@sapphire/framework";
-import { Message, PermissionFlagsBits, Guild } from "discord.js";
+import { BaseCommand } from "lumi/commands";
+import type { ApplicationCommandRegistry, Args } from "@sapphire/framework";
+import { type ChatInputCommandInteraction, Message, PermissionFlagsBits, Guild } from "discord.js";
 import {
   makeSuccessCard,
   makeErrorCard,
@@ -69,7 +70,7 @@ function sanitizeEmojiName(name: string): string {
   return sanitized;
 }
 
-@ApplyOptions<Command.Options>({
+@ApplyOptions<BaseCommand.Options>({
   name: "steal",
   aliases: ["emoji-steal", "steal-emoji", "addemoji", "add-emoji"],
   description:
@@ -77,8 +78,91 @@ function sanitizeEmojiName(name: string): string {
   preconditions: ["GuildOnly"],
   requiredClientPermissions: [PermissionFlagsBits.ManageGuildExpressions],
   requiredUserPermissions: [PermissionFlagsBits.ManageGuildExpressions],
+  prefixEnabled: true,
 })
-export class StealCommand extends Command {
+export class StealCommand extends BaseCommand {
+  public override registerApplicationCommands(registry: ApplicationCommandRegistry) {
+    registry.registerChatInputCommand((builder) =>
+      builder
+        .setName(this.name)
+        .setDescription(this.description)
+        .addStringOption((opt) =>
+          opt
+            .setName("emoji_or_url")
+            .setDescription("The custom emoji or direct image URL to steal")
+            .setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName("name")
+            .setDescription("Custom name for the new emoji")
+            .setRequired(false),
+        ),
+    );
+  }
+
+  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
+    if (!interaction.guild) return;
+    await interaction.deferReply();
+
+    const input = interaction.options.getString("emoji_or_url", true);
+    const customName = interaction.options.getString("name");
+
+    const emojiMatch = input.match(/<(a?):([a-zA-Z0-9_]+):([0-9]+)>/);
+    if (emojiMatch) {
+      const isAnimated = Boolean(emojiMatch[1]);
+      const originalName = emojiMatch[2] || "emoji";
+      const id = emojiMatch[3];
+      const name = customName
+        ? sanitizeEmojiName(customName)
+        : sanitizeEmojiName(originalName);
+      const emojiUrl = `https://cdn.discordapp.com/emojis/${id}.${isAnimated ? "gif" : "png"}`;
+
+      const result = await createEmoji(interaction.guild, emojiUrl, name);
+      if (result.success && result.emoji) {
+        return interaction.editReply(
+          makeSuccessCard(
+            "Emoji Added",
+            `Successfully created custom emoji ${result.emoji} (\`:${result.emoji.name}:\`).`,
+          ),
+        );
+      }
+      return interaction.editReply(
+        makeErrorCard("Steal Failed", `Failed to create emoji: ${result.error}`),
+      );
+    }
+
+    if (input.startsWith("http://") || input.startsWith("https://")) {
+      if (!customName) {
+        return interaction.editReply(
+          makeErrorCard(
+            "Missing Name",
+            "When stealing from a URL, please specify a name option.",
+          ),
+        );
+      }
+      const name = sanitizeEmojiName(customName);
+      const result = await createEmoji(interaction.guild, input, name);
+      if (result.success && result.emoji) {
+        return interaction.editReply(
+          makeSuccessCard(
+            "Emoji Added",
+            `Successfully created custom emoji ${result.emoji} (\`:${result.emoji.name}:\`) from URL.`,
+          ),
+        );
+      }
+      return interaction.editReply(
+        makeErrorCard("Steal Failed", `Failed to create emoji from URL: ${result.error}`),
+      );
+    }
+
+    return interaction.editReply(
+      makeErrorCard(
+        "Invalid Argument",
+        "Please provide a valid custom emoji or direct image URL.",
+      ),
+    );
+  }
   public override async messageRun(message: Message, args: Args) {
     if (!message.guild) return;
 

@@ -52,4 +52,17 @@ export class ThreadCleanerModule extends Module {
     this.container.logger.info("[ThreadCleanerModule] Unloaded Thread Cleaner task handlers.");
     return super.onUnload();
   }
+
+  public override async deleteUserData(
+    _userId: string,
+    _requester?: string,
+  ): Promise<void> {
+    // No-op: thread-cleaner only tracks thread channels and timers.
+  }
+
+  public override async exportUserData(
+    _userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    return null;
+  }
 }

@@ -11,7 +11,7 @@ export async function handleDragmeExpireFire(
   payload: DragmeExpirePayload,
 ): Promise<void> {
   const { guildId, userId } = payload;
-  const release = await acquireRedisLock(
+  const lock = await acquireRedisLock(
     container.redis,
     DragmeKeys.requestLock(guildId, userId),
     { ttlMs: 5_000, acquireTimeoutMs: 10_000 },
@@ -22,7 +22,7 @@ export async function handleDragmeExpireFire(
     if (!req) return; // Already accepted/declined/cleared.
     await deleteRequest(guildId, userId);
   } finally {
-    await release();
+    await lock.release();
   }
   if (!req) return;
 

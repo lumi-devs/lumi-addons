@@ -42,7 +42,7 @@ export class DragmeButtonHandler extends InteractionHandler {
   ): Promise<void> {
     if (!interaction.inCachedGuild() || interaction.guildId !== guildId) return;
 
-    const release = await acquireRedisLock(
+    const lock = await acquireRedisLock(
       this.container.redis,
       DragmeKeys.requestLock(guildId, userId),
       { ttlMs: 5_000, acquireTimeoutMs: 10_000 },
@@ -89,7 +89,7 @@ export class DragmeButtonHandler extends InteractionHandler {
       await deleteRequest(guildId, userId);
       await cancelTask(dragmeExpireJobId(guildId, userId)).catch(() => null);
     } finally {
-      await release();
+      await lock.release();
     }
     if (!target?.isVoiceBased()) return;
 

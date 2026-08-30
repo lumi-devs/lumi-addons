@@ -37,4 +37,12 @@ export class StatusModule extends Module {
       ),
     );
   }
+
+  public override async exportUserData(
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const entries = await getEntries();
+    const addedByUser = entries.filter((e) => e.addedBy === userId);
+    return addedByUser.length > 0 ? { statusEntriesAdded: addedByUser } : null;
+  }
 }

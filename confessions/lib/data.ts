@@ -265,3 +265,38 @@ export async function deleteForUser(
         AUTHOR_KEY,
       );
 }
+
+export async function exportForUser(
+  guildId: string,
+  userId: string,
+): Promise<{
+  banned: boolean;
+  confessionsAuthored: ConfessionMeta[];
+  replyMessageIdsAuthored: string[];
+} | null> {
+  const hash = await authorHashFor(guildId, userId);
+  const banned = await isBanned(guildId, hash);
+
+  const metas = await kv().listModuleData<ConfessionMeta>({
+    module: MODULE_NAME,
+    key: CONFESSION_META_KEY,
+    guildId,
+  });
+  const confessionsAuthored = metas
+    .filter((row) => row.value.authorHash === hash)
+    .map((row) => row.value);
+
+  const replies = await kv().listModuleData<string>({
+    module: MODULE_NAME,
+    key: AUTHOR_KEY,
+    guildId,
+  });
+  const replyMessageIdsAuthored = replies
+    .filter((row) => row.value === hash)
+    .map((row) => row.targetId);
+
+  if (!banned && confessionsAuthored.length === 0 && replyMessageIdsAuthored.length === 0) {
+    return null;
+  }
+  return { banned, confessionsAuthored, replyMessageIdsAuthored };
+}
