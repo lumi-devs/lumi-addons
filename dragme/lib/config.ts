@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { MODULE_NAME } from "../keys.js";
 
 export interface DragmeConfig {
@@ -17,7 +17,7 @@ export async function getDragmeConfig(guildId: string): Promise<DragmeConfig> {
     get("request_channel_id"),
     get("timeout_minutes"),
     get("grace_minutes"),
-    getService("config").getConfigList(
+    getUtility("config").getConfigList(
       guildId,
       MODULE_NAME,
       "blacklist_role_ids",

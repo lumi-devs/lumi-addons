@@ -2,7 +2,7 @@ import { container } from "@sapphire/framework";
 import { ActivityType, type GuildMember } from "discord.js";
 import { userMention } from "@discordjs/formatters";
 import { cutText } from "@sapphire/utilities";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { acquireRedisLock } from "lumi/utils";
 import { makeSuccessCard, makeWarningCard, noPingCard } from "lumi/ui";
 import {
@@ -29,7 +29,7 @@ export async function getPromoterConfig(
   const [role, log, matchTerms, tag, sweep] = await Promise.all([
     get("promoter_role_id"),
     get("log_channel_id"),
-    getService("config").getConfigList(guildId, MODULE_NAME, "match_terms"),
+    getUtility("config").getConfigList(guildId, MODULE_NAME, "match_terms"),
     get("detect_server_tag"),
     get("sweep_interval_minutes"),
   ]);
