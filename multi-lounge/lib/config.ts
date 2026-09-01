@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { MODULE_NAME } from "../keys.js";
 
 export interface LoungeConfig {
@@ -16,7 +16,7 @@ export async function getLoungeConfig(guildId: string): Promise<LoungeConfig> {
     container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
   const [baseChannelIds, threshold, maxExtras, template, cooldown] =
     await Promise.all([
-      getService("config").getConfigList(
+      getUtility("config").getConfigList(
         guildId,
         MODULE_NAME,
         "base_channel_ids",
