@@ -19,7 +19,7 @@
   "devDependencies": {
     "@changesets/cli": "^2.27.12",
     "@eslint/js": "^10",
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^10",
     "typescript": "^5",
     "typescript-eslint": "^8",
