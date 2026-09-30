@@ -38,6 +38,15 @@ First-party addon modules for [Lumi](https://github.com/lumi-devs/lumi). Each ad
 | `utility` | Translator, emoji stealer, and other essentials |
 | `verify` | Captcha verification with timeout and expiry handling |
 
+### Examples
+
+[`examples/`](examples/) holds minimal reference addons (`hello-world`, `tag-manager`,
+`giveaway`) migrated from the Lumi core repo — not meant to be installed on a live server,
+but read alongside [Writing an addon](#writing-an-addon) as a starting point for each module
+extension point (config schema, commands, interaction handlers, scheduled tasks, `guildKV`
+persistence). They're linted, typechecked, and validated by CI the same as every other addon
+here.
+
 ## Installation
 
 Lumi's built-in module manager handles everything. No restarts required.

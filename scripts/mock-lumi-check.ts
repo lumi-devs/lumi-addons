@@ -31,7 +31,20 @@ async function runAudit(): Promise<void> {
       (e) =>
         e.isDirectory() &&
         !e.name.startsWith(".") &&
-        !["node_modules", "scripts", "docs", "data", "dist", "coverage", "lumi-core"].includes(e.name),
+        // "examples" holds nested reference addons (examples/hello-world, ...), not a flat
+        // installable addon itself — the downloader only ever installs flat top-level dirs,
+        // so this loader (which mirrors that layout) can't discover addons nested under it.
+        // They're still covered by typecheck/lint, just not this runtime/AST pass.
+        ![
+          "node_modules",
+          "scripts",
+          "docs",
+          "data",
+          "dist",
+          "coverage",
+          "lumi-core",
+          "examples",
+        ].includes(e.name),
     )
     .map((e) => e.name)
     .sort();
