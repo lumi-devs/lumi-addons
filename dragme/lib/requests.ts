@@ -6,7 +6,7 @@ export async function getRequest(
   guildId: string,
   userId: string,
 ): Promise<DragRequest | null> {
-  const raw = await container.redis.get(DragmeKeys.request(guildId, userId));
+  const raw = await container.valkey.get(DragmeKeys.request(guildId, userId));
   if (!raw) return null;
   const parsed = tryParseJSON(raw) as DragRequest | string;
   return typeof parsed === "string" ? null : parsed;
@@ -14,7 +14,7 @@ export async function getRequest(
 
 export async function setRequest(req: DragRequest): Promise<void> {
   const ttlSec = Math.max(1, Math.ceil((req.expiresAt - Date.now()) / 1000));
-  await container.redis
+  await container.valkey
     .multi()
     .set(
       DragmeKeys.request(req.guildId, req.userId),
@@ -30,7 +30,7 @@ export async function deleteRequest(
   guildId: string,
   userId: string,
 ): Promise<void> {
-  await container.redis
+  await container.valkey
     .multi()
     .del(DragmeKeys.request(guildId, userId))
     .srem(DragmeKeys.activeSet(guildId), userId)
@@ -39,12 +39,12 @@ export async function deleteRequest(
 
 /** Live requests for a guild; self-heals set members whose key expired. */
 export async function listRequests(guildId: string): Promise<DragRequest[]> {
-  const ids = await container.redis.smembers(DragmeKeys.activeSet(guildId));
+  const ids = await container.valkey.smembers(DragmeKeys.activeSet(guildId));
   const out: DragRequest[] = [];
   for (const userId of ids) {
     const req = await getRequest(guildId, userId);
     if (req) out.push(req);
-    else await container.redis.srem(DragmeKeys.activeSet(guildId), userId);
+    else await container.valkey.srem(DragmeKeys.activeSet(guildId), userId);
   }
   return out;
 }

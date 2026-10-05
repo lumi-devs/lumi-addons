@@ -31,7 +31,7 @@ export async function incrementMention(
   roleId: string,
 ): Promise<void> {
   const key = RmKeys.count(guildId);
-  await container.redis
+  await container.valkey
     .multi()
     .hincrby(key, roleId, 1)
     .expire(key, COUNT_TTL_SECONDS)
@@ -51,7 +51,7 @@ export async function incrementMentions(
   if (roleIds.length === 0) return counts;
 
   const key = RmKeys.count(guildId);
-  const pipeline = container.redis.multi();
+  const pipeline = container.valkey.multi();
   for (const roleId of roleIds) pipeline.hincrby(key, roleId, 1);
   pipeline.expire(key, COUNT_TTL_SECONDS);
   const replies = await pipeline.exec();
@@ -65,7 +65,7 @@ export async function incrementMentions(
 }
 
 export async function getCounts(guildId: string): Promise<Map<string, number>> {
-  const raw = await container.redis.hgetall(RmKeys.count(guildId));
+  const raw = await container.valkey.hgetall(RmKeys.count(guildId));
   const out = new Map<string, number>();
   for (const [roleId, value] of Object.entries(raw)) {
     const n = Number(value);
@@ -78,13 +78,13 @@ export async function getRoleCount(
   guildId: string,
   roleId: string,
 ): Promise<number> {
-  const raw = await container.redis.hget(RmKeys.count(guildId), roleId);
+  const raw = await container.valkey.hget(RmKeys.count(guildId), roleId);
   const n = Number(raw);
   return Number.isNaN(n) ? 0 : n;
 }
 
 export async function resetCounts(guildId: string): Promise<void> {
-  await container.redis.del(RmKeys.count(guildId));
+  await container.valkey.del(RmKeys.count(guildId));
 }
 
 // ── Protected roles (Postgres, durable) ──────────────────────────────────────
@@ -140,7 +140,7 @@ export async function getProtectedDuration(
 export async function getBlocks(
   guildId: string,
 ): Promise<Map<string, ActiveBlock>> {
-  const raw = await container.redis.hgetall(RmKeys.blocks(guildId));
+  const raw = await container.valkey.hgetall(RmKeys.blocks(guildId));
   const out = new Map<string, ActiveBlock>();
   for (const [roleId, value] of Object.entries(raw)) {
     const parsed = tryParseJSON(value) as ActiveBlock | null;
@@ -153,7 +153,7 @@ export async function getBlock(
   guildId: string,
   roleId: string,
 ): Promise<ActiveBlock | null> {
-  const raw = await container.redis.hget(RmKeys.blocks(guildId), roleId);
+  const raw = await container.valkey.hget(RmKeys.blocks(guildId), roleId);
   return raw ? ((tryParseJSON(raw) as ActiveBlock | null) ?? null) : null;
 }
 
@@ -161,7 +161,7 @@ export async function setBlock(
   guildId: string,
   block: ActiveBlock,
 ): Promise<void> {
-  await container.redis.hset(
+  await container.valkey.hset(
     RmKeys.blocks(guildId),
     block.roleId,
     JSON.stringify(block),
@@ -172,23 +172,23 @@ export async function removeBlock(
   guildId: string,
   roleId: string,
 ): Promise<boolean> {
-  const removed = await container.redis.hdel(RmKeys.blocks(guildId), roleId);
+  const removed = await container.valkey.hdel(RmKeys.blocks(guildId), roleId);
   return removed > 0;
 }
 
 // ── Managed AutoMod rule id (Redis) ──────────────────────────────────────────
 
 export async function getRuleId(guildId: string): Promise<string | null> {
-  return container.redis.get(RmKeys.ruleId(guildId));
+  return container.valkey.get(RmKeys.ruleId(guildId));
 }
 
 export async function setRuleId(
   guildId: string,
   ruleId: string,
 ): Promise<void> {
-  await container.redis.set(RmKeys.ruleId(guildId), ruleId);
+  await container.valkey.set(RmKeys.ruleId(guildId), ruleId);
 }
 
 export async function clearRuleId(guildId: string): Promise<void> {
-  await container.redis.del(RmKeys.ruleId(guildId));
+  await container.valkey.del(RmKeys.ruleId(guildId));
 }

@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { statusMatches, wearsServerTag } from "./matching.js";
+import { statusMatches, vanityMatchTerms, wearsServerTag } from "./matching.js";
+
+describe("vanityMatchTerms", () => {
+  it("derives the bare code and full invite form", () => {
+    expect(vanityMatchTerms("lumi")).toEqual(["lumi", "discord.gg/lumi"]);
+  });
+
+  it("is empty when the guild has no vanity code", () => {
+    expect(vanityMatchTerms(null)).toEqual([]);
+  });
+});
 
 describe("statusMatches", () => {
   const terms = [".gg/lumi", "discord.gg/lumi", "LUMI"];

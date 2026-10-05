@@ -6,7 +6,7 @@
 import { container } from "@sapphire/framework";
 import { ChannelType, type Guild, type ThreadChannel } from "discord.js";
 import { userMention } from "@discordjs/formatters";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { isModuleEnabled } from "lumi/permissions";
 import { makeSuccessCard, noPingCard } from "lumi/ui";
 import type { ThreadSweepPayload } from "../scheduled-tasks/threadSweep.js";
@@ -34,7 +34,7 @@ export async function handleThreadSweepFire(
   const parentIds =
     payload.scope === "enabled"
       ? new Set(
-          await getService("config").getConfigList(
+          await getUtility("config").getConfigList(
             guildId,
             "thread-cleaner",
             "enabled_channels",

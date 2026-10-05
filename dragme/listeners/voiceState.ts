@@ -31,9 +31,9 @@ export class DragmeVoiceStateListener extends ModuleListener<"voiceStateUpdate">
     if (!cfg.grantHiddenPerms) return;
 
     const key = DragmeKeys.tempPerm(guildId, oldState.channelId, userId);
-    const exists = await this.container.redis.exists(key);
+    const exists = await this.container.valkey.exists(key);
     if (exists) {
-      await this.container.redis.del(key);
+      await this.container.valkey.del(key);
       const { channel } = oldState;
       if (channel) {
         await channel.permissionOverwrites

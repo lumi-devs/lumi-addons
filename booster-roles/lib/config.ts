@@ -1,5 +1,5 @@
 import { container } from "@sapphire/framework";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { MODULE_NAME } from "../keys.js";
 
 export interface BoosterConfig {
@@ -26,7 +26,7 @@ export async function getBoosterConfig(
     container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
   const [boosterRoleIds, anchor, showcase, log, maxShares, grace, nameMax] =
     await Promise.all([
-      getService("config").getConfigList(
+      getUtility("config").getConfigList(
         guildId,
         MODULE_NAME,
         "booster_role_ids",

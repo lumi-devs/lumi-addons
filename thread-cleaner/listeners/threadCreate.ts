@@ -4,7 +4,7 @@ import { ThreadChannel } from "discord.js";
 import { scheduleTask } from "lumi/scheduling";
 import { threadCleanupJobId } from "../lib/keys.js";
 import { parseDuration } from "lumi/utils";
-import { getService } from "lumi";
+import { getUtility } from "lumi";
 import { isModuleEnabled } from "lumi/permissions";
 
 @ApplyOptions<Listener.Options>({
@@ -15,7 +15,7 @@ export class ThreadCreateListener extends Listener {
     if (!thread.guild) return;
     if (!(await isModuleEnabled(thread.guild.id, "thread-cleaner"))) return;
 
-    const enabledChannels = await getService("config").getConfigList(
+    const enabledChannels = await getUtility("config").getConfigList(
       thread.guild.id,
       "thread-cleaner",
       "enabled_channels",
