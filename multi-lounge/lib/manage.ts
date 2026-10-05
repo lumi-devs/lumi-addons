@@ -87,7 +87,7 @@ async function createExtra(
   ]);
   await recordCreation(guild.id);
   if (config.cooldownSeconds > 0)
-    await container.redis.set(
+    await container.valkey.set(
       LoungeKeys.cooldown(guild.id, baseId),
       "1",
       "EX",
@@ -126,7 +126,7 @@ async function manageBase(
   if (live.length !== stored.length) await setExtras(guild.id, baseId, live);
 
   const cooldownActive =
-    (await container.redis.exists(LoungeKeys.cooldown(guild.id, baseId))) === 1;
+    (await container.valkey.exists(LoungeKeys.cooldown(guild.id, baseId))) === 1;
   const action = evaluateLounges(slots, config, cooldownActive);
 
   if (action.kind === "create")

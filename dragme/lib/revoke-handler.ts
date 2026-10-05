@@ -20,7 +20,7 @@ export async function handleDragmeRevokeFire(
     payload.channelId,
     payload.userId,
   );
-  await container.redis.del(key);
+  await container.valkey.del(key);
 
   const overwrite = channel.permissionOverwrites.cache.get(payload.userId);
   if (!overwrite) return;

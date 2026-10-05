@@ -214,7 +214,7 @@ export async function onCooldown(
   hash: string,
 ): Promise<boolean> {
   return (
-    (await container.redis.exists(ConfessKeys.cooldown(guildId, hash))) === 1
+    (await container.valkey.exists(ConfessKeys.cooldown(guildId, hash))) === 1
   );
 }
 
@@ -224,7 +224,7 @@ export async function setCooldown(
   minutes: number,
 ): Promise<void> {
   if (minutes <= 0) return;
-  await container.redis.set(
+  await container.valkey.set(
     ConfessKeys.cooldown(guildId, hash),
     "1",
     "EX",
@@ -240,7 +240,7 @@ export async function deleteForUser(
 ): Promise<void> {
   const hash = await authorHashFor(guildId, userId);
   await kv().deleteModuleData(guildId, MODULE_NAME, hash, BAN_KEY);
-  await container.redis.del(ConfessKeys.cooldown(guildId, hash));
+  await container.valkey.del(ConfessKeys.cooldown(guildId, hash));
 
   const metas = await kv().listModuleData<ConfessionMeta>({
     module: MODULE_NAME,
