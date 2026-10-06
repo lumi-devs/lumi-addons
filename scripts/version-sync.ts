@@ -31,7 +31,9 @@ async function main() {
       entry.name === "node_modules" ||
       entry.name === "scripts" ||
       entry.name === "docs" ||
-      entry.name === "site"
+      entry.name === "site" ||
+      // Nested reference addons, not part of the versioned/released addon set.
+      entry.name === "examples"
     ) {
       continue;
     }
