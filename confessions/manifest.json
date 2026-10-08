@@ -1,0 +1,14 @@
+{
+  "name": "confessions",
+  "displayName": "Confessions",
+  "emoji": "⚙️",
+  "description": "Anonymous confessions with numbered Components-v2 cards, optional threads, anonymous replies, and hash-based moderation that never exposes author identity.",
+  "short": "Anonymous confessions + replies.",
+  "version": "1.0.0",
+  "disableable": true,
+  "targetUtility": "worker",
+  "subStores": [
+    "commands"
+  ],
+  "configFields": []
+}

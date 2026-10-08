@@ -1,0 +1,14 @@
+{
+  "name": "utility",
+  "displayName": "Utility",
+  "emoji": "⚙️",
+  "description": "General utility addons including auto-translate and emoji-stealer.",
+  "short": "General utility tools.",
+  "version": "1.0.0",
+  "disableable": true,
+  "targetUtility": "worker",
+  "subStores": [
+    "commands"
+  ],
+  "configFields": []
+}

@@ -1,0 +1,14 @@
+{
+  "name": "economy-games",
+  "displayName": "Economy Games",
+  "emoji": "⚙️",
+  "description": "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — all settled through the core Economy ledger.",
+  "short": "Casino games, crime, grinds, and a shop for the core economy.",
+  "version": "1.0.0",
+  "disableable": true,
+  "targetUtility": "worker",
+  "subStores": [
+    "commands"
+  ],
+  "configFields": []
+}
