@@ -1,6 +1,6 @@
 import type { InteractionContext } from "lumi/interactions";
 import { makeWarningCard } from "lumi/ui";
-import { channels, threads } from "lumi/discord";
+import { attachments, channels, threads } from "lumi/discord";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
   authorHashFor,
@@ -14,10 +14,22 @@ import {
   saveReply,
   setCooldown,
 } from "../lib/data.js";
-import { sanitizeAttachmentUrl } from "../lib/anon.js";
 import { confessionPayload, replyPayload } from "../lib/ui.js";
 
+async function rehostUpload(
+  ctx: InteractionContext,
+  channelId: string,
+): Promise<string | null> {
+  const file = ctx.attachments["image"]?.[0];
+  if (!file) return null;
+  const rehosted = await attachments
+    .rehost(file.url, file.filename, channelId)
+    .catch(() => null);
+  return rehosted?.url ?? null;
+}
+
 async function handleNew(ctx: InteractionContext, guildId: string): Promise<void> {
+  await ctx.defer();
   const config = await getConfessionsConfig(guildId);
   if (!config.channelId) {
     return ctx.replyWarning(
@@ -42,7 +54,7 @@ async function handleNew(ctx: InteractionContext, guildId: string): Promise<void
   if (!text) return ctx.replyError("Empty", "Your confession was empty.");
 
   const imageUrl = config.allowAttachments
-    ? sanitizeAttachmentUrl(ctx.fields["image_url"] ?? "")
+    ? await rehostUpload(ctx, config.logChannelId ?? config.channelId)
     : null;
 
   const number = await nextConfessionNumber(guildId);
@@ -103,6 +115,7 @@ async function handleReply(
   number: number,
   parentK: number | null,
 ): Promise<void> {
+  await ctx.defer();
   const config = await getConfessionsConfig(guildId);
   const meta = await getConfession(guildId, number);
   if (!meta) {
@@ -120,10 +133,6 @@ async function handleReply(
   const text = (ctx.fields["reply"] ?? "").trim();
   if (!text) return ctx.replyError("Empty", "Your reply was empty.");
 
-  const imageUrl = config.allowAttachments
-    ? sanitizeAttachmentUrl(ctx.fields["image_url"] ?? "")
-    : null;
-
   if (!config.channelId) {
     return ctx.replyError(
       "Not Configured",
@@ -131,28 +140,37 @@ async function handleReply(
     );
   }
 
-  let parentQuote: string | null = null;
+  const imageUrl = config.allowAttachments
+    ? await rehostUpload(ctx, config.logChannelId ?? config.channelId)
+    : null;
+
+  let parentRef: { label: string; quote: string | null } | undefined;
+  let parentMessageId: string | null = null;
   if (parentK !== null) {
     const parent = await getReply(guildId, number, parentK);
-    if (parent?.text) {
-      const truncated =
-        parent.text.slice(0, 150) + (parent.text.length > 150 ? "…" : "");
-      parentQuote = truncated
-        .split("\n")
-        .map((l) => `> ${l}`)
-        .join("\n");
+    if (parent) {
+      const truncated = parent.text.length > 150 ? `${parent.text.slice(0, 150)}…` : parent.text;
+      parentRef = {
+        label: `In reply to Reply #${number}.${parentK}`,
+        quote: truncated.split("\n").map((l) => `> ${l}`).join("\n"),
+      };
+      parentMessageId = parent.messageId;
     }
+  } else {
+    const truncated = meta.text.length > 150 ? `${meta.text.slice(0, 150)}…` : meta.text;
+    parentRef = {
+      label: `In reply to Confession #${number}`,
+      quote: truncated.split("\n").map((l) => `> ${l}`).join("\n"),
+    };
   }
 
   const isOp = hash === meta.authorHash;
   const k = await nextReplyNumber(guildId, number);
   const targetChannel = meta.threadId ?? config.channelId;
 
-  const payload = replyPayload(number, k, text, imageUrl, isOp, parentQuote);
-  let sent = await channels.send(targetChannel, payload).catch(() => null);
-  if (!sent && targetChannel !== config.channelId) {
-    sent = await channels.send(config.channelId, payload).catch(() => null);
-  }
+  const payload = replyPayload(number, k, text, imageUrl, isOp, parentRef);
+  const sendOpts = parentMessageId ? { replyTo: parentMessageId } : {};
+  const sent = await channels.send(targetChannel, payload, sendOpts);
   if (!sent) {
     return ctx.replyError("Unavailable", "Could not post your reply.");
   }
@@ -179,6 +197,7 @@ async function handleReply(
     authorHash: hash,
     text,
     createdAt: Date.now(),
+    messageId: sent.id,
   });
 
   return ctx.replySuccess(

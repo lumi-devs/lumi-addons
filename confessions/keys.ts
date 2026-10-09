@@ -28,6 +28,7 @@ export interface ReplyRecord {
   authorHash: string;
   text: string;
   createdAt: number;
+  messageId: string | null;
 }
 
 export interface BanRecord {

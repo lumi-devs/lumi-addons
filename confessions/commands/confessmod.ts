@@ -95,11 +95,20 @@ async function removeConfession(ctx: CommandContext): Promise<void> {
   if (!meta) return ctx.replyError("Error", `Confession #${number} was not found.`);
 
   const config = await getConfessionsConfig(guildId);
+  const problems: string[] = [];
   if (config.channelId && meta.messageId) {
-    await messages.remove(config.channelId, meta.messageId).catch(() => null);
+    const ok = await messages
+      .remove(config.channelId, meta.messageId)
+      .then(() => true)
+      .catch(() => false);
+    if (!ok) problems.push("its message is already gone or I lack access to delete it");
   }
   if (meta.threadId) {
-    await threads.remove(meta.threadId).catch(() => null);
+    const ok = await threads
+      .remove(meta.threadId)
+      .then(() => true)
+      .catch(() => false);
+    if (!ok) problems.push("its thread is already gone or I lack access to delete it");
   }
   await deleteConfession(guildId, number);
 
@@ -108,6 +117,12 @@ async function removeConfession(ctx: CommandContext): Promise<void> {
     "Confession Deleted",
     `**Confession #${number}** was deleted by <@${ctx.user.id}>.\nReason: ${reason}`,
   );
+  if (problems.length > 0) {
+    return ctx.replyWarning(
+      "Partially Deleted",
+      `Confession #${number} was removed from the records, but ${problems.join(" and ")}.`,
+    );
+  }
   return ctx.replySuccess("Deleted", `Confession #${number} was removed.`);
 }
 

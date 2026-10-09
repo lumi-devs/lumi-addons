@@ -1,7 +1,6 @@
 import {
   actionRow,
   makeCard,
-  makeInfoCard,
   modal,
   noPingCard,
   type CardReply,
@@ -15,8 +14,7 @@ export function confessionPayload(
 ): CardReply {
   const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
   return noPingCard(
-    makeInfoCard(`🕊️ ${displayTitle}`, text, {
-      footer: `Confession #${number} · anyone can reply anonymously`,
+    makeCard(0x131313, `🕊️ ${displayTitle}`, [text, `-# Confession #${number}`], {
       headerImages: imageUrl ? [imageUrl] : undefined,
       actionRows: [
         actionRow([
@@ -36,12 +34,17 @@ export function replyPayload(
   imageUrl?: string | null,
   isOp = false,
   parentQuote?: string | null,
+  parentRef?: { label: string; quote: string | null },
 ): CardReply {
-  const body = parentQuote ? `${parentQuote}\n\n${text}` : text;
+  const body = parentQuote
+    ? [parentQuote, text]
+    : parentRef
+      ? [`🔗 ${parentRef.label}`, ...(parentRef.quote ? [parentRef.quote] : []), text]
+      : text;
   return noPingCard(
     makeCard(
-      isOp ? 0xeab308 : 0x5865f2,
-      `💬 Reply #${confessionNumber}.${k}`,
+      isOp ? 0xeab308 : 0xab766f,
+      `↩️ Reply to Confession #${confessionNumber}`,
       body,
       {
         footer: isOp ? "👑 OP · Anonymous reply" : "Anonymous reply",
@@ -67,6 +70,8 @@ export function replyPayload(
   );
 }
 
+const uploadField = { kind: "upload", customId: "image", label: "Attach an image (optional)", required: false } as const;
+
 export function buildConfessionModal(allowAttachments: boolean): {
   toJSON(): unknown;
 } {
@@ -76,9 +81,7 @@ export function buildConfessionModal(allowAttachments: boolean): {
     fields: [
       { customId: "title", label: "Title (optional)", required: false, maxLength: 100, placeholder: "Give your confession a title…" },
       { customId: "confession", label: "Your confession", style: "paragraph", maxLength: 2000, placeholder: "This is posted anonymously." },
-      ...(allowAttachments
-        ? [{ customId: "image_url", label: "Image URL (optional)", required: false, maxLength: 500, placeholder: "https://…" }]
-        : []),
+      ...(allowAttachments ? [uploadField] : []),
     ],
   });
 }
@@ -92,9 +95,7 @@ export function buildReplyModal(
     customId: `confessions:modal:reply:${confessionNumber}`,
     fields: [
       { customId: "reply", label: "Your reply", style: "paragraph", maxLength: 2000, placeholder: "This is posted anonymously." },
-      ...(allowAttachments
-        ? [{ customId: "image_url", label: "Image URL (optional)", required: false, maxLength: 500, placeholder: "https://…" }]
-        : []),
+      ...(allowAttachments ? [uploadField] : []),
     ],
   });
 }
@@ -109,9 +110,7 @@ export function buildReplyToReplyModal(
     customId: `confessions:modal:replyto:${confessionNumber}:${parentK}`,
     fields: [
       { customId: "reply", label: "Your reply", style: "paragraph", maxLength: 2000, placeholder: "This is posted anonymously." },
-      ...(allowAttachments
-        ? [{ customId: "image_url", label: "Image URL (optional)", required: false, maxLength: 500, placeholder: "https://…" }]
-        : []),
+      ...(allowAttachments ? [uploadField] : []),
     ],
   });
 }
