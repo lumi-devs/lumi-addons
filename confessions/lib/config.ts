@@ -8,6 +8,7 @@ export interface ConfessionsConfig {
   autoThread: boolean;
   allowAttachments: boolean;
   cooldownMinutes: number;
+  replyDm: boolean;
 }
 
 export async function getConfessionsConfig(
@@ -22,6 +23,7 @@ export async function getConfessionsConfig(
     thread,
     attachments,
     cooldown,
+    replyDm,
   ] = await Promise.all([
     get("confession_channel_id"),
     get("log_channel_id"),
@@ -30,6 +32,7 @@ export async function getConfessionsConfig(
     get("auto_thread"),
     get("allow_attachments"),
     get("cooldown_minutes"),
+    get("reply_dm_notifications"),
   ]);
   return {
     channelId: (channel as string | null) ?? null,
@@ -39,5 +42,6 @@ export async function getConfessionsConfig(
     autoThread: (thread as boolean | null) ?? true,
     allowAttachments: (attachments as boolean | null) ?? true,
     cooldownMinutes: (cooldown as number | null) ?? 5,
+    replyDm: (replyDm as boolean | null) ?? true,
   };
 }

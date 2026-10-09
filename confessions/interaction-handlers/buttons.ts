@@ -1,8 +1,14 @@
 import type { InteractionContext } from "lumi/interactions";
-import { makeWarningCard } from "lumi/ui";
+import { actionRow, makeWarningCard } from "lumi/ui";
 import { channels } from "lumi/discord";
 import { getConfessionsConfig } from "../lib/config.js";
-import { authorHashFor, getConfession, getReply, isBanned } from "../lib/data.js";
+import {
+  authorHashFor,
+  getConfession,
+  getReply,
+  isBanned,
+  setReplyDmOptOut,
+} from "../lib/data.js";
 import {
   buildConfessionModal,
   buildReplyModal,
@@ -12,10 +18,34 @@ import {
 export default {
   prefix: "confessions:btn",
   run: async (ctx: InteractionContext) => {
-    if (!ctx.guildId) return;
-    const guildId = ctx.guildId;
     const parts = ctx.customId.split(":");
     const action = parts[2];
+
+    if (action === "mutedms" || action === "unmutedms") {
+      const targetGuild = parts[3];
+      if (!targetGuild) return;
+      await ctx.defer();
+      await setReplyDmOptOut(targetGuild, ctx.user.id, action === "mutedms");
+      if (action === "mutedms") {
+        return ctx.reply(
+          makeWarningCard("Reply DMs Off", "You won't be DM'd about replies in that server anymore.", {
+            actionRows: [
+              actionRow([
+                {
+                  customId: `confessions:btn:unmutedms:${targetGuild}`,
+                  label: "Undo",
+                  style: "secondary",
+                },
+              ]),
+            ],
+          }),
+        );
+      }
+      return ctx.replySuccess("Reply DMs On", "You'll be DM'd when someone replies to you again.");
+    }
+
+    if (!ctx.guildId) return;
+    const guildId = ctx.guildId;
     const number = Number(parts[3]);
     const parentK = parts[4] !== undefined ? Number(parts[4]) : null;
 

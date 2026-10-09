@@ -59,12 +59,12 @@ export function replyPayload(
           actionRow([
             {
               customId: `confessions:btn:replyto:${confessionNumber}:${k}`,
-              label: "💬 Reply",
+              label: "Reply",
               style: "secondary",
             },
             {
               customId: `confessions:btn:reportreply:${confessionNumber}:${k}`,
-              label: "🚨 Report",
+              label: "Report",
               style: "danger",
             },
           ]),
@@ -120,5 +120,5 @@ export function buildReplyToReplyModal(
 }
 
 export function openFormRow() {
-  return actionRow([{ customId: "confessions:btn:new", label: "Write Anonymously", style: "primary", emoji: "🕊️" }]);
+  return actionRow([{ customId: "confessions:btn:new", label: "Write Anonymously", style: "primary" }]);
 }

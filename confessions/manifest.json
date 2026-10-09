@@ -16,6 +16,7 @@
     "discord": [
       "reply",
       "sendMessage",
+      "sendDirectMessage",
       "editMessage",
       "manageThreads"
     ],

@@ -5,5 +5,5 @@
   "short": "Anonymous confessions + replies.",
   "version": "1.0.0",
   "min_bot_version": "0.6.0",
-  "end_user_data_statement": "Stores cryptographic one-way hashes of author IDs per guild for moderation purposes (banning abusers, managing replies) without storing plaintext user identities. Author mappings can be purged via GDPR deletion."
+  "end_user_data_statement": "Stores cryptographic one-way hashes of author IDs per guild for moderation, plus your user ID linked to confessions/replies you author so reply notifications can reach you, and your notification opt-out choice. ID-linked rows are keyed to you and removed by GDPR deletion."
 }

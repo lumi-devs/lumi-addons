@@ -8,8 +8,13 @@ export const REPLY_COUNTER_KEY = "replies";
 export const BAN_KEY = "ban";
 export const COOLDOWN_KEY = "cooldown";
 
+export const DM_OPT_OUT_KEY = "dm-optout";
+
 export const confessionTarget = (n: number) => `c:${n}`;
 export const replyKey = (k: number) => `r:${k}`;
+
+export const confessionAuthorKey = (n: number) => `author:c:${n}`;
+export const replyAuthorKey = (n: number, k: number) => `author:r:${n}:${k}`;
 
 export interface ConfessionMeta {
   number: number;

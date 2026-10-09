@@ -25,15 +25,13 @@
     "allowImportingTsExtensions": true,
     "paths": {
       "*": ["./*"],
-      "lumi": ["./.lumi/packages/core/src/lib/addon-sdk/index.ts"],
-      "lumi/*": ["./.lumi/packages/core/src/lib/addon-sdk/*.ts"],
+      "lumi": ["./.lumi/packages/core/src/lib/addon-sandbox/sdk/index.ts"],
+      "lumi/*": ["./.lumi/packages/core/src/lib/addon-sandbox/sdk/*.ts"],
       "@lumi/contracts": ["./.lumi/packages/contracts/src/index.ts"],
-      "@lumi/event-bus": ["./.lumi/packages/event-bus/src/index.ts"],
       "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"]
     }
   },
-  // Core src is included so its scattered module augmentations (Sapphire
-  // Preconditions, ScheduledTasks, i18n keys) are visible to addon files.
-  "include": ["*/**/*.ts", "./.lumi/packages/core/src/**/*.ts"],
-  "exclude": ["node_modules", ".lumi/node_modules", ".lumi/packages/core/src/lib/client/setup.ts", "docs", "dist", "coverage"]
+  // Core SDK entrypoints are resolved via paths; addon source files are checked here.
+  "include": ["*/**/*.ts"],
+  "exclude": ["node_modules", "scripts", "docs", "dist", "coverage"]
 }

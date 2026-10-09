@@ -6,9 +6,12 @@ import {
   CONFESSION_META_KEY,
   COUNTER_KEY,
   COOLDOWN_KEY,
+  DM_OPT_OUT_KEY,
   REPLY_COUNTER_KEY,
   SALT_KEY,
+  confessionAuthorKey,
   confessionTarget,
+  replyAuthorKey,
   replyKey,
   type BanRecord,
   type ConfessionMeta,
@@ -88,6 +91,56 @@ export async function getReply(
     confessionTarget(confessionNumber),
     replyKey(k),
   );
+}
+
+export async function recordConfessionAuthor(
+  guildId: string,
+  number: number,
+  userId: string,
+): Promise<void> {
+  await set(guildId, userId, confessionAuthorKey(number), { at: Date.now() });
+}
+
+export async function recordReplyAuthor(
+  guildId: string,
+  number: number,
+  k: number,
+  userId: string,
+): Promise<void> {
+  await set(guildId, userId, replyAuthorKey(number, k), { at: Date.now() });
+}
+
+export async function findConfessionAuthor(
+  guildId: string,
+  number: number,
+): Promise<string | null> {
+  const rows = await list(confessionAuthorKey(number), guildId);
+  return rows[0]?.targetId ?? null;
+}
+
+export async function findReplyAuthor(
+  guildId: string,
+  number: number,
+  k: number,
+): Promise<string | null> {
+  const rows = await list(replyAuthorKey(number, k), guildId);
+  return rows[0]?.targetId ?? null;
+}
+
+export async function setReplyDmOptOut(
+  guildId: string,
+  userId: string,
+  off: boolean,
+): Promise<void> {
+  if (off) await set(guildId, userId, DM_OPT_OUT_KEY, { at: Date.now() });
+  else await remove(guildId, userId, DM_OPT_OUT_KEY);
+}
+
+export async function hasReplyDmOptOut(
+  guildId: string,
+  userId: string,
+): Promise<boolean> {
+  return (await get(guildId, userId, DM_OPT_OUT_KEY)) !== null;
 }
 
 export async function banHash(

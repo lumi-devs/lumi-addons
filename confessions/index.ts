@@ -9,7 +9,7 @@ export const meta = defineModule({
     "Anonymous confessions posted through /confess, with optional anonymous replies, per-author cooldowns, and moderator bans — identities are never stored in the clear.",
   short: "Anonymous confessions + replies.",
   endUserDataStatement:
-    "Stores cryptographic one-way hashes of author IDs per guild for moderation purposes (banning abusers, managing replies) without storing plaintext user identities. Author mappings can be purged via GDPR deletion.",
+    "Stores cryptographic one-way hashes of author IDs per guild for moderation, plus your user ID linked to confessions/replies you author so reply notifications can reach you, and your notification opt-out choice. ID-linked rows are keyed to you and removed by GDPR deletion.",
   configSchema: cfg.object({
     confession_channel_id: cfg.channel({
       label: "Confession Channel",
@@ -51,6 +51,12 @@ export const meta = defineModule({
       default: 5,
       min: 0,
       max: 1440,
+    }),
+    reply_dm_notifications: cfg.boolean({
+      label: "Reply DM Notifications",
+      description:
+        "DM authors when someone replies to their confession or reply. Users can stop these from the DM itself.",
+      default: true,
     }),
   }),
 });

@@ -1,15 +1,20 @@
 import type { InteractionContext } from "lumi/interactions";
-import { makeWarningCard } from "lumi/ui";
-import { attachments, channels, messages, threads } from "lumi/discord";
+import { actionRow, makeInfoCard, makeWarningCard } from "lumi/ui";
+import { attachments, channels, messages, threads, users } from "lumi/discord";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
   authorHashFor,
+  findConfessionAuthor,
+  findReplyAuthor,
   getConfession,
   getReply,
+  hasReplyDmOptOut,
   isBanned,
   nextConfessionNumber,
   nextReplyNumber,
   onCooldown,
+  recordConfessionAuthor,
+  recordReplyAuthor,
   saveConfession,
   saveReply,
   setCooldown,
@@ -116,6 +121,7 @@ async function handleNew(ctx: InteractionContext, guildId: string): Promise<void
     text,
     imageUrl,
   });
+  await recordConfessionAuthor(guildId, number, ctx.user.id);
   await setCooldown(guildId, hash, config.cooldownMinutes);
 
   return ctx.replySuccess(
@@ -214,11 +220,67 @@ async function handleReply(
     createdAt: Date.now(),
     messageId: sent.id,
   });
+  await recordReplyAuthor(guildId, number, k, ctx.user.id);
+
+  await notifyTarget(guildId, {
+    replyDm: config.replyDm,
+    number,
+    parentK,
+    replierId: ctx.user.id,
+    replyText: text,
+    jumpUrl: `https://discord.com/channels/${guildId}/${targetChannel}/${sent.id}`,
+    isOp,
+  });
 
   return ctx.replySuccess(
     "Reply Posted",
     `Posted anonymously as **Reply #${number}.${k}**.`,
   );
+}
+
+async function notifyTarget(
+  guildId: string,
+  opts: {
+    replyDm: boolean;
+    number: number;
+    parentK: number | null;
+    replierId: string;
+    replyText: string;
+    jumpUrl: string;
+    isOp: boolean;
+  },
+): Promise<void> {
+  if (!opts.replyDm) return;
+  const targetId =
+    opts.parentK !== null
+      ? await findReplyAuthor(guildId, opts.number, opts.parentK)
+      : await findConfessionAuthor(guildId, opts.number);
+  if (!targetId || targetId === opts.replierId) return;
+  if (await hasReplyDmOptOut(guildId, targetId)) return;
+  const quote =
+    opts.replyText.length > 150
+      ? `${opts.replyText.slice(0, 150)}…`
+      : opts.replyText;
+  await users
+    .send(
+      targetId,
+      makeInfoCard(
+        opts.isOp ? "👑 The OP replied to you" : "💬 Someone replied to you",
+        `**Confession #${opts.number}**\n${quote}\n[Jump to reply](${opts.jumpUrl})`,
+        {
+          actionRows: [
+            actionRow([
+              {
+                customId: `confessions:btn:mutedms:${guildId}`,
+                label: "Stop these DMs",
+                style: "secondary",
+              },
+            ]),
+          ],
+        },
+      ),
+    )
+    .catch(() => undefined);
 }
 
 export default {
