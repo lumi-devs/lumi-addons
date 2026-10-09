@@ -37,11 +37,8 @@ export function replyPayload(
   parentRef?: { label: string; quote: string | null },
 ): CardReply {
   const body: string[] = [];
-  if (parentRef) {
-    body.push(`🔗 ${parentRef.label}`);
-    if (parentRef.quote) {
-      body.push(parentRef.quote);
-    }
+  if (parentRef?.quote) {
+    body.push(parentRef.quote);
   }
   body.push(text);
 
