@@ -1,6 +1,6 @@
 import type { InteractionContext } from "lumi/interactions";
 import { makeWarningCard } from "lumi/ui";
-import { attachments, channels, threads } from "lumi/discord";
+import { attachments, channels, messages, threads } from "lumi/discord";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
   authorHashFor,
@@ -58,9 +58,24 @@ async function handleNew(ctx: InteractionContext, guildId: string): Promise<void
     : null;
 
   const number = await nextConfessionNumber(guildId);
+  const prevNumber = number > 1 ? number - 1 : null;
+  if (prevNumber) {
+    const prevMeta = await getConfession(guildId, prevNumber);
+    if (prevMeta && prevMeta.messageId) {
+      const strippedPayload = confessionPayload(
+        prevMeta.number,
+        prevMeta.text,
+        prevMeta.imageUrl,
+        prevMeta.title,
+        false,
+      );
+      await messages.edit(config.channelId, prevMeta.messageId, strippedPayload).catch(() => null);
+    }
+  }
+
   const sent = await channels.send(
     config.channelId,
-    confessionPayload(number, text, imageUrl, title),
+    confessionPayload(number, text, imageUrl, title, true),
   );
 
   const threadId = config.autoThread

@@ -11,20 +11,24 @@ export function confessionPayload(
   text: string,
   imageUrl?: string | null,
   title?: string | null,
+  showConfessButton = false,
 ): CardReply {
   const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
+  const buttons = [];
+  if (showConfessButton) {
+    buttons.push({ customId: "confessions:btn:new", label: "Make a Confession", style: "primary" } as const);
+  }
+  buttons.push(
+    { customId: `confessions:btn:reply:${number}`, label: "Reply", style: "secondary" } as const,
+    { customId: `confessions:btn:report:${number}`, label: "Report", style: "danger" } as const,
+  );
+
   return noPingCard(
     makeCard(0x131313, `💌 ${displayTitle}`, text, {
       footer: `Confession #${number}`,
       headerImages: imageUrl ? [imageUrl] : undefined,
       separatorAboveActionRows: true,
-      actionRows: [
-        actionRow([
-          { customId: "confessions:btn:new", label: "Confess", style: "primary", emoji: "💌" },
-          { customId: `confessions:btn:reply:${number}`, label: "Reply", style: "secondary", emoji: "💬" },
-          { customId: `confessions:btn:report:${number}`, label: "Report", style: "danger", emoji: "🚨" },
-        ]),
-      ],
+      actionRows: [actionRow(buttons)],
     }),
   );
 }
@@ -56,15 +60,13 @@ export function replyPayload(
           actionRow([
             {
               customId: `confessions:btn:replyto:${confessionNumber}:${k}`,
-              label: "Reply",
+              label: "💬 Reply",
               style: "secondary",
-              emoji: "💬",
             },
             {
               customId: `confessions:btn:reportreply:${confessionNumber}:${k}`,
-              label: "Report",
+              label: "🚨 Report",
               style: "danger",
-              emoji: "🚨",
             },
           ]),
         ],
