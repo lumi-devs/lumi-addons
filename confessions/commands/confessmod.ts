@@ -1,15 +1,6 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import type { ChatInputCommandInteraction, Guild } from "discord.js";
-import { userMention, time, TimestampStyles } from "@discordjs/formatters";
-import { BaseSubcommand, sendReply } from "lumi/commands";
-import {
-  ephemeralCard,
-  makeSuccessCard,
-  makeErrorCard,
-  paginateList,
-  type CardReply,
-} from "lumi/ui";
+import { defineCommand, type CommandContext } from "lumi/commands";
+import { makeErrorCard, makeListCard } from "lumi/ui";
+import { channels, messages, threads } from "lumi/discord";
 import { getConfessionsConfig } from "../lib/config.js";
 import {
   banHash,
@@ -21,201 +12,148 @@ import {
 
 const HASH_RE = /^[0-9a-f]{64}$/i;
 
-@ApplyOptions<BaseSubcommand.Options>({
+const relative = (at: number): string => `<t:${Math.floor(at / 1000)}:R>`;
+
+async function log(
+  guildId: string,
+  title: string,
+  body: string,
+): Promise<void> {
+  const config = await getConfessionsConfig(guildId);
+  if (!config.logChannelId) return;
+  await channels
+    .send(config.logChannelId, makeErrorCard(title, body))
+    .catch(() => null);
+}
+
+async function ban(ctx: CommandContext): Promise<void> {
+  await ctx.checkPermit("mod.*");
+  const guildId = ctx.guildId!;
+  const number = await ctx.getInteger("number");
+  if (number === null) return ctx.replyError("Error", "Provide a confession number.");
+  const meta = await getConfession(guildId, number);
+  if (!meta) return ctx.replyError("Error", `Confession #${number} was not found.`);
+
+  await banHash(guildId, meta.authorHash, ctx.user.id);
+  await log(
+    guildId,
+    "Author Banned",
+    `The author of **Confession #${number}** was banned by <@${ctx.user.id}>.`,
+  );
+  return ctx.replySuccess(
+    "Author Banned",
+    `The anonymous author of **Confession #${number}** can no longer submit or reply.`,
+  );
+}
+
+async function unban(ctx: CommandContext): Promise<void> {
+  await ctx.checkPermit("mod.*");
+  const guildId = ctx.guildId!;
+  const target = ((await ctx.getString("target")) ?? "").trim();
+
+  let hash: string;
+  if (/^\d+$/.test(target)) {
+    const meta = await getConfession(guildId, Number(target));
+    if (!meta?.authorHash)
+      return ctx.replyError("Error", `Confession #${target} was not found.`);
+    hash = meta.authorHash;
+  } else if (HASH_RE.test(target)) {
+    hash = target.toLowerCase();
+  } else {
+    return ctx.replyError(
+      "Error",
+      "Provide a confession number or a 64-character author hash.",
+    );
+  }
+
+  const removed = await unbanHash(guildId, hash);
+  if (removed === 0) return ctx.replyError("Error", "That author was not banned.");
+
+  await log(guildId, "Author Unbanned", `An author was unbanned by <@${ctx.user.id}>.`);
+  return ctx.replySuccess("Unbanned", "The author can participate again.");
+}
+
+async function list(ctx: CommandContext): Promise<void> {
+  await ctx.checkPermit("mod.*");
+  const bans = await listBans(ctx.guildId!);
+  if (bans.length === 0) {
+    return ctx.reply(makeListCard("Banned Authors", ["No authors are currently banned."]));
+  }
+  const lines = bans.map(
+    (b) => `\`${b.hash.slice(0, 16)}…\` — ${relative(b.record.at)} by <@${b.record.by}>`,
+  );
+  return ctx.reply(makeListCard("Banned Authors", lines));
+}
+
+async function removeConfession(ctx: CommandContext): Promise<void> {
+  await ctx.checkPermit("mod.*");
+  const guildId = ctx.guildId!;
+  const number = await ctx.getInteger("number");
+  if (number === null) return ctx.replyError("Error", "Provide a confession number.");
+  const reason = (await ctx.getString("reason")) ?? "No reason given";
+  const meta = await getConfession(guildId, number);
+  if (!meta) return ctx.replyError("Error", `Confession #${number} was not found.`);
+
+  const config = await getConfessionsConfig(guildId);
+  if (config.channelId && meta.messageId) {
+    await messages.remove(config.channelId, meta.messageId).catch(() => null);
+  }
+  if (meta.threadId) {
+    await threads.remove(meta.threadId).catch(() => null);
+  }
+  await deleteConfession(guildId, number);
+
+  await log(
+    guildId,
+    "Confession Deleted",
+    `**Confession #${number}** was deleted by <@${ctx.user.id}>.\nReason: ${reason}`,
+  );
+  return ctx.replySuccess("Deleted", `Confession #${number} was removed.`);
+}
+
+export default defineCommand({
   name: "confessmod",
   description: "Moderate anonymous confessions (identity is never revealed).",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "mod.*",
-  subcommands: [
-    { name: "ban", chatInputRun: "chatInputRunBan" },
-    { name: "unban", chatInputRun: "chatInputRunUnban" },
-    { name: "list", chatInputRun: "chatInputRunList" },
-    { name: "delete", chatInputRun: "chatInputRunDelete" },
-  ],
-})
-export class ConfessModCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s
-            .setName("ban")
-            .setDescription("Ban a confession's anonymous author by number.")
-            .addIntegerOption((o) =>
-              o
-                .setName("number")
-                .setDescription("The confession number.")
-                .setRequired(true)
-                .setMinValue(1),
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("unban")
-            .setDescription("Unban by confession number or author hash.")
-            .addStringOption((o) =>
-              o
-                .setName("target")
-                .setDescription("A confession number or a 64-char author hash.")
-                .setRequired(true),
-            ),
-        )
-        .addSubcommand((s) =>
-          s.setName("list").setDescription("List banned author hashes."),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("delete")
-            .setDescription("Delete a confession (and its thread) by number.")
-            .addIntegerOption((o) =>
-              o
-                .setName("number")
-                .setDescription("The confession number.")
-                .setRequired(true)
-                .setMinValue(1),
-            )
-            .addStringOption((o) =>
-              o.setName("reason").setDescription("Logged reason (optional)."),
-            ),
-        ),
-    );
-  }
-
-  public async chatInputRunBan(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const number = interaction.options.getInteger("number", true);
-    const meta = await getConfession(guild.id, number);
-    if (!meta)
-      return this.#err(interaction, `Confession #${number} was not found.`);
-
-    await banHash(guild.id, meta.authorHash, interaction.user.id);
-    await this.#log(
-      guild,
-      makeSuccessCard(
-        "Author Banned",
-        `The author of **Confession #${number}** was banned by ${userMention(interaction.user.id)}.`,
-      ),
-    );
-    return sendReply(
-      interaction,
-      ephemeralCard(
-        makeSuccessCard(
-          "Author Banned",
-          `The anonymous author of **Confession #${number}** can no longer submit or reply.`,
-        ),
-      ),
-    );
-  }
-
-  public async chatInputRunUnban(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const target = interaction.options.getString("target", true).trim();
-
-    let hash: string;
-    if (/^\d+$/.test(target)) {
-      const meta = await getConfession(guild.id, Number(target));
-      if (!meta?.authorHash)
-        return this.#err(interaction, `Confession #${target} was not found.`);
-      hash = meta.authorHash;
-    } else if (HASH_RE.test(target)) {
-      hash = target.toLowerCase();
-    } else {
-      return this.#err(
-        interaction,
-        "Provide a confession number or a 64-character author hash.",
-      );
+  build: () => ({
+    name: "confessmod",
+    description: "Moderate anonymous confessions (identity is never revealed).",
+    options: [
+      {
+        type: 1,
+        name: "ban",
+        description: "Ban a confession's anonymous author by number.",
+        options: [
+          { type: 4, name: "number", description: "The confession number.", required: true, min_value: 1 },
+        ],
+      },
+      {
+        type: 1,
+        name: "unban",
+        description: "Unban by confession number or author hash.",
+        options: [
+          { type: 3, name: "target", description: "A confession number or a 64-char author hash.", required: true },
+        ],
+      },
+      { type: 1, name: "list", description: "List banned author hashes." },
+      {
+        type: 1,
+        name: "delete",
+        description: "Delete a confession by number.",
+        options: [
+          { type: 4, name: "number", description: "The confession number.", required: true, min_value: 1 },
+          { type: 3, name: "reason", description: "Logged reason (optional).", required: false },
+        ],
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    if (!ctx.guildId) {
+      return ctx.replyError("Guild Only", "This command only works inside a server.");
     }
-
-    const removed = await unbanHash(guild.id, hash);
-    if (removed === 0)
-      return this.#err(interaction, "That author was not banned.");
-
-    await this.#log(
-      guild,
-      makeSuccessCard(
-        "Author Unbanned",
-        `An author was unbanned by ${userMention(interaction.user.id)}.`,
-      ),
+    return ctx.replyError(
+      "Error",
+      "Use a subcommand: `ban`, `unban`, `list`, or `delete`.",
     );
-    return sendReply(
-      interaction,
-      ephemeralCard(
-        makeSuccessCard("Unbanned", "The author can participate again."),
-      ),
-    );
-  }
-
-  public async chatInputRunList(interaction: ChatInputCommandInteraction) {
-    const bans = await listBans(interaction.guild!.id);
-    const lines = bans.map(
-      (b) =>
-        `\`${b.hash.slice(0, 16)}…\` — ${time(new Date(b.record.at), TimestampStyles.RelativeTime)} by ${userMention(b.record.by)}`,
-    );
-    await paginateList({
-      interactionOrMessage: interaction,
-      userId: interaction.user.id,
-      title: "Banned Authors",
-      items: lines,
-      perPage: 5,
-      ephemeral: true,
-    });
-  }
-
-  public async chatInputRunDelete(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const number = interaction.options.getInteger("number", true);
-    const reason = interaction.options.getString("reason") ?? "No reason given";
-    const meta = await getConfession(guild.id, number);
-    if (!meta)
-      return this.#err(interaction, `Confession #${number} was not found.`);
-
-    const config = await getConfessionsConfig(guild.id);
-    if (config.channelId) {
-      const channel = guild.channels.cache.get(config.channelId);
-      if (channel?.isTextBased())
-        await channel.messages.delete(meta.messageId).catch(() => null);
-    }
-    if (meta.threadId)
-      await guild.channels.cache
-        .get(meta.threadId)
-        ?.delete("confessions: moderator delete")
-        .catch(() => null);
-    await deleteConfession(guild.id, number);
-
-    await this.#log(
-      guild,
-      makeErrorCard(
-        "Confession Deleted",
-        `**Confession #${number}** was deleted by ${userMention(interaction.user.id)}.\nReason: ${reason}`,
-      ),
-    );
-    return sendReply(
-      interaction,
-      ephemeralCard(
-        makeSuccessCard(
-          "Deleted",
-          `Confession #${number} and its thread were removed.`,
-        ),
-      ),
-    );
-  }
-
-  #err(interaction: ChatInputCommandInteraction, message: string) {
-    return sendReply(
-      interaction,
-      ephemeralCard(makeErrorCard("Error", message)),
-    );
-  }
-
-  async #log(guild: Guild, card: CardReply) {
-    const config = await getConfessionsConfig(guild.id);
-    if (!config.logChannelId) return;
-    const channel = guild.channels.cache.get(config.logChannelId);
-    if (channel?.isSendable())
-      await channel.send({ ...card }).catch(() => null);
-  }
-}
+  },
+  handlers: { ban, unban, list, delete: removeConfession },
+});

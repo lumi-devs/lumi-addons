@@ -1,86 +1,115 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { Subcommand } from "@sapphire/plugin-subcommands";
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { ButtonStyle, type ChatInputCommandInteraction } from "discord.js";
-import { roleMention } from "@discordjs/formatters";
-import {
-  BaseSubcommand,
-  assertPermit,
-  replyError,
-  replySuccess,
-  replyInfo,
-} from "lumi/commands";
-import { makeInfoCard } from "lumi/ui";
+import { defineCommand, type CommandContext } from "lumi/commands";
+import { actionRow, makeInfoCard } from "lumi/ui";
+import { channels } from "lumi/discord";
 import { getPromoterConfig, getStats } from "../lib/evaluate.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
+export default defineCommand({
   name: "promoter",
   description: "Promoter-role tools.",
-  requiredPermit: "mod.*",
-  preconditions: ["GuildOnly"],
-  subcommands: [
-    { name: "panel", chatInputRun: "chatInputPanel" },
-    { name: "stats", chatInputRun: "chatInputStats" },
-  ],
-})
-export class PromoterCommand extends BaseSubcommand {
-  public override registerApplicationCommands(registry: Subcommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((sub) =>
-          sub
-            .setName("panel")
-            .setDescription("Post the persistent promoter info panel here"),
-        )
-        .addSubcommand((sub) =>
-          sub.setName("stats").setDescription("Show grant/revoke totals"),
-        ),
-    );
-  }
-
-  public async chatInputPanel(
-    interaction: ChatInputCommandInteraction<"cached">,
-  ) {
-    // Panel posting changes the channel for everyone — gate at ADMIN.
-    await assertPermit(interaction, "admin.*");
-    const cfg = await getPromoterConfig(interaction.guildId);
-    if (!cfg.roleId || cfg.matchTerms.length === 0) {
-      return replyError(
-        interaction,
-        "Not Configured",
-        "Set `promoter_role_id` and `match_terms` in `/config` first.",
+  build: () => ({
+    name: "promoter",
+    description: "Promoter-role tools.",
+    options: [
+      {
+        type: 1,
+        name: "panel",
+        description: "Post the persistent promoter info panel here",
+      },
+      {
+        type: 1,
+        name: "stats",
+        description: "Show grant/revoke totals",
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    if (!ctx.guildId) {
+      return ctx.replyError(
+        "Guild Only",
+        "This command only works inside a server.",
       );
     }
+    if (ctx.subcommand === "stats") return chatInputStats(ctx);
+    return chatInputPanel(ctx);
+  },
+  handlers: {
+    panel: async (ctx: CommandContext) => {
+      if (!ctx.guildId) {
+        return ctx.replyError(
+          "Guild Only",
+          "This command only works inside a server.",
+        );
+      }
+      return chatInputPanel(ctx);
+    },
+    stats: async (ctx: CommandContext) => {
+      if (!ctx.guildId) {
+        return ctx.replyError(
+          "Guild Only",
+          "This command only works inside a server.",
+        );
+      }
+      return chatInputStats(ctx);
+    },
+  },
+});
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId("promoter:check")
-        .setLabel("Check my status")
-        .setStyle(ButtonStyle.Primary),
+async function chatInputPanel(ctx: CommandContext): Promise<void> {
+  try {
+    await ctx.checkPermit("admin.*");
+  } catch {
+    return ctx.replyError(
+      "Permission Denied",
+      "Posting the panel is restricted to admins.",
     );
-    const card = makeInfoCard(
-      "Promote the Server, Get the Role",
-      `Put our invite or tag in your **custom status** and receive ${roleMention(cfg.roleId)} automatically. Remove it and the role goes away.\n\nAlready did it? Hit the button to be checked right now.`,
-      { actionRows: [row] },
-    );
-    await interaction.channel?.send(card);
-    return replySuccess(
-      interaction,
-      "Panel Posted",
-      "The promoter panel is live.",
+  }
+  const guildId = ctx.guildId!;
+  const cfg = await getPromoterConfig(guildId);
+  if (!cfg.roleId || cfg.matchTerms.length === 0) {
+    return ctx.replyError(
+      "Not Configured",
+      "Set `promoter_role_id` and `match_terms` in `/config` first.",
     );
   }
 
-  public async chatInputStats(
-    interaction: ChatInputCommandInteraction<"cached">,
-  ) {
-    const stats = await getStats(interaction.guildId);
-    return replyInfo(
-      interaction,
-      "Promoter Stats",
-      `**${stats.granted}** roles granted · **${stats.revoked}** roles revoked (all-time).`,
+  const card = makeInfoCard(
+    "Promote the Server, Get the Role",
+    `Put our invite or tag in your **custom status** and receive <@&${cfg.roleId}> automatically. Remove it and the role goes away.\n\nAlready did it? Hit the button to be checked right now.`,
+    {
+      actionRows: [
+        actionRow([
+          {
+            customId: "promoter:check",
+            label: "Check my status",
+            style: "primary",
+          },
+        ]),
+      ],
+    },
+  );
+  try {
+    await channels.send(ctx.channelId, card);
+  } catch {
+    return ctx.replyError(
+      "Error",
+      "Couldn't post the panel in this channel.",
     );
   }
+  return ctx.replySuccess("Panel Posted", "The promoter panel is live.");
+}
+
+async function chatInputStats(ctx: CommandContext): Promise<void> {
+  try {
+    await ctx.checkPermit("mod.*");
+  } catch {
+    return ctx.replyError(
+      "Permission Denied",
+      "Viewing stats is restricted to moderators.",
+    );
+  }
+  const stats = await getStats(ctx.guildId!);
+  return ctx.replyInfo(
+    "Promoter Stats",
+    `**${stats.granted}** roles granted · **${stats.revoked}** roles revoked (all-time).`,
+  );
 }

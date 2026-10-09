@@ -1,15 +1,20 @@
 {
   "name": "status",
-  "displayName": "Status",
-  "emoji": "⚙️",
+  "displayName": "Status Rotator",
+  "emoji": "🔁",
   "description": "Rotating bot presence managed at runtime by the bot owner: custom statuses with activity type, online status, and live placeholders.",
   "short": "Owner-managed rotating presence.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
   "subStores": [
-    "commands",
-    "scheduled-tasks"
+    "commands"
   ],
-  "configFields": []
+  "configFields": [],
+  "endUserDataStatement": "Stores rotating bot status entries configured globally by bot owners. Records the owner user ID who created each status entry for audit purposes.",
+  "capabilities": {
+    "discord": ["reply", "clientPresence"],
+    "scheduling": true,
+    "kv": true
+  }
 }

@@ -1,9 +1,7 @@
-import { container } from "@sapphire/framework";
-import { getUtility } from "lumi";
-import { MODULE_NAME } from "../keys.js";
+import { toStringArray } from "lumi";
+import { getModuleConfig } from "lumi/config";
 
 export interface LoungeConfig {
-  /** One or more permanent voice channels; each scales its own group. */
   baseChannelIds: string[];
   busyThreshold: number;
   maxExtras: number;
@@ -12,22 +10,16 @@ export interface LoungeConfig {
 }
 
 export async function getLoungeConfig(guildId: string): Promise<LoungeConfig> {
-  const get = (key: string) =>
-    container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
   const [baseChannelIds, threshold, maxExtras, template, cooldown] =
     await Promise.all([
-      getUtility("config").getConfigList(
-        guildId,
-        MODULE_NAME,
-        "base_channel_ids",
-      ),
-      get("busy_threshold"),
-      get("max_extra_lounges"),
-      get("name_template"),
-      get("cooldown_seconds"),
+      getModuleConfig("base_channel_ids", guildId),
+      getModuleConfig("busy_threshold", guildId),
+      getModuleConfig("max_extra_lounges", guildId),
+      getModuleConfig("name_template", guildId),
+      getModuleConfig("cooldown_seconds", guildId),
     ]);
   return {
-    baseChannelIds,
+    baseChannelIds: toStringArray(baseChannelIds),
     busyThreshold: (threshold as number | null) ?? 2,
     maxExtras: (maxExtras as number | null) ?? 5,
     nameTemplate:

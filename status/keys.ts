@@ -1,40 +1,37 @@
-// Global-scope sentinel: presence is bot-wide, so all KV rows live under this
-// pseudo guild. Never pass a real guild id for status data.
-export const MODULE_NAME = "status";
-export const GLOBAL_SCOPE = "global";
-
-export const StatusData = {
-  /** targetId for the entries row and the settings row. */
-  META: "meta",
-  ENTRIES: "entries",
-  SETTINGS: "settings",
-} as const;
-
-export const StatusKeys = {
-  /** Redis list of entry ids still to play in this shuffle cycle. */
-  queue: () => "lumi:addon:status:queue",
-  /** Redis string: entry id applied most recently. */
-  last: () => "lumi:addon:status:last",
-  /** Redis string: epoch ms of the last applied rotation. */
-  lastRotatedAt: () => "lumi:addon:status:rotated-at",
+export const StatusStore = {
+  targetId: "meta",
+  entries: "entries",
+  state: "state",
 } as const;
 
 export interface StatusEntry {
   id: number;
   text: string;
-  /** discord.js ActivityType name we support. */
   type: "Custom" | "Playing" | "Listening" | "Watching" | "Competing";
   presence: "online" | "idle" | "dnd";
   addedBy: string;
   addedAt: number;
 }
 
-export interface GlobalSettings {
-  enabled: boolean;
+export interface RotationState {
+  queue: number[];
+  lastId: number | null;
+  nextAtMs: number;
   intervalMs: number;
+  enabled: boolean;
+  scheduledForMs: number;
 }
 
-export const DEFAULT_SETTINGS: GlobalSettings = {
-  enabled: true,
-  intervalMs: 120_000,
-};
+export const DEFAULT_INTERVAL_MS = 120_000;
+export const MIN_INTERVAL_MS = 30_000;
+
+export function defaultState(now: number = Date.now()): RotationState {
+  return {
+    queue: [],
+    lastId: null,
+    nextAtMs: now + DEFAULT_INTERVAL_MS,
+    intervalMs: DEFAULT_INTERVAL_MS,
+    enabled: true,
+    scheduledForMs: 0,
+  };
+}

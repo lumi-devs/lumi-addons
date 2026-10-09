@@ -10,5 +10,10 @@
   "subStores": [
     "commands"
   ],
-  "configFields": []
+  "configFields": [],
+  "endUserDataStatement": "Processes transient translation and emoji extraction requests in real-time. Does not collect, persist, or retain any personal user data or message content.",
+  "capabilities": {
+    "discord": ["reply", "editMessage", "manageEmoji"],
+    "kv": false
+  }
 }

@@ -1,19 +1,19 @@
 {
   "name": "activity-roles",
   "displayName": "Activity Roles",
-  "emoji": "⚙️",
+  "emoji": "🎮",
   "description": "Auto-assign roles based on users' Discord presence (Playing, Streaming, Listening, Watching, Custom, Competing).",
   "short": "Presence-based role automation.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
   "subStores": [
-    "commands",
-    "listeners"
+    "commands"
   ],
   "configFields": [],
+  "endUserDataStatement": "Stores each member's recent activity snapshot and the role IDs this addon granted, keyed by user ID in guild storage, to assign and revoke activity roles. Removed when the member's data is purged.",
   "capabilities": {
-    "discord": ["sendMessage", "manageRoles"],
+    "discord": ["reply", "manageRoles"],
     "kv": true
   }
 }

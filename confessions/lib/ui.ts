@@ -1,213 +1,121 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  MediaGalleryBuilder,
-  MediaGalleryItemBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  LabelBuilder,
-  FileUploadBuilder,
-} from "@discordjs/builders";
-import { ButtonStyle, TextInputStyle } from "discord.js";
-import { makeCard, resolveCardColor, defaultCardColors, type CardReply } from "lumi/ui";
+  actionRow,
+  makeCard,
+  makeInfoCard,
+  modal,
+  noPingCard,
+  type CardReply,
+} from "lumi/ui";
 
-const replyButtonRow = (
-  confessionNumber: number,
-  showConfessButton: boolean,
-) => {
-  const row = new ActionRowBuilder<ButtonBuilder>();
-  if (showConfessButton) {
-    row.addComponents(
-      new ButtonBuilder()
-        .setCustomId("confess:new_button")
-        .setLabel("Make a Confession")
-        .setEmoji({ name: "🕊️" })
-        .setStyle(ButtonStyle.Primary),
-    );
-  }
-  row.addComponents(
-    new ButtonBuilder()
-      .setCustomId(`confess:reply:${confessionNumber}`)
-      .setLabel("Reply")
-      .setEmoji({ name: "💬" })
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`confess:report:${confessionNumber}`)
-      .setLabel("Report")
-      .setEmoji({ name: "🚨" })
-      .setStyle(ButtonStyle.Danger),
-  );
-  return row;
-};
-
-const galleryFor = (imageUrl?: string | null) =>
-  imageUrl
-    ? new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder().setURL(imageUrl),
-      )
-    : undefined;
-
-export function buildConfessionCard(
+export function confessionPayload(
   number: number,
   text: string,
   imageUrl?: string | null,
   title?: string | null,
-  showConfessButton = true,
 ): CardReply {
   const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
-  return makeCard(resolveCardColor("primary") || defaultCardColors.primary, `🕊️ ${displayTitle}`, text, {
-    footer: `Confession #${number} · anyone can reply anonymously`,
-    actionRows: [replyButtonRow(number, showConfessButton)],
-    mediaGallery: galleryFor(imageUrl),
-  });
+  return noPingCard(
+    makeInfoCard(`🕊️ ${displayTitle}`, text, {
+      footer: `Confession #${number} · anyone can reply anonymously`,
+      headerImages: imageUrl ? [imageUrl] : undefined,
+      actionRows: [
+        actionRow([
+          { customId: "confessions:btn:new", label: "Confess", style: "primary", emoji: "🕊️" },
+          { customId: `confessions:btn:reply:${number}`, label: "Reply", style: "secondary", emoji: "💬" },
+          { customId: `confessions:btn:report:${number}`, label: "Report", style: "danger", emoji: "🚨" },
+        ]),
+      ],
+    }),
+  );
 }
 
-export function buildReplyCard(
+export function replyPayload(
   confessionNumber: number,
   k: number,
   text: string,
   imageUrl?: string | null,
   isOp = false,
   parentQuote?: string | null,
-  replyId?: string | number | null,
 ): CardReply {
-  const bodyText = parentQuote ? `${parentQuote}\n\n${text}` : text;
-  const footerText = isOp ? "👑 OP · Anonymous reply" : "Anonymous reply";
-  const color = isOp
-    ? resolveCardColor("warning") || defaultCardColors.warning
-    : resolveCardColor("primary") || defaultCardColors.primary;
-
-  const actionRow = new ActionRowBuilder<ButtonBuilder>();
-  if (replyId) {
-    actionRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`confess:replyto:${confessionNumber}:${replyId}`)
-        .setLabel("Reply")
-        .setEmoji({ name: "💬" })
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(`confess:reportreply:${confessionNumber}:${replyId}`)
-        .setLabel("Report")
-        .setEmoji({ name: "🚨" })
-        .setStyle(ButtonStyle.Danger),
-    );
-  } else {
-    actionRow.addComponents(
-      new ButtonBuilder()
-        .setCustomId(`confess:reply:${confessionNumber}`)
-        .setLabel("Reply")
-        .setEmoji({ name: "💬" })
-        .setStyle(ButtonStyle.Secondary),
-    );
-  }
-
-  return makeCard(color, `💬 Reply #${confessionNumber}.${k}`, bodyText, {
-    footer: footerText,
-    actionRows: [actionRow],
-    mediaGallery: galleryFor(imageUrl),
-  });
-}
-
-function textArea(
-  id: string,
-  label: string,
-  style: TextInputStyle,
-  required: boolean,
-  placeholder?: string,
-): ActionRowBuilder<TextInputBuilder> {
-  const input = new TextInputBuilder()
-    .setCustomId(id)
-    .setLabel(label)
-    .setStyle(style)
-    .setRequired(required)
-    .setMaxLength(style === TextInputStyle.Paragraph ? 2000 : 400);
-  if (placeholder) input.setPlaceholder(placeholder);
-  return new ActionRowBuilder<TextInputBuilder>().addComponents(input);
-}
-
-function imageUploadComponent(): LabelBuilder {
-  const fileUpload = new FileUploadBuilder()
-    .setCustomId("image_upload")
-    .setRequired(false)
-    .setMinValues(0)
-    .setMaxValues(1);
-
-  return new LabelBuilder()
-    .setLabel("Attach an image (optional)")
-    .setFileUploadComponent(fileUpload);
-}
-
-export function buildConfessionModal(allowAttachments: boolean): ModalBuilder {
-  const modal = new ModalBuilder()
-    .setCustomId("confess:new")
-    .setTitle("Anonymous Confession");
-
-  const titleInput = textArea(
-    "title",
-    "Title (optional)",
-    TextInputStyle.Short,
-    false,
-    "Give your confession a title...",
-  );
-  titleInput.components[0]?.setMaxLength(100);
-
-  modal.addComponents(
-    titleInput,
-    textArea(
-      "confession",
-      "Your confession",
-      TextInputStyle.Paragraph,
-      true,
-      "This is posted anonymously.",
+  const body = parentQuote ? `${parentQuote}\n\n${text}` : text;
+  return noPingCard(
+    makeCard(
+      isOp ? 0xeab308 : 0x5865f2,
+      `💬 Reply #${confessionNumber}.${k}`,
+      body,
+      {
+        footer: isOp ? "👑 OP · Anonymous reply" : "Anonymous reply",
+        headerImages: imageUrl ? [imageUrl] : undefined,
+        actionRows: [
+          actionRow([
+            {
+              customId: `confessions:btn:replyto:${confessionNumber}:${k}`,
+              label: "Reply",
+              style: "secondary",
+              emoji: "💬",
+            },
+            {
+              customId: `confessions:btn:reportreply:${confessionNumber}:${k}`,
+              label: "Report",
+              style: "danger",
+              emoji: "🚨",
+            },
+          ]),
+        ],
+      },
     ),
   );
-  if (allowAttachments) {
-    modal.addComponents(imageUploadComponent());
-  }
-  return modal;
+}
+
+export function buildConfessionModal(allowAttachments: boolean): {
+  toJSON(): unknown;
+} {
+  return modal({
+    title: "Anonymous Confession",
+    customId: "confessions:modal:new",
+    fields: [
+      { customId: "title", label: "Title (optional)", required: false, maxLength: 100, placeholder: "Give your confession a title…" },
+      { customId: "confession", label: "Your confession", style: "paragraph", maxLength: 2000, placeholder: "This is posted anonymously." },
+      ...(allowAttachments
+        ? [{ customId: "image_url", label: "Image URL (optional)", required: false, maxLength: 500, placeholder: "https://…" }]
+        : []),
+    ],
+  });
 }
 
 export function buildReplyModal(
   confessionNumber: number,
   allowAttachments: boolean,
-): ModalBuilder {
-  const modal = new ModalBuilder()
-    .setCustomId(`confess:replymodal:${confessionNumber}`)
-    .setTitle(`Reply to Confession #${confessionNumber}`.slice(0, 45))
-    .addComponents(
-      textArea(
-        "reply",
-        "Your reply",
-        TextInputStyle.Paragraph,
-        true,
-        "This is posted anonymously.",
-      ),
-    );
-  if (allowAttachments) {
-    modal.addComponents(imageUploadComponent());
-  }
-  return modal;
+): { toJSON(): unknown } {
+  return modal({
+    title: `Reply to Confession #${confessionNumber}`.slice(0, 45),
+    customId: `confessions:modal:reply:${confessionNumber}`,
+    fields: [
+      { customId: "reply", label: "Your reply", style: "paragraph", maxLength: 2000, placeholder: "This is posted anonymously." },
+      ...(allowAttachments
+        ? [{ customId: "image_url", label: "Image URL (optional)", required: false, maxLength: 500, placeholder: "https://…" }]
+        : []),
+    ],
+  });
 }
 
 export function buildReplyToReplyModal(
   confessionNumber: number,
-  parentReplyId: string,
+  parentK: number,
   allowAttachments: boolean,
-): ModalBuilder {
-  const modal = new ModalBuilder()
-    .setCustomId(`confess:replytomodal:${confessionNumber}:${parentReplyId}`)
-    .setTitle(`Reply to Reply`.slice(0, 45))
-    .addComponents(
-      textArea(
-        "reply",
-        "Your reply",
-        TextInputStyle.Paragraph,
-        true,
-        "This is posted anonymously.",
-      ),
-    );
-  if (allowAttachments) {
-    modal.addComponents(imageUploadComponent());
-  }
-  return modal;
+): { toJSON(): unknown } {
+  return modal({
+    title: `Reply to #${confessionNumber}.${parentK}`.slice(0, 45),
+    customId: `confessions:modal:replyto:${confessionNumber}:${parentK}`,
+    fields: [
+      { customId: "reply", label: "Your reply", style: "paragraph", maxLength: 2000, placeholder: "This is posted anonymously." },
+      ...(allowAttachments
+        ? [{ customId: "image_url", label: "Image URL (optional)", required: false, maxLength: 500, placeholder: "https://…" }]
+        : []),
+    ],
+  });
+}
+
+export function openFormRow() {
+  return actionRow([{ customId: "confessions:btn:new", label: "Write Anonymously", style: "primary", emoji: "🕊️" }]);
 }

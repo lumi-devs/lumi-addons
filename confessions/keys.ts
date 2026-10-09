@@ -1,24 +1,15 @@
 export const MODULE_NAME = "confessions";
 
-/** KV scope (targetId) for guild-wide state: salt + counter. */
 export const CONFIG_SCOPE = "config";
 export const SALT_KEY = "salt";
 export const COUNTER_KEY = "counter";
-/** Per-confession rows use `c:<number>` as targetId. */
-export const confessionTarget = (n: number) => `c:${n}`;
 export const CONFESSION_META_KEY = "meta";
 export const REPLY_COUNTER_KEY = "replies";
-/** Per-reply author rows use `r:<messageId>` as targetId. */
-export const replyTarget = (messageId: string) => `r:${messageId}`;
-export const AUTHOR_KEY = "author";
-/** Banned-hash rows use the author hash as targetId. */
 export const BAN_KEY = "ban";
+export const COOLDOWN_KEY = "cooldown";
 
-export const ConfessKeys = {
-  /** Per-author submit cooldown; TTL = configured minutes. */
-  cooldown: (guildId: string, hash: string) =>
-    `lumi:addon:confessions:cd:${guildId}:${hash}`,
-} as const;
+export const confessionTarget = (n: number) => `c:${n}`;
+export const replyKey = (k: number) => `r:${k}`;
 
 export interface ConfessionMeta {
   number: number;
@@ -27,8 +18,16 @@ export interface ConfessionMeta {
   authorHash: string;
   createdAt: number;
   title?: string | null;
-  text?: string | null;
+  text: string;
   imageUrl?: string | null;
+}
+
+export interface ReplyRecord {
+  number: number;
+  k: number;
+  authorHash: string;
+  text: string;
+  createdAt: number;
 }
 
 export interface BanRecord {

@@ -1,7 +1,7 @@
 {
   "name": "rolementions",
   "author": ["Antigravity"],
-  "description": "Tracks role mentions with daily stats and auto-protects sensitive roles from mention spam via Discord AutoMod rules.",
+  "description": "Tracks role mentions with daily stats and auto-protects sensitive roles from mention spam via timed mention blocks.",
   "short": "Role-mention tracking + auto-protection.",
   "version": "1.0.0",
   "min_bot_version": "0.6.0",

@@ -20,8 +20,8 @@ The **Activity Roles** addon automatically assigns roles to server members based
 
 - **Full Presence Support**: Detects `Playing`, `Streaming`, `Listening`, `Watching`, `Custom`, and `Competing` activity types.
 - **Substring & Text Matching**: Flexible string matching rules per activity rule.
-- **Automated Revocation**: Strips assigned roles immediately when members change or clear their status.
-- **Durable KV Persistence**: Configured mappings are safely stored per guild via `container.db.guildKV`.
+- **Additive-only Revocation**: Only roles this addon granted are ever removed; manually assigned roles are never stripped.
+- **Single Source of Truth**: One kv record per member (`activities` snapshot + `granted` role IDs); every event converges it.
 
 ---
 
@@ -58,18 +58,19 @@ All commands require **Manage Roles** permission:
 | Command | Subcommand | Arguments | Description |
 | :--- | :--- | :--- | :--- |
 | `/activityroles` | `add` | `type: ActivityType`, `match: string`, `role: Role` | Create a new presence-to-role rule mapping. |
-| `/activityroles` | `remove` | `role: Role` | Remove an existing activity role mapping. |
+| `/activityroles` | `remove` | `type: ActivityType`, `match: string` | Remove an existing activity role mapping. |
 | `/activityroles` | `list` | *None* | Display all configured activity role rules for this server. |
 
 ---
 
 ## 📡 Events & Listeners
 
-- **`presenceUpdate` Listener** (`listeners/presenceUpdate.ts`):
-  Evaluates incoming presence updates against configured rules in `lib/store.ts` using `lib/matcher.ts`. Dynamically grants roles when matching criteria are met and removes roles when presence changes.
+- **`presenceUpdate`** (`lib/converge.ts`): Recomputes desired roles from the event's activities, diffs against the member's kv record, adds/removes, persists.
+- **`guildMemberUpdate`** (`lib/converge.ts`): Reconciles external role changes against the stored snapshot (prunes roles removed by moderators). Carries no activity data, so members with no record are skipped.
+- Other sandbox events (`voiceStateUpdate`, `messageCreate`, `threadCreate`, `userUpdate`) carry no activity or role data this addon can act on, so it does not subscribe to them.
 
 - **GDPR Standard**:
-  This module only stores guild-level mapping configurations. No user-specific data is persisted.
+  Per-member records are keyed by user ID in guild kv storage and are removed automatically on user-data purge requests.
 
 ---
 
@@ -81,17 +82,18 @@ All commands require **Manage Roles** permission:
 sequenceDiagram
     autonumber
     actor User as Member Presence
-    participant Listener as presenceUpdate Listener
+    participant Handler as convergeMember
     participant Matcher as Activity Matcher
-    participant DB as container.db.guildKV
+    participant KV as lumi/kv member record
     participant Guild as Discord Guild Member
 
-    User->>Listener: Presence update event
-    Listener->>DB: Fetch guild rules
-    DB-->>Listener: Return rule list
-    Listener->>Matcher: Evaluate activity vs rules
-    Matcher-->>Listener: Match result (Grant / Revoke)
-    Listener->>Guild: Add or remove activity role
+    User->>Handler: presenceUpdate / guildMemberUpdate
+    Handler->>KV: Load member record
+    KV-->>Handler: Snapshot + granted roles
+    Handler->>Matcher: Evaluate activities vs rules, diff owned roles
+    Matcher-->>Handler: Add / Remove / next granted set
+    Handler->>Guild: Add or remove owned activity roles
+    Handler->>KV: Persist converged record (or clear when empty)
 ```
 
 ### TypeScript Mapping Example

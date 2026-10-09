@@ -3,6 +3,8 @@ import {
   loungeName,
   parseLoungeNumber,
   nextFreeNumber,
+  shouldDeleteChild,
+  canCreateChild,
   evaluateLounges,
   type LoungeSlot,
   type LoungeRules,
@@ -38,8 +40,22 @@ describe("engine names + numbers", () => {
   it("allocates the lowest free number", () => {
     expect(nextFreeNumber([])).toBe(1);
     expect(nextFreeNumber([1, 2])).toBe(3);
-    expect(nextFreeNumber([1, 3])).toBe(2); // fills the gap
+    expect(nextFreeNumber([1, 3])).toBe(2);
     expect(nextFreeNumber([2, 3])).toBe(1);
+  });
+});
+
+describe("dynamic child logic", () => {
+  it("deletes empty child lounges", () => {
+    expect(shouldDeleteChild(0)).toBe(true);
+    expect(shouldDeleteChild(1)).toBe(false);
+  });
+
+  it("checks child creation limits and cooldown", () => {
+    expect(canCreateChild(0, 5, false)).toBe(true);
+    expect(canCreateChild(4, 5, false)).toBe(true);
+    expect(canCreateChild(5, 5, false)).toBe(false);
+    expect(canCreateChild(2, 5, true)).toBe(false);
   });
 });
 
@@ -72,7 +88,6 @@ describe("evaluateLounges", () => {
   });
 
   it("prefers reclaiming an empty extra over creating", () => {
-    // base busy, one extra full, one extra empty → reclaim, don't grow
     const slots = [base(5), extra("a", 1, 5), extra("b", 2, 0)];
     expect(evaluateLounges(slots, RULES, false)).toEqual({
       kind: "delete",

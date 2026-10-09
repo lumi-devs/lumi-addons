@@ -1,34 +1,31 @@
-import { container } from "@sapphire/framework";
-import { getUtility } from "lumi";
-import { MODULE_NAME } from "../keys.js";
+import { getModuleConfig } from "lumi/config";
 
 export interface DragmeConfig {
   requestChannelId: string | null;
   timeoutMinutes: number;
-  graceMinutes: number;
   blacklistRoleIds: string[];
-  grantHiddenPerms: boolean;
 }
 
 export async function getDragmeConfig(guildId: string): Promise<DragmeConfig> {
-  const get = (key: string) =>
-    container.db.config.getModuleConfig(guildId, MODULE_NAME, key);
-  const [channel, timeout, grace, blacklistRoleIds, grant] = await Promise.all([
+  const get = (key: string) => getModuleConfig(key, guildId);
+  const [channel, timeout, blacklist] = await Promise.all([
     get("request_channel_id"),
     get("timeout_minutes"),
-    get("grace_minutes"),
-    getUtility("config").getConfigList(
-      guildId,
-      MODULE_NAME,
-      "blacklist_role_ids",
-    ),
-    get("grant_hidden_perms"),
+    get("blacklist_role_ids"),
   ]);
   return {
     requestChannelId: (channel as string | null) ?? null,
     timeoutMinutes: (timeout as number | null) ?? 5,
-    graceMinutes: (grace as number | null) ?? 10,
-    blacklistRoleIds,
-    grantHiddenPerms: (grant as boolean | null) ?? true,
+    blacklistRoleIds: normalizeIds(blacklist),
   };
+}
+
+function normalizeIds(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter((v): v is string => typeof v === "string");
+  if (typeof raw === "string" && raw.trim())
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  return [];
 }

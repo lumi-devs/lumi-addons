@@ -1,182 +1,188 @@
-import { container } from "@sapphire/framework";
-import { AsyncQueue } from "@sapphire/async-queue";
+import { channels, members, voiceChannels } from "lumi/discord";
+import { schedule } from "lumi/scheduling";
 import {
-  ChannelType,
-  type Guild,
-  type VoiceChannel,
-  type OverwriteResolvable,
-} from "discord.js";
-import { LoungeKeys, type ExtraLounge } from "../keys.js";
+  RECONCILE_INTERVAL_MS,
+  RECONCILE_TASK,
+  type ExtraLounge,
+} from "../keys.js";
 import { getLoungeConfig, type LoungeConfig } from "./config.js";
-import { evaluateLounges, loungeName, type LoungeSlot } from "./engine.js";
+import {
+  canCreateChild,
+  loungeName,
+  nextFreeNumber,
+  shouldDeleteChild,
+} from "./engine.js";
 import {
   getExtras,
-  setExtras,
+  isCoolingDown,
   listRegisteredBases,
+  markCooldown,
   recordCreation,
   recordDeletion,
   recordPeak,
+  setExtras,
 } from "./data.js";
 
-// Per-guild serialization so overlapping voice events can't double-create or
-// double-delete. In-process is correct on the monolith; the reconcile task
-// heals any drift on split deployments.
-const queues = new Map<string, AsyncQueue>();
-const queueFor = (guildId: string): AsyncQueue => {
-  let q = queues.get(guildId);
-  if (!q) queues.set(guildId, (q = new AsyncQueue()));
-  return q;
-};
+const tails = new Map<string, Promise<void>>();
 
-function asVoice(channel: unknown): VoiceChannel | null {
-  return channel &&
-    typeof channel === "object" &&
-    (channel as { type?: number }).type === ChannelType.GuildVoice
-    ? (channel as VoiceChannel)
-    : null;
-}
-
-/** Build one base's slot view (base + live extras), pruning dead registry rows. */
-function buildSlots(
-  guild: Guild,
-  base: VoiceChannel,
-  extras: ExtraLounge[],
-): { slots: LoungeSlot[]; live: ExtraLounge[] } {
-  const slots: LoungeSlot[] = [
-    { channelId: base.id, number: 0, count: base.members.size, isBase: true },
-  ];
-  const live: ExtraLounge[] = [];
-  for (const extra of extras) {
-    const channel = asVoice(guild.channels.cache.get(extra.channelId));
-    if (!channel) continue; // deleted out-of-band — drop it
-    live.push(extra);
-    slots.push({
-      channelId: channel.id,
-      number: extra.number,
-      count: channel.members.size,
-      isBase: false,
-    });
-  }
-  return { slots, live };
-}
-
-async function createExtra(
-  guild: Guild,
-  base: VoiceChannel,
-  baseId: string,
-  number: number,
-  config: LoungeConfig,
-  extras: ExtraLounge[],
-): Promise<void> {
-  const overwrites: OverwriteResolvable[] = base.permissionOverwrites.cache.map(
-    (o) => ({ id: o.id, type: o.type, allow: o.allow, deny: o.deny }),
+function serialized<T>(guildId: string, work: () => Promise<T>): Promise<T> {
+  if (tails.size > 200) tails.clear();
+  const tail = tails.get(guildId) ?? Promise.resolve();
+  const next = tail.catch(() => null).then(work);
+  tails.set(
+    guildId,
+    next.then(
+      () => {
+        tails.delete(guildId);
+      },
+      () => {
+        tails.delete(guildId);
+      },
+    ),
   );
-  const created = await guild.channels.create({
-    name: loungeName(config.nameTemplate, number),
-    type: ChannelType.GuildVoice,
-    parent: base.parent ?? undefined,
-    bitrate: base.bitrate,
-    userLimit: base.userLimit,
-    position: base.position + 1,
-    permissionOverwrites: overwrites,
-    reason: "multi-lounge: all lounges busy",
-  });
-  await setExtras(guild.id, baseId, [
-    ...extras,
-    { channelId: created.id, number },
-  ]);
-  await recordCreation(guild.id);
-  if (config.cooldownSeconds > 0)
-    await container.valkey.set(
-      LoungeKeys.cooldown(guild.id, baseId),
-      "1",
-      "EX",
-      config.cooldownSeconds,
-    );
+  return next;
 }
 
-async function deleteExtra(
-  guild: Guild,
-  baseId: string,
-  channelId: string,
-  extras: ExtraLounge[],
-): Promise<void> {
-  const channel = asVoice(guild.channels.cache.get(channelId));
-  if (channel && channel.members.size === 0)
-    await channel.delete("multi-lounge: extra lounge empty").catch(() => null);
-  await setExtras(
-    guild.id,
-    baseId,
-    extras.filter((e) => e.channelId !== channelId),
-  );
-  await recordDeletion(guild.id);
-}
-
-/** Manage one base group; returns its total occupancy for peak tracking. */
-async function manageBase(
-  guild: Guild,
-  baseId: string,
-  config: LoungeConfig,
-): Promise<number> {
-  const base = asVoice(guild.channels.cache.get(baseId));
-  if (!base) return 0; // base missing/not voice — nothing to manage
-
-  const stored = await getExtras(guild.id, baseId);
-  const { slots, live } = buildSlots(guild, base, stored);
-  if (live.length !== stored.length) await setExtras(guild.id, baseId, live);
-
-  const cooldownActive =
-    (await container.valkey.exists(LoungeKeys.cooldown(guild.id, baseId))) === 1;
-  const action = evaluateLounges(slots, config, cooldownActive);
-
-  if (action.kind === "create")
-    await createExtra(guild, base, baseId, action.number, config, live);
-  else if (action.kind === "delete")
-    await deleteExtra(guild, baseId, action.channelId, live);
-
-  return slots.reduce((sum, s) => sum + s.count, 0);
-}
-
-/** Remove registry rows (and their empty channels) for de-configured bases. */
-async function cleanupStaleBases(
-  guild: Guild,
-  configuredBases: Set<string>,
-): Promise<void> {
-  for (const baseId of await listRegisteredBases(guild.id)) {
-    if (configuredBases.has(baseId)) continue;
-    for (const extra of await getExtras(guild.id, baseId)) {
-      const channel = asVoice(guild.channels.cache.get(extra.channelId));
-      if (channel && channel.members.size === 0)
-        await channel
-          .delete("multi-lounge: base no longer managed")
-          .catch(() => null);
-    }
-    await setExtras(guild.id, baseId, []);
-  }
-}
-
-/**
- * Evaluate every configured base in a guild and apply at most one action each.
- * Serialized per guild; safe to call from the voice listener and the reconcile
- * sweep.
- */
-export async function manageLounges(guild: Guild): Promise<void> {
-  const queue = queueFor(guild.id);
-  await queue.wait();
+async function countOccupants(channelId: string): Promise<number> {
   try {
-    const config = await getLoungeConfig(guild.id);
-    const bases = new Set(config.baseChannelIds);
-    await cleanupStaleBases(guild, bases);
-    if (bases.size === 0) return;
-
-    let totalUsers = 0;
-    for (const baseId of bases) {
-      totalUsers += await manageBase(guild, baseId, config);
-    }
-    await recordPeak(guild.id, totalUsers);
-  } catch (err) {
-    container.logger.warn(`[multi-lounge] manage failed for ${guild.id}:`, err);
-  } finally {
-    queue.shift();
+    return (await voiceChannels.members(channelId)).length;
+  } catch {
+    return 0;
   }
+}
+
+async function updatePeakStats(
+  guildId: string,
+  config: LoungeConfig,
+): Promise<void> {
+  let total = 0;
+  for (const baseId of config.baseChannelIds) {
+    total += await countOccupants(baseId);
+    const extras = await getExtras(guildId, baseId);
+    for (const extra of extras) {
+      total += await countOccupants(extra.channelId);
+    }
+  }
+  await recordPeak(guildId, total);
+}
+
+export async function handleVoiceState(
+  guildId: string,
+  userId: string,
+  oldChannelId: string | null,
+  newChannelId: string | null,
+): Promise<void> {
+  await serialized(guildId, async () => {
+    const config = await getLoungeConfig(guildId);
+
+    if (newChannelId && config.baseChannelIds.includes(newChannelId)) {
+      const cooldownActive = await isCoolingDown(
+        guildId,
+        newChannelId,
+        config.cooldownSeconds,
+      );
+      const extras = await getExtras(guildId, newChannelId);
+
+      if (canCreateChild(extras.length, config.maxExtras, cooldownActive)) {
+        const nextNum = nextFreeNumber(extras.map((e) => e.number));
+        const name = loungeName(config.nameTemplate, nextNum);
+        const created = await channels
+          .createVoice(guildId, name, {
+            reason: "multi-lounge dynamic channel",
+          })
+          .catch(() => null);
+
+        if (created) {
+          await members.move(guildId, userId, created.id).catch(() => null);
+          const updated: ExtraLounge[] = [
+            ...extras,
+            { channelId: created.id, baseId: newChannelId, number: nextNum },
+          ];
+          await setExtras(guildId, newChannelId, updated);
+          await markCooldown(guildId, newChannelId, config.cooldownSeconds);
+          await recordCreation(guildId);
+          await schedule(
+            RECONCILE_TASK,
+            { guildId },
+            { delay: RECONCILE_INTERVAL_MS },
+          ).catch(() => null);
+        }
+      }
+    }
+
+    if (oldChannelId) {
+      const bases = await listRegisteredBases(guildId);
+      for (const baseId of bases) {
+        const extras = await getExtras(guildId, baseId);
+        const match = extras.find((e) => e.channelId === oldChannelId);
+        if (match) {
+          const occupants = await countOccupants(oldChannelId);
+          if (shouldDeleteChild(occupants)) {
+            await channels
+              .remove(oldChannelId, "multi-lounge empty")
+              .catch(() => null);
+            await setExtras(
+              guildId,
+              baseId,
+              extras.filter((e) => e.channelId !== oldChannelId),
+            );
+            await recordDeletion(guildId);
+          }
+          break;
+        }
+      }
+    }
+
+    await updatePeakStats(guildId, config);
+  });
+}
+
+export async function reconcileGuild(guildId: string): Promise<number> {
+  return serialized(guildId, async () => {
+    const config = await getLoungeConfig(guildId);
+    const configured = new Set(config.baseChannelIds);
+    const bases = await listRegisteredBases(guildId);
+    let totalExtras = 0;
+
+    for (const baseId of bases) {
+      const extras = await getExtras(guildId, baseId);
+      const remaining: ExtraLounge[] = [];
+
+      for (const extra of extras) {
+        let occupants: string[];
+        try {
+          occupants = await voiceChannels.members(extra.channelId);
+        } catch {
+          continue;
+        }
+
+        if (occupants.length === 0) {
+          await channels
+            .remove(extra.channelId, "multi-lounge empty")
+            .catch(() => null);
+          await recordDeletion(guildId);
+        } else {
+          remaining.push(extra);
+        }
+      }
+
+      if (remaining.length !== extras.length || !configured.has(baseId)) {
+        await setExtras(
+          guildId,
+          baseId,
+          configured.has(baseId) ? remaining : [],
+        );
+      }
+      if (configured.has(baseId)) {
+        totalExtras += remaining.length;
+      }
+    }
+
+    await updatePeakStats(guildId, config);
+    return totalExtras;
+  });
+}
+
+export async function manageLounges(guildId: string): Promise<void> {
+  await reconcileGuild(guildId);
 }

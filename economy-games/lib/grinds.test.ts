@@ -1,8 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { GRIND_DEFS, playGrind, rollGrind } from "./grinds.js";
 import type { GamesLedger, WalletView } from "./ledger.js";
-
-vi.mock("@sapphire/framework", () => ({ container: {} }));
 
 function makeLedger(wallet = 1000): GamesLedger & { log: string[] } {
   const log: string[] = [];

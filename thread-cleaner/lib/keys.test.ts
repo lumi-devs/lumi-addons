@@ -1,16 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { threadCleanupJobId } from "./keys.js";
+import { describe, expect, it } from "vitest";
+import { MODULE_NAME, CLEANUP_TASK, THREAD_STATE_KEY } from "./keys.js";
 
-describe("threadCleanupJobId", () => {
-  it("builds a stable, thread-scoped job id", () => {
-    expect(threadCleanupJobId("123")).toBe("thread-cleaner:123");
-  });
-
-  it("is idempotent for the same thread id", () => {
-    expect(threadCleanupJobId("123")).toBe(threadCleanupJobId("123"));
-  });
-
-  it("differs between threads", () => {
-    expect(threadCleanupJobId("123")).not.toBe(threadCleanupJobId("456"));
+describe("thread-cleaner keys and constants", () => {
+  it("defines standard module and task identifiers", () => {
+    expect(MODULE_NAME).toBe("thread-cleaner");
+    expect(CLEANUP_TASK).toBe("thread-cleaner-task");
+    expect(THREAD_STATE_KEY).toBe("thread-state");
   });
 });

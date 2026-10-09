@@ -1,135 +1,90 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { Command, type Args } from "@sapphire/framework";
+import { logger } from "lumi";
+import { defineCommand, type CommandContext } from "lumi/commands";
+import { makeInfoCard } from "lumi/ui";
 import {
-  type ChatInputCommandInteraction,
-  type MessageContextMenuCommandInteraction,
-  type Message,
-  ApplicationCommandType,
-} from "discord.js";
-import { fetch as sfetch, FetchResultTypes } from "@sapphire/fetch";
-import { BaseCommand, replyError } from "lumi/commands";
+  DEFAULT_TARGET,
+  parseGtxResponse,
+  resolveLanguage,
+} from "../lib/languages.js";
 
-@ApplyOptions<BaseCommand.Options>({
-  name: "translate",
-  aliases: ["t"],
-  description: "Translate text to English",
-  generateDashLessAliases: true,
-})
-export class TranslateCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    // Slash Command
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addStringOption((opt) =>
-          opt
-            .setName("text")
-            .setDescription("The text to translate")
-            .setRequired(true),
-        ),
-    );
-
-    // Context Menu Command (Apps -> Translate)
-    registry.registerContextMenuCommand((builder) =>
-      builder
-        .setName("Translate to English")
-        .setType(ApplicationCommandType.Message),
-    );
-  }
-
-  // Handle Slash Command
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    await interaction.deferReply();
-    const text = interaction.options.getString("text", true);
-
-    const translated = await this.fetchTranslation(text);
-    if (!translated) {
-      return replyError(
-        interaction,
-        "Failed",
-        "Could not translate text.",
-      );
-    }
-
-    return interaction.editReply(`-# ${translated}`);
-  }
-
-  // Handle Right-Click Context Menu
-  public override async contextMenuRun(
-    interaction: MessageContextMenuCommandInteraction,
-  ) {
-    await interaction.deferReply();
-    const message = interaction.targetMessage;
-
-    if (!message.content) {
-      return replyError(interaction, "Failed", "No text to translate.");
-    }
-
-    const translated = await this.fetchTranslation(message.content);
-    if (!translated) {
-      return replyError(
-        interaction,
-        "Failed",
-        "Could not translate text.",
-      );
-    }
-
-    return interaction.editReply(`-# ${translated}`);
-  }
-
-  // Handle Prefix Command (e.g. ,translate text OR replying with ,translate)
-  public override async messageRun(message: Message, args: Args) {
-    let textToTranslate = await args.rest("string").catch(() => "");
-
-    // If no text was provided directly, check if the user is replying to another message
-    if (!textToTranslate && message.reference?.messageId) {
-      const referencedMessage = await message.channel.messages
-        .fetch(message.reference.messageId)
-        .catch(() => null);
-      if (referencedMessage && referencedMessage.content) {
-        textToTranslate = referencedMessage.content;
-      }
-    }
-
-    if (!textToTranslate) {
-      const reply = await message.reply(
-        "Please provide text to translate or reply to a message.",
-      );
-      return reply;
-    }
-
-    const translated = await this.fetchTranslation(textToTranslate);
-    if (!translated) {
-      const reply = await message.reply("Could not translate text.");
-      return reply;
-    }
-
-    return message.reply({
-      content: `-# ${translated}`,
-      allowedMentions: { repliedUser: true },
-    });
-  }
-
-  private async fetchTranslation(text: string): Promise<string | null> {
-    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=${encodeURIComponent(
-      text,
-    )}`;
-
-    try {
-      // Response shape: [[["translated", "original", ...], ...], ...]
-      const data = await sfetch<[Array<[string, ...unknown[]]>]>(
-        url,
-        FetchResultTypes.JSON,
-      );
-      if (!Array.isArray(data) || !Array.isArray(data[0])) return null;
-      return data[0]
-        .map((item) => item[0])
-        .join("")
-        .trim();
-    } catch (e) {
-      this.container.logger.error("Translation error", e);
-      return null;
-    }
+async function fetchTranslation(
+  text: string,
+  target: string,
+): Promise<{ text: string; source: string | null } | null> {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    return parseGtxResponse(await res.json());
+  } catch {
+    await logger.error("Translation request failed");
+    return null;
   }
 }
+
+export default defineCommand({
+  name: "translate",
+  description: "Translate text (auto-detects the source language)",
+  build: () => ({
+    name: "translate",
+    description: "Translate text (auto-detects the source language)",
+    options: [
+      {
+        type: 3,
+        name: "text",
+        description: "The text to translate",
+        required: true,
+      },
+      {
+        type: 3,
+        name: "target",
+        description:
+          "Target language code or name (default: English)",
+        required: false,
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    if (ctx.isSlash) await ctx.defer();
+
+    const targetToken = ((await ctx.getString("target")) ?? "").trim() || null;
+    const rest = ((await ctx.getString("text", { rest: true })) ?? "").trim();
+    const resolved = resolveLanguage(targetToken);
+
+    if (targetToken && !resolved && ctx.isSlash) {
+      await ctx.replyError(
+        "Unknown Language",
+        `I don't recognise "${targetToken}". Use a code like "es" or a name like "Spanish".`,
+      );
+      return;
+    }
+    const target = resolved ?? DEFAULT_TARGET;
+    const text =
+      !ctx.isSlash && targetToken && !resolved
+        ? `${targetToken}${rest ? ` ${rest}` : ""}`
+        : rest;
+
+    if (!text) {
+      await ctx.replyWarning(
+        "Nothing to Translate",
+        "Please provide text to translate.",
+      );
+      return;
+    }
+
+    const translated = await fetchTranslation(text, target);
+    if (!translated) {
+      await ctx.replyError("Translation Failed", "Could not translate text.");
+      return;
+    }
+
+    await ctx.reply(
+      makeInfoCard(
+        translated.source
+          ? `Translation (${translated.source} → ${target})`
+          : "Translation",
+        translated.text,
+      ),
+    );
+  },
+});

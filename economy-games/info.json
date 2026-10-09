@@ -1,8 +1,8 @@
 {
   "name": "economy-games",
   "author": ["Lumi Developers"],
-  "description": "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — all settled through the core Economy ledger.",
-  "short": "Casino games, crime, grinds, and a shop for the core economy.",
+  "description": "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — every payout settled through the addon's own coin ledger.",
+  "short": "Casino games, crime, grinds, and a shop with its own ledger.",
   "version": "1.0.0",
-  "end_user_data_statement": "Stores per-server jail sentences and shop inventories keyed by user ID, plus short-lived cooldowns and active game tables in Redis. Currency balances and the transaction ledger are owned by the core Economy module. Game rows are removed on GDPR erasure."
+  "end_user_data_statement": "Stores per-server wallet balances, jail sentences, shop inventories, cooldown timestamps, and active game tables keyed by user ID. All rows live in this addon's own storage namespace and are removed on GDPR erasure."
 }

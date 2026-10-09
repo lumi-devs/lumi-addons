@@ -1,53 +1,52 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { BaseCommand, type CommandContext } from "lumi/commands";
+import { defineCommand, type CommandContext } from "lumi/commands";
 import { getCurrency, getGamesConfig, validateBet } from "../lib/config.js";
-import { productionLedger } from "../lib/ledger.js";
-import { savePending } from "../lib/store.js";
+import { productionLedger, savePending } from "../lib/store.js";
 import { roulettePickerCard } from "../lib/ui.js";
 import type { RoulettePending } from "../lib/roulette.js";
-import { GamesKeys } from "../keys.js";
+import { ROULETTE_KEY } from "../keys.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export default defineCommand({
   name: "roulette",
   description:
     "Bet on the roulette wheel, then pick red/black/odd/even/low/high/green/number.",
-  preconditions: ["GuildOnly"],
-  prefixEnabled: true,
-  cooldownLimit: 2,
-  cooldownDelay: 5000,
-})
-export class RouletteCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: BaseCommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addIntegerOption((opt) =>
-          opt
-            .setName("bet")
-            .setDescription("How much to bet.")
-            .setMinValue(1)
-            .setRequired(true),
-        )
-        .addIntegerOption((opt) =>
-          opt
-            .setName("number")
-            .setDescription("Exact number for the number bet (0-36).")
-            .setMinValue(0)
-            .setMaxValue(36)
-            .setRequired(false),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
-    const guildId = ctx.guildId!;
+  build: () => ({
+    name: "roulette",
+    description:
+      "Bet on the roulette wheel, then pick red/black/odd/even/low/high/green/number.",
+    options: [
+      {
+        type: 4,
+        name: "bet",
+        description: "How much to bet.",
+        required: true,
+        min_value: 1,
+      },
+      {
+        type: 4,
+        name: "number",
+        description: "Exact number for the number bet (0-36).",
+        required: false,
+        min_value: 0,
+        max_value: 36,
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    const guildId = ctx.guildId;
+    if (!guildId) {
+      await ctx.replyError("Guild Only", "This command only works inside a server.");
+      return;
+    }
     const config = await getGamesConfig(guildId);
     const currency = await getCurrency(guildId);
     const bet = await ctx.getInteger("bet", { required: true });
+    if (bet === null) {
+      await ctx.replyError("Roulette", "Tell me how much to bet.");
+      return;
+    }
     const number = await ctx.getInteger("number");
     const invalid = validateBet(
-      bet!,
+      bet,
       config.rouletteMinBet,
       config.rouletteMaxBet,
     );
@@ -61,22 +60,22 @@ export class RouletteCommand extends BaseCommand {
       currency.startingWallet,
       currency.startingBank,
     );
-    if (balance.wallet < bet!) {
+    if (balance.wallet < bet) {
       await ctx.replyError(
         "Roulette",
-        `You need ${bet!.toLocaleString("en-US")} in your wallet to place that bet.`,
+        `You need ${bet.toLocaleString("en-US")} in your wallet to place that bet.`,
       );
       return;
     }
     const pending: RoulettePending = {
       userId: ctx.user.id,
-      bet: bet!,
+      bet,
       target: number,
     };
-    await savePending(GamesKeys.roulette(guildId, ctx.user.id), pending, 300);
+    await savePending(guildId, ctx.user.id, ROULETTE_KEY, pending, 300);
     await ctx.reply(
-      roulettePickerCard(bet!, number, currency, ctx.user.id),
+      roulettePickerCard(bet, number, currency, ctx.user.id),
       { ephemeral: false },
     );
-  }
-}
+  },
+});

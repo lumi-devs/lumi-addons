@@ -1,18 +1,21 @@
-import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "lumi";
-import { registerTaskFireHandler } from "lumi/scheduling";
-import { deleteForUser, getRole, isBlacklisted, listRoles } from "./lib/data.js";
-import type { RoleRecord } from "./keys.js";
-import { handleBoosterGraceFire } from "./lib/grace-handler.js";
-import { handleBoosterReconcileFire } from "./lib/reconcile-handler.js";
+import { cfg, defineModule } from "lumi";
+import { onEvent } from "lumi/events";
+import { registerTaskFireHandler, schedule } from "lumi/scheduling";
+import { guilds, members } from "lumi/discord";
+import { getBoosterConfig } from "./lib/config.js";
+import { clearGrace, deleteBoosterRole, getGrace, getRole, setGrace } from "./lib/data.js";
+import { isEligible } from "./lib/access.js";
 
-@DefineModule({
+export const meta = defineModule({
   name: "booster-roles",
   displayName: "Booster Roles",
   emoji: "🎨",
   version: "1.0.0",
   description:
-    "Personal custom roles for server boosters — an interactive create/recolour/share panel, moderator admin tools, a blacklist, and automatic grace-period cleanup when a boost lapses.",
+    "Personal custom roles for server boosters — create, rename, recolor and share a role through an interactive panel, with moderator admin tools, a blacklist, and automatic grace-period cleanup when a boost lapses.",
+  short: "Custom roles for boosters.",
+  endUserDataStatement:
+    "Stores custom booster role links (role ID, owner user ID, and optional shared user IDs) in guild storage for managing server booster perks. Data is deleted upon unlink or GDPR user purge request.",
   configSchema: cfg.object({
     booster_role_ids: cfg.string({
       label: "Qualifying Roles",
@@ -22,17 +25,16 @@ import { handleBoosterReconcileFire } from "./lib/reconcile-handler.js";
     }),
     anchor_role_id: cfg.role({
       label: "Anchor Role",
-      description: "Created roles are positioned just below this role.",
+      description:
+        "Legacy anchor role; new roles are no longer positioned under it. Kept so existing settings are not lost.",
     }),
     showcase_channel_id: cfg.channel({
       label: "Showcase Channel",
       description: "Optional channel that announces newly created roles.",
-      channelTypes: [ChannelType.GuildText],
     }),
     log_channel_id: cfg.channel({
       label: "Moderation Log",
       description: "Optional channel for deletion / cleanup audit entries.",
-      channelTypes: [ChannelType.GuildText],
     }),
     max_shares: cfg.number({
       label: "Max Shares",
@@ -57,58 +59,67 @@ import { handleBoosterReconcileFire } from "./lib/reconcile-handler.js";
       max: 100,
     }),
   }),
-})
-export class BoosterRolesModule extends Module {
-  public override onLoad() {
-    // Broadcast: every worker checks its own guilds.cache and only the holder
-    // acts (grace) / all sweep their own guilds (reconcile).
-    registerTaskFireHandler(
-      "booster-grace-delete",
-      "broadcast",
-      handleBoosterGraceFire,
-    );
-    registerTaskFireHandler(
-      "booster-roles-reconcile",
-      "broadcast",
-      handleBoosterReconcileFire,
-    );
-    return super.onLoad();
-  }
+});
 
-  /** GDPR erasure: drop this user's role, blacklist entry, and shares everywhere. */
-  public override async deleteUserData(userId: string): Promise<void> {
-    for (const guildId of this.container.client.guilds.cache.keys())
-      await deleteForUser(guildId, userId);
-  }
+onEvent("guildMemberUpdate", async (data) => {
+  const guildId = data.guildId as string;
+  const userId = data.userId as string;
 
-  public override async exportUserData(
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const ownedRoles: RoleRecord[] = [];
-    const sharedRoles: RoleRecord[] = [];
-    const blacklistedIn: string[] = [];
+  const role = await getRole(guildId, userId);
+  if (!role) return;
 
-    for (const guildId of this.container.client.guilds.cache.keys()) {
-      const owned = await getRole(guildId, userId);
-      if (owned) ownedRoles.push(owned);
+  const config = await getBoosterConfig(guildId);
+  const member = await guilds.fetchMember(guildId, userId);
 
-      const all = await listRoles(guildId);
-      for (const record of all) {
-        if (record.ownerId !== userId && record.sharedWith.includes(userId)) {
-          sharedRoles.push(record);
-        }
-      }
-
-      if (await isBlacklisted(guildId, userId)) blacklistedIn.push(guildId);
+  if (member && isEligible(member.roles, member.premiumSince, config)) {
+    await clearGrace(guildId, userId);
+    if (!member.roles.includes(role.roleId)) {
+      await members.addRole(guildId, userId, role.roleId).catch(() => {});
     }
-
-    if (
-      ownedRoles.length === 0 &&
-      sharedRoles.length === 0 &&
-      blacklistedIn.length === 0
-    ) {
-      return null;
+    for (const friendId of role.sharedWith) {
+      await members.addRole(guildId, friendId, role.roleId).catch(() => {});
     }
-    return { ownedRoles, sharedRoles, blacklistedIn };
+    return;
   }
-}
+
+  if (config.graceHours <= 0) {
+    await deleteBoosterRole(guildId, role, config, "their boost lapsed");
+    return;
+  }
+
+  const existingGrace = await getGrace(guildId, userId);
+  if (existingGrace) return;
+
+  const expiresAt = Date.now() + config.graceHours * 3_600_000;
+  await setGrace(guildId, userId, expiresAt);
+  await schedule(
+    "booster-roles:grace-expire",
+    { guildId, ownerId: userId, expiresAt },
+    { delay: config.graceHours * 3_600_000 },
+  );
+});
+
+registerTaskFireHandler("booster-roles:grace-expire", async (payload) => {
+  const guildId = payload.guildId as string;
+  const ownerId = payload.ownerId as string;
+  const scheduledExpiresAt = payload.expiresAt as number | undefined;
+
+  const grace = await getGrace(guildId, ownerId);
+  if (!grace) return;
+  if (scheduledExpiresAt && grace.expiresAt > scheduledExpiresAt) return;
+
+  const role = await getRole(guildId, ownerId);
+  if (!role) {
+    await clearGrace(guildId, ownerId);
+    return;
+  }
+
+  const config = await getBoosterConfig(guildId);
+  const member = await guilds.fetchMember(guildId, ownerId);
+  if (member && isEligible(member.roles, member.premiumSince, config)) {
+    await clearGrace(guildId, ownerId);
+    return;
+  }
+
+  await deleteBoosterRole(guildId, role, config, "boost lapsed grace period expired");
+});

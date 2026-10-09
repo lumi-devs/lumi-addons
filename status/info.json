@@ -5,5 +5,5 @@
   "short": "Owner-managed rotating presence.",
   "version": "1.0.0",
   "min_bot_version": "0.6.0",
-  "end_user_data_statement": "Stores rotating bot status entries configured globally by bot owners. Records the owner user ID who created each status entry for audit purposes."
+  "end_user_data_statement": "Stores rotating bot status entries configured by bot owners, scoped per server. Records the owner user ID who created each status entry for audit purposes."
 }

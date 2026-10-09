@@ -1,20 +1,14 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { ApplyOptions } from "@sapphire/decorators";
 import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import type { StringSelectMenuInteraction } from "discord.js";
-import { ephemeralCard, makeErrorCard } from "lumi/ui";
-import {
-  formatAmount,
-  getCurrency,
-} from "../lib/config.js";
+  deferUpdate,
+  type InteractionContext,
+} from "lumi/interactions";
+import { makeErrorCard } from "lumi/ui";
+import { formatAmount, getCurrency } from "../lib/config.js";
 import {
   creditCapped,
   debitBet,
   LedgerInsufficientFunds,
-  productionLedger,
 } from "../lib/ledger.js";
 import {
   resolveRouletteBet,
@@ -25,68 +19,55 @@ import {
   type RouletteBetType,
   type RoulettePending,
 } from "../lib/roulette.js";
-import { settledLossCard, settledWinCard } from "../lib/ui.js";
+import { boardUpdate, settledLossCard, settledWinCard } from "../lib/ui.js";
 import { rouletteSpinCard } from "../lib/ui.js";
-import { clearPending, loadPending } from "../lib/store.js";
-import { GamesKeys } from "../keys.js";
+import { clearPending, loadPending, productionLedger } from "../lib/store.js";
+import { ROULETTE_KEY } from "../keys.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "economy-games-roulette",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
-})
-export class RouletteSelectHandler extends InteractionHandler {
-  public override parse(interaction: StringSelectMenuInteraction) {
-    const parts = interaction.customId.split(":");
-    if (parts[0] !== "egrl" || parts.length !== 2) return this.none();
-    const value = interaction.values[0];
-    if (!value || !(ROULETTE_BET_TYPES as readonly string[]).includes(value))
-      return this.none();
-    return this.some({ userId: parts[1], type: value as RouletteBetType });
-  }
-
-  public async run(
-    interaction: StringSelectMenuInteraction,
-    data: { userId: string; type: RouletteBetType },
-  ) {
-    if (!interaction.inGuild() || !interaction.guildId) return;
-    const guildId = interaction.guildId;
-    if (interaction.user.id !== data.userId) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Not Your Spin",
-            "That wheel belongs to someone else. Run `/roulette` to place your own bet.",
-          ),
-        ),
+export default {
+  prefix: "economy-games:roulette",
+  run: async (ctx: InteractionContext) => {
+    const guildId = ctx.guildId;
+    if (!guildId) return;
+    const parts = ctx.customId.split(":");
+    const userId = parts[2];
+    const type = ctx.values[0] as RouletteBetType | undefined;
+    if (
+      !userId ||
+      !type ||
+      !(ROULETTE_BET_TYPES as readonly string[]).includes(type)
+    ) {
+      await ctx.replyError("Roulette", "That wheel is stale. Run `/roulette` to place a fresh bet.");
+      return;
+    }
+    if (ctx.user.id !== userId) {
+      await ctx.replyError(
+        "Not Your Spin",
+        "That wheel belongs to someone else. Run `/roulette` to place your own bet.",
       );
       return;
     }
-    const key = GamesKeys.roulette(guildId, data.userId);
-    const pending = await loadPending<RoulettePending>(key);
+    const pending = await loadPending<RoulettePending>(
+      guildId,
+      userId,
+      ROULETTE_KEY,
+    );
     if (!pending) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Bet Expired",
-            "That bet is gone. Run `/roulette` to place a fresh one.",
-          ),
-        ),
+      await ctx.replyError(
+        "Bet Expired",
+        "That bet is gone. Run `/roulette` to place a fresh one.",
       );
       return;
     }
-    if (data.type === "number" && pending.target === null) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Number Required",
-            "Run `/roulette` again with the `number` option (0-36) to bet on an exact number.",
-          ),
-        ),
+    if (type === "number" && pending.target === null) {
+      await ctx.replyError(
+        "Number Required",
+        "Run `/roulette` again with the `number` option (0-36) to bet on an exact number.",
       );
       return;
     }
-    await interaction.deferUpdate();
-    await clearPending(key);
+    await deferUpdate();
+    await clearPending(guildId, userId, ROULETTE_KEY);
     const currency = await getCurrency(guildId);
     const ledger = productionLedger();
     try {
@@ -94,14 +75,14 @@ export class RouletteSelectHandler extends InteractionHandler {
         ledger,
         currency,
         guildId,
-        data.userId,
+        userId,
         pending.bet,
         "games_roulette_bid",
-        `roulette bid ${pending.bet} on ${data.type}`,
+        `roulette bid ${pending.bet} on ${type}`,
       );
     } catch (err) {
       if (err instanceof LedgerInsufficientFunds) {
-        await interaction.editReply(
+        await boardUpdate(
           makeErrorCard(
             "Roulette",
             "You no longer have that bet in your wallet.",
@@ -114,16 +95,12 @@ export class RouletteSelectHandler extends InteractionHandler {
     const landed = spinRoulette();
     const first = spinRoulette();
     const second = spinRoulette();
-    await interaction.editReply(
-      rouletteSpinCard(first, rouletteColor(first)),
-    );
+    await boardUpdate(rouletteSpinCard(first, rouletteColor(first)));
     await sleep(650);
-    await interaction.editReply(
-      rouletteSpinCard(second, rouletteColor(second)),
-    );
+    await boardUpdate(rouletteSpinCard(second, rouletteColor(second)));
     await sleep(650);
     const result = resolveRouletteBet(
-      data.type,
+      type,
       landed,
       pending.target,
       pending.bet,
@@ -131,11 +108,11 @@ export class RouletteSelectHandler extends InteractionHandler {
     const dot =
       result.color === "red" ? "🔴" : result.color === "black" ? "⚫" : "🟢";
     const lines = [
-      `Bet: **${formatAmount(currency, pending.bet)}** on **${rouletteBetLabel(data.type, pending.target)}**`,
+      `Bet: **${formatAmount(currency, pending.bet)}** on **${rouletteBetLabel(type, pending.target)}**`,
       `Ball landed on **${result.number}** ${dot}`,
     ];
     if (!result.won) {
-      await interaction.editReply(
+      await boardUpdate(
         settledLossCard("🎡 No Win", [
           ...lines,
           `Lost: **${formatAmount(currency, pending.bet)}**`,
@@ -147,16 +124,16 @@ export class RouletteSelectHandler extends InteractionHandler {
       ledger,
       currency,
       guildId,
-      data.userId,
+      userId,
       pending.bet + result.profit,
       "games_roulette_win",
-      `roulette win bet ${pending.bet} on ${data.type} landed ${landed}`,
+      `roulette win bet ${pending.bet} on ${type} landed ${landed}`,
     );
-    await interaction.editReply(
+    await boardUpdate(
       settledWinCard("🎡 Winner!", [
         ...lines,
         `Won: **${formatAmount(currency, credited)}**`,
       ].join("\n")),
     );
-  }
-}
+  },
+};

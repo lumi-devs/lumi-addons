@@ -1,116 +1,87 @@
-import { container } from "@sapphire/framework";
-import { ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import {
-  channelMention,
-  time,
-  TimestampStyles,
-  userMention,
-} from "@discordjs/formatters";
-import { ButtonStyle, type GuildMember } from "discord.js";
-import { makeInfoCard } from "lumi/ui";
-import { scheduleTask } from "lumi/scheduling";
-import { dragmeExpireJobId, type DragRequest } from "../keys.js";
+import { randomBytes } from "node:crypto";
+import { channels, guilds, voiceChannels } from "lumi/discord";
+import { schedule } from "lumi/scheduling";
+import { EXPIRE_TASK, type DragRequestRecord } from "../keys.js";
 import { getDragmeConfig } from "./config.js";
+import { requestPayload, channelMention } from "./cards.js";
 import { getRequest, setRequest } from "./requests.js";
+
+export interface CreateInput {
+  guildId: string;
+  requesterId: string;
+  requesterRoles: string[];
+  targetUserId: string;
+  targetChannelId: string;
+}
 
 export type CreateResult = { ok: true } | { ok: false; reason: string };
 
-export function buildRequestButtons(
-  guildId: string,
-  userId: string,
-  disabled = false,
-): ActionRowBuilder<ButtonBuilder>[] {
-  return [
-    new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`dragme:acc:${guildId}:${userId}`)
-        .setLabel("Accept")
-        .setStyle(ButtonStyle.Success)
-        .setDisabled(disabled),
-      new ButtonBuilder()
-        .setCustomId(`dragme:dec:${guildId}:${userId}`)
-        .setLabel("Decline")
-        .setStyle(ButtonStyle.Danger)
-        .setDisabled(disabled),
-    ),
-  ];
-}
-
 export async function createDragRequest(
-  member: GuildMember,
-  targetMember: GuildMember,
+  input: CreateInput,
 ): Promise<CreateResult> {
-  const { guild } = member;
-  const target = targetMember.voice.channel;
-  if (!target) {
+  const { guildId, requesterId, requesterRoles, targetUserId, targetChannelId } = input;
+  const cfg = await getDragmeConfig(guildId);
+
+  if (!cfg.requestChannelId) {
     return {
       ok: false,
-      reason: "That user isn't in a voice channel right now.",
+      reason: "Drag requests aren't set up yet — an admin needs to set the request channel.",
     };
   }
-
-  const cfg = await getDragmeConfig(guild.id);
-
-  if (cfg.blacklistRoleIds.some((id) => member.roles.cache.has(id))) {
+  if (cfg.blacklistRoleIds.some((id) => requesterRoles.includes(id))) {
     return { ok: false, reason: "You're not allowed to use drag requests." };
   }
-  if (member.voice.channelId === target.id) {
+
+  const target = await guilds.fetchMember(guildId, targetUserId);
+  if (!target) {
+    return { ok: false, reason: "Could not find that member in the server." };
+  }
+  const occupants = await voiceChannels.members(targetChannelId).catch((): null => null);
+  if (!occupants) {
+    return { ok: false, reason: "That isn't a voice channel I can see." };
+  }
+  if (!occupants.includes(targetUserId)) {
+    return { ok: false, reason: "That user isn't in that voice channel right now." };
+  }
+  if (occupants.includes(requesterId)) {
     return {
       ok: false,
-      reason: `You're already in ${channelMention(target.id)}.`,
+      reason: `You're already in ${channelMention(targetChannelId)}.`,
     };
   }
-  if (target.members.size === 0) {
-    return {
-      ok: false,
-      reason: `${channelMention(target.id)} is empty — nobody can approve you. Just join it.`,
-    };
-  }
-  if (await getRequest(guild.id, member.id)) {
+
+  const active = await getRequest(guildId, requesterId);
+  if (active && active.status === "pending" && active.expiresAt > Date.now()) {
     return { ok: false, reason: "You already have a pending drag request." };
   }
 
-  const expiresAt = Date.now() + cfg.timeoutMinutes * 60_000;
-  const card = makeInfoCard(
-    "Voice Drag Request",
-    `${userMention(member.id)} wants to be dragged into ${channelMention(target.id)}.\n\nAnyone **inside that channel** can accept or decline. Expires ${time(new Date(expiresAt), TimestampStyles.RelativeTime)}.`,
-    { actionRows: buildRequestButtons(guild.id, member.id) },
-  );
-
-  const message = await target.send({
-    ...card,
-    content: `${userMention(targetMember.id)}, you have a drag request!`,
-    allowedMentions: { users: [targetMember.id] },
-  });
-
-  const req: DragRequest = {
-    guildId: guild.id,
-    userId: member.id,
-    targetChannelId: target.id,
-    cardChannelId: target.id,
-    cardMessageId: message.id,
-    createdAt: Date.now(),
-    expiresAt,
+  const requestId = randomBytes(6).toString("hex");
+  const now = Date.now();
+  const req: DragRequestRecord = {
+    requestId,
+    guildId,
+    requesterId,
+    targetUserId,
+    channelId: targetChannelId,
+    cardChannelId: cfg.requestChannelId,
+    cardMessageId: "",
+    status: "pending",
+    createdAt: now,
+    expiresAt: now + cfg.timeoutMinutes * 60_000,
   };
-  await setRequest(req);
 
-  // Expiring a little late (e.g. after downtime) is still correct — the
-  // handler no-ops if the request was already resolved — so catchUp stays true.
-  await scheduleTask(
-    "dragme-expire",
-    { guildId: guild.id, userId: member.id },
-    {
-      repeated: false,
-      delay: cfg.timeoutMinutes * 60_000,
-      customJobOptions: {
-        jobId: dragmeExpireJobId(guild.id, member.id),
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
-    },
-  );
-  container.logger.debug(
-    `[Dragme] Request ${member.id} → ${target.id} in guild ${guild.id}`,
+  const sent = await channels.send(cfg.requestChannelId, requestPayload(req));
+  req.cardMessageId = sent.id;
+
+  await Promise.all([
+    setRequest(req),
+    setRequest({ ...req, requestId: requesterId }),
+  ]);
+
+  await schedule(
+    EXPIRE_TASK,
+    { requestId, guildId },
+    { delay: cfg.timeoutMinutes * 60_000 },
   );
   return { ok: true };
 }

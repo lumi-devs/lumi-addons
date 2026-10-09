@@ -1,18 +1,14 @@
-import { ApplyOptions } from "@sapphire/decorators";
 import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import { time, TimestampStyles } from "@discordjs/formatters";
-import type { StringSelectMenuInteraction } from "discord.js";
-import { ephemeralCard, makeErrorCard } from "lumi/ui";
-import { formatDuration } from "lumi/utils";
+  deferUpdate,
+  type InteractionContext,
+} from "lumi/interactions";
+import { formatDuration, relativeTimestamp } from "lumi/utils";
 import {
   formatAmount,
   getCurrency,
   getGamesConfig,
 } from "../lib/config.js";
-import { creditCapped, productionLedger } from "../lib/ledger.js";
+import { creditCapped } from "../lib/ledger.js";
 import {
   findCrimeTier,
   isJailed,
@@ -21,78 +17,52 @@ import {
 import {
   claimCooldown,
   getJail,
+  productionLedger,
   setJail,
 } from "../lib/store.js";
-import { settledLossCard, settledWinCard } from "../lib/ui.js";
-import { GamesKeys } from "../keys.js";
+import { boardUpdate, settledLossCard, settledWinCard } from "../lib/ui.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "economy-games-crime",
-  interactionHandlerType: InteractionHandlerTypes.SelectMenu,
-})
-export class CrimeSelectHandler extends InteractionHandler {
-  public override parse(interaction: StringSelectMenuInteraction) {
-    const parts = interaction.customId.split(":");
-    if (parts[0] !== "egcr" || parts.length !== 2) return this.none();
-    const value = interaction.values[0];
-    if (!value) return this.none();
-    return this.some({ userId: parts[1], crimeId: value });
-  }
-
-  public async run(
-    interaction: StringSelectMenuInteraction,
-    data: { userId: string; crimeId: string },
-  ) {
-    if (!interaction.inGuild() || !interaction.guildId) return;
-    const guildId = interaction.guildId;
-    if (interaction.user.id !== data.userId) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Not Your Crime",
-            "That scheme belongs to someone else. Run `/crime` to plan your own.",
-          ),
-        ),
+export default {
+  prefix: "economy-games:crime",
+  run: async (ctx: InteractionContext) => {
+    const guildId = ctx.guildId;
+    if (!guildId) return;
+    const parts = ctx.customId.split(":");
+    const userId = parts[2];
+    const crimeId = ctx.values[0];
+    if (!userId || !crimeId) {
+      await ctx.replyError("Crime", "That menu is stale. Run `/crime` to plan a fresh scheme.");
+      return;
+    }
+    if (ctx.user.id !== userId) {
+      await ctx.replyError(
+        "Not Your Crime",
+        "That scheme belongs to someone else. Run `/crime` to plan your own.",
       );
       return;
     }
-    const jail = await getJail(guildId, data.userId);
+    const jail = await getJail(guildId, userId);
     if (isJailed(jail)) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Jailed",
-            `Released ${time(new Date(jail!.until), TimestampStyles.RelativeTime)}.`,
-          ),
-        ),
+      await ctx.replyError(
+        "Jailed",
+        `Released ${relativeTimestamp(jail!.until)}.`,
       );
       return;
     }
     const config = await getGamesConfig(guildId);
-    if (
-      !(await claimCooldown(
-        GamesKeys.cooldown("crime", guildId, data.userId),
-        config.crimeCooldownMs,
-      ))
-    ) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Lay Low",
-            `The heat is on. Try again in ${formatDuration(config.crimeCooldownMs)}.`,
-          ),
-        ),
+    if (!(await claimCooldown(guildId, userId, "crime", config.crimeCooldownMs))) {
+      await ctx.replyError(
+        "Lay Low",
+        `The heat is on. Try again in ${formatDuration(config.crimeCooldownMs)}.`,
       );
       return;
     }
-    const tier = findCrimeTier(data.crimeId);
+    const tier = findCrimeTier(crimeId);
     if (!tier) {
-      await interaction.reply(
-        ephemeralCard(makeErrorCard("Crime", "Unknown crime type.")),
-      );
+      await ctx.replyError("Crime", "Unknown crime type.");
       return;
     }
-    await interaction.deferUpdate();
+    await deferUpdate();
     const currency = await getCurrency(guildId);
     const ledger = productionLedger();
     const outcome = resolveCrime(tier);
@@ -101,14 +71,14 @@ export class CrimeSelectHandler extends InteractionHandler {
         ledger,
         currency,
         guildId,
-        data.userId,
+        userId,
         outcome.amount,
         "games_crime_win",
         `${tier.id} success paid ${outcome.amount}`,
       );
       const cappedNote =
         credited < outcome.amount ? " *(capped at the server maximum)*" : "";
-      await interaction.editReply(
+      await boardUpdate(
         settledWinCard(`${tier.emoji} ${tier.label} — Clean Getaway!`, [
           `Score: **${formatAmount(currency, credited)}**${cappedNote}`,
           `Wallet: **${formatAmount(currency, balance.wallet)}**`,
@@ -118,7 +88,7 @@ export class CrimeSelectHandler extends InteractionHandler {
     }
     const balance = await ledger.ensureAccount(
       guildId,
-      data.userId,
+      userId,
       currency.startingWallet,
       currency.startingBank,
     );
@@ -126,7 +96,7 @@ export class CrimeSelectHandler extends InteractionHandler {
     if (fine > 0) {
       await ledger.applyMutation({
         guildId,
-        userId: data.userId,
+        userId,
         walletDelta: -fine,
         bankDelta: 0,
         kind: "games_crime_fine",
@@ -136,15 +106,15 @@ export class CrimeSelectHandler extends InteractionHandler {
       });
     }
     const until = Date.now() + outcome.jailMinutes * 60 * 1000;
-    await setJail(guildId, data.userId, {
+    await setJail(guildId, userId, {
       until,
       reason: `failed ${tier.label}`,
     });
-    await interaction.editReply(
+    await boardUpdate(
       settledLossCard(`${tier.emoji} ${tier.label} — Busted!`, [
         `Fine: **${formatAmount(currency, fine)}**`,
-        `Sentence: **${outcome.jailMinutes} minutes** (out ${time(new Date(until), TimestampStyles.RelativeTime)})`,
+        `Sentence: **${outcome.jailMinutes} minutes** (out ${relativeTimestamp(until)})`,
       ].join("\n")),
     );
-  }
-}
+  },
+};

@@ -1,10 +1,20 @@
-import { describe, it, expect } from "vitest";
-import { ActivityType, type Activity } from "discord.js";
-import { matchActivities } from "./matcher.js";
+import { describe, expect, it } from "vitest";
+import {
+  matchActivities,
+  planRoleDiff,
+  type PresenceActivity,
+} from "./matcher.js";
 import type { ActivityRoleMapping } from "./store.js";
 
-const activity = (fields: Partial<Activity>): Activity =>
-  fields as unknown as Activity;
+// Discord activity type numbers: 0 Playing, 2 Listening, 3 Watching, 4 Custom.
+const activity = (
+  fields: Partial<PresenceActivity> & { name?: string },
+): PresenceActivity => ({
+  name: "",
+  type: 0,
+  state: null,
+  ...fields,
+});
 
 const mapping = (
   type: string,
@@ -14,41 +24,39 @@ const mapping = (
 
 describe("matchActivities", () => {
   it("matches on the activity name, case-insensitively", () => {
-    const activities = [
-      activity({ type: ActivityType.Playing, name: "League of Legends" }),
-    ];
+    const activities = [activity({ type: 0, name: "League of Legends" })];
     const mappings = [mapping("Playing", "league of legends", "role-1")];
     expect(matchActivities(activities, mappings)).toEqual(["role-1"]);
   });
 
-  it("matches a partial substring within the name/state/details", () => {
+  it("matches a partial substring within the name/state", () => {
     const activities = [
-      activity({ type: ActivityType.Custom, state: "grinding some League" }),
+      activity({ type: 4, name: "Custom Status", state: "grinding some League" }),
     ];
     const mappings = [mapping("Custom", "league", "role-1")];
     expect(matchActivities(activities, mappings)).toEqual(["role-1"]);
   });
 
   it("requires the activity type to match the mapping type", () => {
-    const activities = [
-      activity({ type: ActivityType.Watching, name: "League of Legends" }),
-    ];
+    const activities = [activity({ type: 3, name: "League of Legends" })];
     const mappings = [mapping("Playing", "league of legends", "role-1")];
     expect(matchActivities(activities, mappings)).toEqual([]);
   });
 
   it("returns no roles when nothing matches", () => {
-    const activities = [
-      activity({ type: ActivityType.Playing, name: "Solitaire" }),
-    ];
+    const activities = [activity({ type: 0, name: "Solitaire" })];
     const mappings = [mapping("Playing", "league of legends", "role-1")];
     expect(matchActivities(activities, mappings)).toEqual([]);
   });
 
   it("de-duplicates roles awarded by multiple matching activities", () => {
     const activities = [
-      activity({ type: ActivityType.Playing, name: "League of Legends" }),
-      activity({ type: ActivityType.Custom, state: "playing league rn" }),
+      activity({ type: 0, name: "League of Legends" }),
+      activity({
+        type: 4,
+        name: "Custom Status",
+        state: "playing league rn",
+      }),
     ];
     const mappings = [
       mapping("Playing", "league of legends", "role-1"),
@@ -59,8 +67,8 @@ describe("matchActivities", () => {
 
   it("collects roles from multiple distinct mappings", () => {
     const activities = [
-      activity({ type: ActivityType.Playing, name: "League of Legends" }),
-      activity({ type: ActivityType.Listening, name: "Spotify", details: "Some Song" }),
+      activity({ type: 0, name: "League of Legends" }),
+      activity({ type: 2, name: "Spotify" }),
     ];
     const mappings = [
       mapping("Playing", "league of legends", "role-1"),
@@ -77,10 +85,65 @@ describe("matchActivities", () => {
       [],
     );
     expect(
-      matchActivities(
-        [activity({ type: ActivityType.Playing, name: "x" })],
-        [],
-      ),
+      matchActivities([activity({ type: 0, name: "x" })], []),
     ).toEqual([]);
+  });
+});
+
+describe("planRoleDiff", () => {
+  it("adds desired roles the member lacks and takes ownership", () => {
+    expect(planRoleDiff(["role-1"], [], [])).toEqual({
+      add: ["role-1"],
+      remove: [],
+      granted: ["role-1"],
+    });
+  });
+
+  it("does not re-add roles the member already holds", () => {
+    expect(planRoleDiff(["role-1"], ["role-1"], [])).toEqual({
+      add: [],
+      remove: [],
+      granted: [],
+    });
+  });
+
+  it("removes only owned roles that are no longer desired", () => {
+    expect(planRoleDiff([], ["role-1", "role-2"], ["role-1"])).toEqual({
+      add: [],
+      remove: ["role-1"],
+      granted: [],
+    });
+  });
+
+  it("never strips a managed role the addon did not grant", () => {
+    expect(planRoleDiff([], ["role-1"], [])).toEqual({
+      add: [],
+      remove: [],
+      granted: [],
+    });
+  });
+
+  it("drops owned roles that vanished externally without calling remove", () => {
+    expect(planRoleDiff([], [], ["role-1"])).toEqual({
+      add: [],
+      remove: [],
+      granted: [],
+    });
+  });
+
+  it("keeps owned roles that are still desired and held", () => {
+    expect(planRoleDiff(["role-1"], ["role-1"], ["role-1"])).toEqual({
+      add: [],
+      remove: [],
+      granted: ["role-1"],
+    });
+  });
+
+  it("re-adds owned roles lost externally and keeps ownership", () => {
+    expect(planRoleDiff(["role-1"], [], ["role-1"])).toEqual({
+      add: ["role-1"],
+      remove: [],
+      granted: ["role-1"],
+    });
   });
 });

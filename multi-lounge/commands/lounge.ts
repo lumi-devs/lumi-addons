@@ -1,85 +1,80 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import type { ChatInputCommandInteraction } from "discord.js";
-import { ChannelType } from "discord.js";
-import { channelMention } from "@discordjs/formatters";
-import { BaseSubcommand, sendReply } from "lumi/commands";
-import { ephemeralCard, makeInfoCard, makeWarningCard } from "lumi/ui";
+import { defineCommand, type CommandContext } from "lumi/commands";
+import { voiceChannels } from "lumi/discord";
+import { makeInfoCard } from "lumi/ui";
 import { MODULE_NAME } from "../keys.js";
 import { getLoungeConfig } from "../lib/config.js";
 import { getExtras, getStats } from "../lib/data.js";
+import { reconcileGuild } from "../lib/manage.js";
 
-@ApplyOptions<BaseSubcommand.Options>({
-  name: "lounge",
-  description: "Auto-scaling voice lounge controls.",
-  preconditions: ["GuildOnly"],
-  requiredPermit: "mod.*",
-  subcommands: [{ name: "stats", chatInputRun: "chatInputRunStats" }],
-})
-export class LoungeCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((sub) =>
-          sub
-            .setName("stats")
-            .setDescription("Show live lounge state and lifetime stats."),
-        ),
-    );
-  }
+const channelMention = (id: string): string => `<#${id}>`;
 
-  public async chatInputRunStats(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const config = await getLoungeConfig(guild.id);
-
-    if (config.baseChannelIds.length === 0) {
-      return sendReply(
-        interaction,
-        ephemeralCard(
-          makeWarningCard(
-            "Not Configured",
-            `Add one or more base lounges with \`/config\` → **${MODULE_NAME}** → Base Lounges first.`,
-          ),
-        ),
-      );
-    }
-
-    const cap = (limit: number) => (limit === 0 ? "∞" : String(limit));
-    const countFor = (id: string): string => {
-      const ch = guild.channels.cache.get(id);
-      if (!ch || ch.type !== ChannelType.GuildVoice) return "*(missing)*";
-      return `${ch.members.size}/${cap(ch.userLimit)}`;
-    };
-
-    const groups: string[] = [];
-    for (const baseId of config.baseChannelIds) {
-      const extras = await getExtras(guild.id, baseId);
-      const lines = [
-        `${channelMention(baseId)} · ${countFor(baseId)} *(base)*`,
-        ...[...extras]
-          .sort((a, b) => a.number - b.number)
-          .map(
-            (e) =>
-              `${channelMention(e.channelId)} · ${countFor(e.channelId)} *(#${e.number})*`,
-          ),
-      ];
-      groups.push(lines.join("\n"));
-    }
-
-    const stats = await getStats(guild.id);
-    const body = [
-      `Busy at **${config.busyThreshold}** · up to **${config.maxExtras}** extras/base · **${config.cooldownSeconds}s** cooldown`,
-      ...groups,
-      `Created **${stats.creations}** · Removed **${stats.deletions}** · Peak **${stats.peakUsers}** concurrent`,
-    ];
-
-    return sendReply(
-      interaction,
-      ephemeralCard(makeInfoCard("🛋️ Multi Lounge", body)),
-    );
+async function liveCount(channelId: string): Promise<number> {
+  try {
+    return (await voiceChannels.members(channelId)).length;
+  } catch {
+    return 0;
   }
 }
+
+async function showStats(ctx: CommandContext): Promise<void> {
+  await ctx.checkPermit("mod.*");
+  const guildId = ctx.guildId;
+  if (!guildId) {
+    await ctx.replyError(
+      "Guild Only",
+      "This command only works inside a server.",
+    );
+    return;
+  }
+
+  await reconcileGuild(guildId);
+
+  const config = await getLoungeConfig(guildId);
+  if (config.baseChannelIds.length === 0) {
+    await ctx.replyWarning(
+      "Not Configured",
+      `Add one or more base lounges with \`/config\` → **${MODULE_NAME}** → Base Lounges first.`,
+    );
+    return;
+  }
+
+  const groups: string[] = [];
+  for (const baseId of config.baseChannelIds) {
+    const extras = await getExtras(guildId, baseId);
+    const lines = [
+      `${channelMention(baseId)} · ${await liveCount(baseId)} *(base)*`,
+    ];
+    for (const e of [...extras].sort((a, b) => a.number - b.number)) {
+      lines.push(
+        `${channelMention(e.channelId)} · ${await liveCount(e.channelId)} *(#${e.number})*`,
+      );
+    }
+    groups.push(lines.join("\n"));
+  }
+
+  const stats = await getStats(guildId);
+  const body = [
+    `Up to **${config.maxExtras}** lounges/base · **${config.cooldownSeconds}s** cooldown`,
+    ...groups,
+    `Created **${stats.creations}** · Removed **${stats.deletions}** · Peak **${stats.peakUsers}** concurrent`,
+  ];
+
+  await ctx.reply(makeInfoCard("🛋️ Multi Lounge", body));
+}
+
+export default defineCommand({
+  name: "lounge",
+  description: "Dynamic voice lounge controls.",
+  build: () => ({
+    name: "lounge",
+    description: "Dynamic voice lounge controls.",
+    options: [
+      {
+        type: 1,
+        name: "stats",
+        description: "Show live lounge state and lifetime stats.",
+      },
+    ],
+  }),
+  run: showStats,
+});

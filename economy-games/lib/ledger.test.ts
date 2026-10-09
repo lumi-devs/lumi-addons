@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   creditCapped,
   debitBet,
@@ -8,8 +8,6 @@ import {
   type WalletView,
 } from "./ledger.js";
 import { profitFor } from "./blackjack.js";
-
-vi.mock("@sapphire/framework", () => ({ container: {} }));
 
 const currency = {
   name: "credits",

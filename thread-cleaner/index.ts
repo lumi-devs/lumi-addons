@@ -1,68 +1,81 @@
-import { Module, DefineModule, cfg } from "lumi";
-import { Emojis } from "lumi/ui";
-import { registerTaskFireHandler } from "lumi/scheduling";
-import { handleThreadCleanerFire } from "./lib/cleanup-handler.js";
-import { handleThreadSweepFire } from "./lib/sweep-handler.js";
+import { cfg, defineModule, logger, toStringArray } from "lumi";
+import { getModuleConfig } from "lumi/config";
+import { modules } from "lumi/discord";
+import { onEvent } from "lumi/events";
+import { set } from "lumi/kv";
+import { registerTaskFireHandler, schedule } from "lumi/scheduling";
+import { parseDuration } from "lumi/utils";
+import { CLEANUP_TASK, MODULE_NAME, THREAD_STATE_KEY, type ThreadState } from "./lib/keys.js";
+import { handleThreadCleanup } from "./lib/cleanup-handler.js";
 
-@DefineModule({
+export const meta = defineModule({
   name: "thread-cleaner",
   displayName: "Thread Cleaner",
-  emoji: Emojis.CLEANUP,
+  emoji: "🧹",
   version: "1.0.0",
-  description:
-    "Automatically archives/locks threads after inactivity, plus an admin bulk sweep of all existing threads.",
+  description: "Automatically archives or locks threads after a period of inactivity.",
   configSchema: cfg.object({
-    enabled_channels: cfg.string({
+    enabled_channels: cfg.multiChannel({
       label: "Enabled Channels",
-      description:
-        "A comma-separated list of channel IDs where new threads should be tracked.",
-      list: true,
+      description: "Channels where new threads should be scheduled for cleanup.",
     }),
-    inactive_duration: cfg.string({
+    inactive_duration: cfg.duration({
       label: "Inactivity Duration",
-      description:
-        "The duration of inactivity before a thread is archived (e.g., '24h', '3d', '1w').",
+      description: "Duration of inactivity before cleanup runs (e.g. '24h', '3d', '1w').",
       default: "3d",
     }),
     action: cfg.enum(["archive", "lock"], {
       label: "Cleanup Action",
-      description: "The action to perform on the thread after the duration.",
+      description: "Action to perform on the thread (archive or lock).",
       default: "archive",
     }),
   }),
-})
-export class ThreadCleanerModule extends Module {
-  public override onLoad() {
-    registerTaskFireHandler(
-      "thread-cleaner-task",
-      "unicast",
-      handleThreadCleanerFire,
+});
+
+onEvent("threadCreate", async (data) => {
+  const guildId = data["guildId"] as string | undefined;
+  const parentId = (data["parentId"] as string | undefined) ?? "";
+  const threadId = data["threadId"] as string | undefined;
+  if (!guildId || !threadId) return;
+
+  const states = await modules.enabled(guildId, [MODULE_NAME]);
+  if (!states[MODULE_NAME]) return;
+
+  const enabledChannels = toStringArray(
+    await getModuleConfig("enabled_channels", guildId),
+  );
+  if (!parentId || !enabledChannels.includes(parentId)) return;
+
+  const durationStr =
+    ((await getModuleConfig("inactive_duration", guildId)) as string | null) ??
+    "3d";
+  const delay = parseDuration(durationStr);
+  if (delay === null || delay <= 0) {
+    logger.warn(
+      `[thread-cleaner] Invalid duration "${durationStr}" in guild ${guildId}`,
     );
-    // Broadcast: the sweep iterates guilds.cache, so only the worker holding the
-    // guild acts.
-    registerTaskFireHandler(
-      "thread-cleaner-sweep",
-      "broadcast",
-      handleThreadSweepFire,
-    );
-    return super.onLoad();
+    return;
   }
 
-  public override onUnload() {
-    this.container.logger.info("[ThreadCleanerModule] Unloaded Thread Cleaner task handlers.");
-    return super.onUnload();
-  }
+  const action =
+    ((await getModuleConfig("action", guildId)) as "archive" | "lock" | null) ??
+    "archive";
 
-  public override async deleteUserData(
-    _userId: string,
-    _requester?: string,
-  ): Promise<void> {
-    // No-op: thread-cleaner only tracks thread channels and timers.
-  }
+  const now = Date.now();
+  await set<ThreadState>(guildId, threadId, THREAD_STATE_KEY, {
+    parentId,
+    action,
+    scheduledAt: now,
+    dueAt: now + delay,
+    status: "pending",
+  }).catch(() => null);
 
-  public override async exportUserData(
-    _userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    return null;
-  }
-}
+  await schedule(CLEANUP_TASK, { threadId, guildId }, { delay }).catch(
+    (err: unknown) =>
+      logger.error(
+        `[thread-cleaner] Failed to schedule cleanup for thread ${threadId}: ${String(err)}`,
+      ),
+  );
+});
+
+registerTaskFireHandler(CLEANUP_TASK, handleThreadCleanup);

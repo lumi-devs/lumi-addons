@@ -1,190 +1,108 @@
-import { ApplyOptions } from "@sapphire/decorators";
+import type { InteractionContext } from "lumi/interactions";
+import { deferUpdate } from "lumi/interactions";
+import { guilds, members, messages, voiceChannels } from "lumi/discord";
 import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import type { ButtonInteraction, GuildMember } from "discord.js";
-import { channelMention, userMention } from "@discordjs/formatters";
+  channelMention,
+  disabledRequestPayload,
+  userMention,
+} from "../lib/cards.js";
 import {
-  ephemeralCard,
-  makeErrorCard,
-  makeSuccessCard,
-  makeWarningCard,
-  noPingCard,
-} from "lumi/ui";
-import { scheduleTask, cancelTask } from "lumi/scheduling";
-import { acquireRedisLock } from "lumi/utils";
-import { dragmeExpireJobId, dragmeRevokeJobId, DragmeKeys } from "../keys.js";
-import { getDragmeConfig } from "../lib/config.js";
-import { buildRequestButtons } from "../lib/create-request.js";
-import { deleteRequest, getRequest } from "../lib/requests.js";
+  getRequest,
+  setRequest,
+} from "../lib/requests.js";
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "dragme-buttons",
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class DragmeButtonHandler extends InteractionHandler {
-  public override parse(interaction: ButtonInteraction) {
-    if (!interaction.customId.startsWith("dragme:")) return this.none();
-    const [, verb, guildId, userId] = interaction.customId.split(":");
-    if ((verb !== "acc" && verb !== "dec") || !guildId || !userId)
-      return this.none();
-    return this.some({ verb, guildId, userId });
-  }
+export default {
+  prefix: "dragme:",
+  run: async (ctx: InteractionContext) => {
+    const [, verb, requestId] = ctx.customId.split(":");
+    if ((verb !== "acc" && verb !== "dec") || !requestId || !ctx.guildId) return;
 
-  public async run(
-    interaction: ButtonInteraction,
-    {
-      verb,
-      guildId,
-      userId,
-    }: { verb: string; guildId: string; userId: string },
-  ): Promise<void> {
-    if (!interaction.inCachedGuild() || interaction.guildId !== guildId) return;
-
-    const lock = await acquireRedisLock(
-      this.container.redis,
-      DragmeKeys.requestLock(guildId, userId),
-      { ttlMs: 5_000, acquireTimeoutMs: 10_000 },
-    );
-    let req: Awaited<ReturnType<typeof getRequest>>;
-    let target: ReturnType<typeof interaction.guild.channels.cache.get>;
-    const presser = interaction.member;
-    try {
-      req = await getRequest(guildId, userId);
-      if (!req) {
-        await interaction.reply(
-          ephemeralCard(
-            makeErrorCard("Gone", "This drag request is no longer active."),
-          ),
-        );
-        return;
-      }
-
-      target = interaction.guild.channels.cache.get(req.targetChannelId);
-      if (!target?.isVoiceBased()) {
-        await interaction.reply(
-          ephemeralCard(
-            makeErrorCard(
-              "Gone",
-              "The requested voice channel no longer exists.",
-            ),
-          ),
-        );
-        return;
-      }
-
-      if (presser.voice.channelId !== target.id) {
-        await interaction.reply(
-          ephemeralCard(
-            makeErrorCard(
-              "Not Your Call",
-              `Only members currently in ${channelMention(target.id)} can respond to this request.`,
-            ),
-          ),
-        );
-        return;
-      }
-
-      await deleteRequest(guildId, userId);
-      await cancelTask(dragmeExpireJobId(guildId, userId)).catch(() => null);
-    } finally {
-      await lock.release();
+    const req = await getRequest(ctx.guildId, requestId);
+    if (!req || req.status !== "pending" || req.expiresAt <= Date.now()) {
+      return ctx.replyError("Gone", "This drag request is no longer active.");
     }
-    if (!target?.isVoiceBased()) return;
 
-    const disabledRows = buildRequestButtons(guildId, userId, true);
+    const occupants = await voiceChannels.members(req.channelId).catch((): null => null);
+    if (!occupants) {
+      return ctx.replyError("Gone", "That voice channel no longer exists.");
+    }
+    if (!occupants.includes(ctx.user.id)) {
+      return ctx.replyError(
+        "Not Your Call",
+        `Only members currently in ${channelMention(req.channelId)} can respond to this request.`,
+      );
+    }
+
+    req.status = verb === "acc" ? "accepted" : "declined";
+    await Promise.all([
+      setRequest(req),
+      setRequest({ ...req, requestId: req.requesterId }),
+    ]);
+
+    await deferUpdate();
 
     if (verb === "dec") {
-      await interaction.update(
-        noPingCard(
-          makeWarningCard(
+      await messages
+        .edit(
+          req.cardChannelId,
+          req.cardMessageId,
+          disabledRequestPayload(
+            req,
             "Drag Request Declined",
-            `${userMention(presser.id)} declined ${userMention(userId)}'s request to join ${channelMention(target.id)}.`,
-            { actionRows: disabledRows },
+            `${userMention(ctx.user.id)} declined ${userMention(req.requesterId)}'s request to join ${channelMention(req.channelId)}.`,
+            "warning",
           ),
-        ),
-      );
+        )
+        .catch(() => null);
       return;
     }
 
-    // Accept.
-    const requester: GuildMember | null = await interaction.guild.members
-      .fetch(userId)
-      .catch(() => null);
+    const requester = await guilds.fetchMember(ctx.guildId, req.requesterId);
     if (!requester) {
-      await interaction.update(
-        noPingCard(
-          makeErrorCard(
+      await messages
+        .edit(
+          req.cardChannelId,
+          req.cardMessageId,
+          disabledRequestPayload(
+            req,
             "Member Left",
             "The requester is no longer in this server.",
-            { actionRows: disabledRows },
+            "error",
           ),
-        ),
-      );
+        )
+        .catch(() => null);
       return;
     }
 
-    const cfg = await getDragmeConfig(guildId);
-    let outcome: string;
-
-    if (requester.voice.channelId) {
-      if (cfg.grantHiddenPerms) {
-        await target.permissionOverwrites.create(
-          requester.id,
-          { Connect: true, ViewChannel: true },
-          { reason: `Drag request accepted by ${presser.user.tag}` },
-        );
-        const key = DragmeKeys.tempPerm(guildId, target.id, userId);
-        await this.container.redis.set(key, "1", "EX", 24 * 3600); // safety fallback TTL (1 day)
-      }
-
-      await requester.voice.setChannel(
-        target,
-        `Drag request accepted by ${presser.user.tag}`,
-      );
-      outcome = `moved into ${channelMention(target.id)}`;
-    } else {
-      if (cfg.grantHiddenPerms) {
-        await target.permissionOverwrites.create(
-          requester.id,
-          { Connect: true, ViewChannel: true },
-          { reason: `Drag request accepted by ${presser.user.tag}` },
-        );
-        const key = DragmeKeys.tempPerm(guildId, target.id, userId);
-        await this.container.redis.set(key, "1", "EX", 24 * 3600);
-      } else {
-        await target.permissionOverwrites.create(
-          requester.id,
-          { Connect: true },
-          { reason: `Drag request accepted by ${presser.user.tag}` },
-        );
-      }
-
-      await scheduleTask(
-        "dragme-revoke",
-        { guildId, userId, channelId: target.id },
-        {
-          repeated: false,
-          delay: cfg.graceMinutes * 60_000,
-          customJobOptions: {
-            jobId: dragmeRevokeJobId(guildId, userId),
-            removeOnComplete: true,
-            removeOnFail: true,
-          },
-        },
-      );
-      outcome = `granted a **${cfg.graceMinutes}-minute** pass to join ${channelMention(target.id)} (they weren't in voice, so I couldn't move them)`;
+    try {
+      await members.move(ctx.guildId, req.requesterId, req.channelId);
+    } catch {
+      await messages
+        .edit(
+          req.cardChannelId,
+          req.cardMessageId,
+          disabledRequestPayload(
+            req,
+            "Drag Failed",
+            `${userMention(req.requesterId)} couldn't be moved into ${channelMention(req.channelId)} — they may have left voice.`,
+            "error",
+          ),
+        )
+        .catch(() => null);
+      return;
     }
 
-    await interaction.update(
-      noPingCard(
-        makeSuccessCard(
+    await messages
+      .edit(
+        req.cardChannelId,
+        req.cardMessageId,
+        disabledRequestPayload(
+          req,
           "Drag Request Accepted",
-          `${userMention(presser.id)} accepted — ${userMention(userId)} ${outcome}.`,
-          { actionRows: disabledRows },
+          `${userMention(ctx.user.id)} dragged ${userMention(req.requesterId)} into ${channelMention(req.channelId)}.`,
+          "success",
         ),
-      ),
-    );
-  }
-}
+      )
+      .catch(() => null);
+  },
+};

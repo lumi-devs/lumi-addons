@@ -1,14 +1,24 @@
 {
   "name": "confessions",
   "displayName": "Confessions",
-  "emoji": "⚙️",
-  "description": "Anonymous confessions with numbered Components-v2 cards, optional threads, anonymous replies, and hash-based moderation that never exposes author identity.",
+  "emoji": "🕊️",
+  "description": "Anonymous confessions posted through /confess, with optional anonymous replies, per-author cooldowns, and moderator bans — identities are never stored in the clear.",
   "short": "Anonymous confessions + replies.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
   "subStores": [
-    "commands"
+    "commands",
+    "interaction-handlers"
   ],
-  "configFields": []
+  "configFields": [],
+  "capabilities": {
+    "discord": [
+      "reply",
+      "sendMessage",
+      "editMessage",
+      "manageThreads"
+    ],
+    "kv": true
+  }
 }

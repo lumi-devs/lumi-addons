@@ -1,10 +1,6 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import type { ChatInputCommandInteraction } from "discord.js";
-import { roleMention } from "discord.js";
-import { BaseSubcommand, sendReply } from "lumi/commands";
+import { defineCommand, type CommandContext } from "lumi/commands";
+import { guilds, members } from "lumi/discord";
 import {
-  ephemeralCard,
   makeEmptyCard,
   makeErrorCard,
   makeListCard,
@@ -14,12 +10,12 @@ import {
   formatAmount,
   getCurrency,
   getGamesConfig,
+  type CurrencyConfig,
 } from "../lib/config.js";
 import {
   creditCapped,
   debitBet,
   LedgerInsufficientFunds,
-  productionLedger,
   type WalletView,
 } from "../lib/ledger.js";
 import {
@@ -33,11 +29,12 @@ import {
   addSold,
   getInventory,
   getSold,
+  productionLedger,
 } from "../lib/store.js";
 
 async function loadItems(
   guildId: string,
-): Promise<{ items: ShopItem[]; currency: Awaited<ReturnType<typeof getCurrency>> }> {
+): Promise<{ items: ShopItem[]; currency: CurrencyConfig }> {
   const [config, currency] = await Promise.all([
     getGamesConfig(guildId),
     getCurrency(guildId),
@@ -45,305 +42,318 @@ async function loadItems(
   return { items: parseShopItems(config.shopItems), currency };
 }
 
-@ApplyOptions<BaseSubcommand.Options>({
-  name: "shop",
-  description: "Browse the shop, buy items, and manage your inventory.",
-  preconditions: ["GuildOnly"],
-  subcommands: [
-    { name: "view", chatInputRun: "chatInputRunView" },
-    { name: "buy", chatInputRun: "chatInputRunBuy" },
-    { name: "inventory", chatInputRun: "chatInputRunInventory" },
-    { name: "use", chatInputRun: "chatInputRunUse" },
-    { name: "equip", chatInputRun: "chatInputRunEquip" },
-  ],
-})
-export class ShopCommand extends BaseSubcommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addSubcommand((s) =>
-          s.setName("view").setDescription("Browse the shop."),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("buy")
-            .setDescription("Buy a shop item.")
-            .addStringOption((o) =>
-              o
-                .setName("name")
-                .setDescription("Item name.")
-                .setRequired(true),
-            ),
-        )
-        .addSubcommand((s) =>
-          s.setName("inventory").setDescription("Show what you own."),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("use")
-            .setDescription("Use a consumable item.")
-            .addStringOption((o) =>
-              o
-                .setName("name")
-                .setDescription("Item name.")
-                .setRequired(true),
-            ),
-        )
-        .addSubcommand((s) =>
-          s
-            .setName("equip")
-            .setDescription("Equip or unequip a role item.")
-            .addStringOption((o) =>
-              o
-                .setName("name")
-                .setDescription("Item name.")
-                .setRequired(true),
-            ),
-        ),
-    );
-  }
+async function itemError(
+  ctx: CommandContext,
+  items: ShopItem[],
+  name: string,
+): Promise<void> {
+  const known =
+    items.length > 0
+      ? ` Available: ${items.map((item) => item.name).join(", ")}.`
+      : " The shop is currently empty.";
+  await ctx.reply(makeErrorCard("Shop", `Unknown item "${name}".${known}`));
+}
 
-  public async chatInputRunView(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const { items, currency } = await loadItems(guild.id);
-    if (items.length === 0)
-      return sendReply(
-        interaction,
-        ephemeralCard(
-          makeEmptyCard(
-            "Shop",
-            "The shop is empty.",
-            "An admin can add items in `/lumi` → Modules → Economy Games → Shop Items.",
-          ),
-        ),
-      );
-    const sold = await Promise.all(
-      items.map((item) => getSold(guild.id, item.name)),
-    );
-    return sendReply(
-      interaction,
-      makeListCard(
-        "🛒 Shop",
-        items.map((item, i) => shopItemLine(item, sold[i]!)),
-        { footer: `Prices in ${currency.name} · buy with /shop buy` },
+async function shopError(ctx: CommandContext, message: string): Promise<void> {
+  await ctx.reply(makeErrorCard("Shop", message));
+}
+
+async function runView(ctx: CommandContext): Promise<void> {
+  const guildId = ctx.guildId;
+  if (!guildId) {
+    await ctx.replyError("Guild Only", "This command only works inside a server.");
+    return;
+  }
+  const { items, currency } = await loadItems(guildId);
+  if (items.length === 0) {
+    await ctx.reply(
+      makeEmptyCard(
+        "Shop",
+        "The shop is empty.",
+        "An admin can add items in `/lumi` → Modules → Economy Games → Shop Items.",
       ),
     );
+    return;
   }
+  const sold = await Promise.all(
+    items.map((item) => getSold(guildId, item.name)),
+  );
+  await ctx.reply(
+    makeListCard(
+      "🛒 Shop",
+      items.map((item, i) => shopItemLine(item, sold[i]!)),
+      { footer: `Prices in ${currency.name} · buy with /shop buy` },
+    ),
+    { ephemeral: false },
+  );
+}
 
-  public async chatInputRunBuy(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const name = interaction.options.getString("name", true);
-    const { items, currency } = await loadItems(guild.id);
-    const item = findShopItem(items, name);
-    if (!item) return this.itemError(interaction, items, name);
-    const sold = await getSold(guild.id, item.name);
-    if (item.stock !== null && sold >= item.stock)
-      return this.err(interaction, `${item.name} is sold out.`);
-    const ledger = productionLedger();
-    let after: WalletView;
-    try {
-      after = await debitBet(
-        ledger,
-        currency,
-        guild.id,
-        interaction.user.id,
-        item.price,
-        "games_shop_buy",
-        `shop buy ${item.name}`,
-      );
-    } catch (err) {
-      if (err instanceof LedgerInsufficientFunds)
-        return this.err(
-          interaction,
-          `${item.name} costs ${formatAmount(currency, item.price)} — your wallet is short.`,
-        );
-      throw err;
-    }
-    await addSold(guild.id, item.name, 1);
-    const inventory = await addInventory(
-      guild.id,
-      interaction.user.id,
-      item.name,
-      1,
-    );
-    let roleNote = "";
-    if (item.roleId) {
-      const member = await guild.members
-        .fetch(interaction.user.id)
-        .catch(() => null);
-      if (!member) {
-        roleNote = "\n-# The role could not be granted (member not found).";
-      } else {
-        try {
-          await member.roles.add(item.roleId);
-          roleNote = `\nGranted ${roleMention(item.roleId)}!`;
-        } catch {
-          roleNote =
-            "\n-# The role could not be granted (missing permissions). Run `/shop equip` to retry.";
-        }
-      }
-    }
-    return sendReply(
-      interaction,
-      makeSuccessCard(`🛒 Bought ${item.name}`, [
-        `Paid: **${formatAmount(currency, item.price)}**`,
-        `You own: **${inventory[item.name.toLowerCase()] ?? 0}**`,
-        `Wallet: **${formatAmount(currency, after.wallet)}**${roleNote}`,
-      ].join("\n")),
-    );
+async function runBuy(ctx: CommandContext): Promise<void> {
+  const guildId = ctx.guildId;
+  if (!guildId) {
+    await ctx.replyError("Guild Only", "This command only works inside a server.");
+    return;
   }
-
-  public async chatInputRunInventory(
-    interaction: ChatInputCommandInteraction,
-  ) {
-    const guild = interaction.guild!;
-    const { items, currency } = await loadItems(guild.id);
-    const inventory = await getInventory(guild.id, interaction.user.id);
-    const owned = Object.entries(inventory);
-    if (owned.length === 0)
-      return sendReply(
-        interaction,
-        ephemeralCard(
-          makeEmptyCard(
-            "Inventory",
-            "You own nothing yet.",
-            "Browse the stock with `/shop view`.",
-          ),
-        ),
-      );
-    const lines = owned.map(([key, count]) => {
-      const def = findShopItem(items, key);
-      const label = def ? `**${def.name}**` : `**${key}**`;
-      const tags: string[] = [];
-      if (def?.roleId) tags.push("🎭 role");
-      if (def?.consumable) tags.push("🧪 usable");
-      return `${label} × **${count}**${tags.length > 0 ? ` · ${tags.join(" · ")}` : ""}`;
-    });
-    return sendReply(
-      interaction,
-      ephemeralCard(
-        makeListCard("🎒 Inventory", lines, {
-          footer: `Wallet prices in ${currency.name}`,
-        }),
-      ),
-    );
+  const name = await ctx.getString("name", { required: true });
+  if (name === null) {
+    await shopError(ctx, "Tell me which item to buy.");
+    return;
   }
-
-  public async chatInputRunUse(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const name = interaction.options.getString("name", true);
-    const [config, { items, currency }] = await Promise.all([
-      getGamesConfig(guild.id),
-      loadItems(guild.id),
-    ]);
-    const item = findShopItem(items, name);
-    if (!item) return this.itemError(interaction, items, name);
-    if (!item.consumable)
-      return this.err(
-        interaction,
-        item.roleId
-          ? `${item.name} is worn, not used — try \`/shop equip\`.`
-          : `${item.name} can't be used.`,
-      );
-    const inventory = await getInventory(guild.id, interaction.user.id);
-    if ((inventory[item.name.toLowerCase()] ?? 0) <= 0)
-      return this.err(interaction, `You don't own ${item.name}.`);
-    await addInventory(guild.id, interaction.user.id, item.name, -1);
-    const low = Math.min(config.useRewardMin, config.useRewardMax);
-    const high = Math.max(config.useRewardMin, config.useRewardMax);
-    const reward = low + Math.floor(Math.random() * (high - low + 1));
-    const { balance, credited } = await creditCapped(
-      productionLedger(),
+  const { items, currency } = await loadItems(guildId);
+  const item = findShopItem(items, name);
+  if (!item) {
+    await itemError(ctx, items, name);
+    return;
+  }
+  const sold = await getSold(guildId, item.name);
+  if (item.stock !== null && sold >= item.stock) {
+    await shopError(ctx, `${item.name} is sold out.`);
+    return;
+  }
+  const ledger = productionLedger();
+  let after: WalletView;
+  try {
+    after = await debitBet(
+      ledger,
       currency,
-      guild.id,
-      interaction.user.id,
-      reward,
-      "games_shop_use",
-      `shop use ${item.name} rewarded ${reward}`,
+      guildId,
+      ctx.user.id,
+      item.price,
+      "games_shop_buy",
+      `shop buy ${item.name}`,
     );
-    const cappedNote =
-      credited < reward ? " *(capped at the server maximum)*" : "";
-    return sendReply(
-      interaction,
-      ephemeralCard(
-        makeSuccessCard(`🧪 Used ${item.name}`, [
-          `Found inside: **${formatAmount(currency, credited)}**${cappedNote}`,
-          `Wallet: **${formatAmount(currency, balance.wallet)}**`,
-        ].join("\n")),
-      ),
-    );
+  } catch (err) {
+    if (err instanceof LedgerInsufficientFunds) {
+      await shopError(
+        ctx,
+        `${item.name} costs ${formatAmount(currency, item.price)} — your wallet is short.`,
+      );
+      return;
+    }
+    throw err;
   }
-
-  public async chatInputRunEquip(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const name = interaction.options.getString("name", true);
-    const { items } = await loadItems(guild.id);
-    const item = findShopItem(items, name);
-    if (!item) return this.itemError(interaction, items, name);
-    if (!item.roleId)
-      return this.err(interaction, `${item.name} grants no role.`);
-    const inventory = await getInventory(guild.id, interaction.user.id);
-    if ((inventory[item.name.toLowerCase()] ?? 0) <= 0)
-      return this.err(
-        interaction,
-        `You don't own ${item.name}. Buy it with \`/shop buy\` first.`,
-      );
-    const member = await guild.members
-      .fetch(interaction.user.id)
-      .catch(() => null);
-    if (!member)
-      return this.err(interaction, "Could not find you in this server.");
-    try {
-      if (member.roles.cache.has(item.roleId)) {
-        await member.roles.remove(item.roleId);
-        return sendReply(
-          interaction,
-          ephemeralCard(
-            makeSuccessCard(
-              `Unequipped ${item.name}`,
-              `Removed ${roleMention(item.roleId)}.`,
-            ),
-          ),
-        );
+  await addSold(guildId, item.name, 1);
+  const inventory = await addInventory(guildId, ctx.user.id, item.name, 1);
+  let roleNote = "";
+  if (item.roleId) {
+    const member = await guilds.fetchMember(guildId, ctx.user.id);
+    if (!member) {
+      roleNote = "\n-# The role could not be granted (member not found).";
+    } else {
+      try {
+        await members.addRole(guildId, ctx.user.id, item.roleId);
+        roleNote = `\nGranted <@&${item.roleId}>!`;
+      } catch {
+        roleNote =
+          "\n-# The role could not be granted (missing permissions). Run `/shop equip` to retry.";
       }
-      await member.roles.add(item.roleId);
-      return sendReply(
-        interaction,
-        ephemeralCard(
-          makeSuccessCard(
-            `Equipped ${item.name}`,
-            `Granted ${roleMention(item.roleId)}!`,
-          ),
-        ),
-      );
-    } catch {
-      return this.err(
-        interaction,
-        "Could not update your roles (the bot may lack permission for that role).",
-      );
     }
   }
+  await ctx.reply(
+    makeSuccessCard(`🛒 Bought ${item.name}`, [
+      `Paid: **${formatAmount(currency, item.price)}**`,
+      `You own: **${inventory[item.name.toLowerCase()] ?? 0}**`,
+      `Wallet: **${formatAmount(currency, after.wallet)}**${roleNote}`,
+    ].join("\n")),
+    { ephemeral: false },
+  );
+}
 
-  private itemError(
-    interaction: ChatInputCommandInteraction,
-    items: ShopItem[],
-    name: string,
-  ) {
-    const known =
-      items.length > 0
-        ? ` Available: ${items.map((item) => item.name).join(", ")}.`
-        : " The shop is currently empty.";
-    return this.err(interaction, `Unknown item "${name}".${known}`);
+async function runInventory(ctx: CommandContext): Promise<void> {
+  const guildId = ctx.guildId;
+  if (!guildId) {
+    await ctx.replyError("Guild Only", "This command only works inside a server.");
+    return;
   }
+  const { items, currency } = await loadItems(guildId);
+  const inventory = await getInventory(guildId, ctx.user.id);
+  const owned = Object.entries(inventory);
+  if (owned.length === 0) {
+    await ctx.reply(
+      makeEmptyCard(
+        "Inventory",
+        "You own nothing yet.",
+        "Browse the stock with `/shop view`.",
+      ),
+    );
+    return;
+  }
+  const lines = owned.map(([key, count]) => {
+    const def = findShopItem(items, key);
+    const label = def ? `**${def.name}**` : `**${key}**`;
+    const tags: string[] = [];
+    if (def?.roleId) tags.push("🎭 role");
+    if (def?.consumable) tags.push("🧪 usable");
+    return `${label} × **${count}**${tags.length > 0 ? ` · ${tags.join(" · ")}` : ""}`;
+  });
+  await ctx.reply(
+    makeListCard("🎒 Inventory", lines, {
+      footer: `Wallet prices in ${currency.name}`,
+    }),
+  );
+}
 
-  private err(interaction: ChatInputCommandInteraction, message: string) {
-    return sendReply(
-      interaction,
-      ephemeralCard(makeErrorCard("Shop", message)),
+async function runUse(ctx: CommandContext): Promise<void> {
+  const guildId = ctx.guildId;
+  if (!guildId) {
+    await ctx.replyError("Guild Only", "This command only works inside a server.");
+    return;
+  }
+  const name = await ctx.getString("name", { required: true });
+  if (name === null) {
+    await shopError(ctx, "Tell me which item to use.");
+    return;
+  }
+  const [config, { items, currency }] = await Promise.all([
+    getGamesConfig(guildId),
+    loadItems(guildId),
+  ]);
+  const item = findShopItem(items, name);
+  if (!item) {
+    await itemError(ctx, items, name);
+    return;
+  }
+  if (!item.consumable) {
+    await shopError(
+      ctx,
+      item.roleId
+        ? `${item.name} is worn, not used — try \`/shop equip\`.`
+        : `${item.name} can't be used.`,
+    );
+    return;
+  }
+  const inventory = await getInventory(guildId, ctx.user.id);
+  if ((inventory[item.name.toLowerCase()] ?? 0) <= 0) {
+    await shopError(ctx, `You don't own ${item.name}.`);
+    return;
+  }
+  await addInventory(guildId, ctx.user.id, item.name, -1);
+  const low = Math.min(config.useRewardMin, config.useRewardMax);
+  const high = Math.max(config.useRewardMin, config.useRewardMax);
+  const reward = low + Math.floor(Math.random() * (high - low + 1));
+  const { balance, credited } = await creditCapped(
+    productionLedger(),
+    currency,
+    guildId,
+    ctx.user.id,
+    reward,
+    "games_shop_use",
+    `shop use ${item.name} rewarded ${reward}`,
+  );
+  const cappedNote =
+    credited < reward ? " *(capped at the server maximum)*" : "";
+  await ctx.reply(
+    makeSuccessCard(`🧪 Used ${item.name}`, [
+      `Found inside: **${formatAmount(currency, credited)}**${cappedNote}`,
+      `Wallet: **${formatAmount(currency, balance.wallet)}**`,
+    ].join("\n")),
+  );
+}
+
+async function runEquip(ctx: CommandContext): Promise<void> {
+  const guildId = ctx.guildId;
+  if (!guildId) {
+    await ctx.replyError("Guild Only", "This command only works inside a server.");
+    return;
+  }
+  const name = await ctx.getString("name", { required: true });
+  if (name === null) {
+    await shopError(ctx, "Tell me which item to equip.");
+    return;
+  }
+  const { items } = await loadItems(guildId);
+  const item = findShopItem(items, name);
+  if (!item) {
+    await itemError(ctx, items, name);
+    return;
+  }
+  if (!item.roleId) {
+    await shopError(ctx, `${item.name} grants no role.`);
+    return;
+  }
+  const inventory = await getInventory(guildId, ctx.user.id);
+  if ((inventory[item.name.toLowerCase()] ?? 0) <= 0) {
+    await shopError(
+      ctx,
+      `You don't own ${item.name}. Buy it with \`/shop buy\` first.`,
+    );
+    return;
+  }
+  const member = await guilds.fetchMember(guildId, ctx.user.id);
+  if (!member) {
+    await shopError(ctx, "Could not find you in this server.");
+    return;
+  }
+  try {
+    if (member.roles.includes(item.roleId)) {
+      await members.removeRole(guildId, ctx.user.id, item.roleId);
+      await ctx.reply(
+        makeSuccessCard(
+          `Unequipped ${item.name}`,
+          `Removed <@&${item.roleId}>.`,
+        ),
+      );
+      return;
+    }
+    await members.addRole(guildId, ctx.user.id, item.roleId);
+    await ctx.reply(
+      makeSuccessCard(
+        `Equipped ${item.name}`,
+        `Granted <@&${item.roleId}>!`,
+      ),
+    );
+  } catch {
+    await shopError(
+      ctx,
+      "Could not update your roles (the bot may lack permission for that role).",
     );
   }
 }
+
+const nameOption = (description: string) => ({
+  type: 3,
+  name: "name",
+  description,
+  required: true,
+});
+
+export default defineCommand({
+  name: "shop",
+  description: "Browse the shop, buy items, and manage your inventory.",
+  build: () => ({
+    name: "shop",
+    description: "Browse the shop, buy items, and manage your inventory.",
+    options: [
+      { type: 1, name: "view", description: "Browse the shop." },
+      {
+        type: 1,
+        name: "buy",
+        description: "Buy a shop item.",
+        options: [nameOption("Item name.")],
+      },
+      { type: 1, name: "inventory", description: "Show what you own." },
+      {
+        type: 1,
+        name: "use",
+        description: "Use a consumable item.",
+        options: [nameOption("Item name.")],
+      },
+      {
+        type: 1,
+        name: "equip",
+        description: "Equip or unequip a role item.",
+        options: [nameOption("Item name.")],
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    await runView(ctx);
+  },
+  handlers: {
+    view: runView,
+    buy: runBuy,
+    inventory: runInventory,
+    use: runUse,
+    equip: runEquip,
+  },
+});

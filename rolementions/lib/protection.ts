@@ -1,110 +1,74 @@
-import { container } from "@sapphire/framework";
-import type { Guild, Role } from "discord.js";
-import { makeWarningCard, makeSuccessCard, Emojis } from "lumi/ui";
+import { logger } from "lumi";
+import { schedule } from "lumi/scheduling";
+import { Emojis, makeSuccessCard, makeWarningCard } from "lumi/ui";
 import { relativeTimestamp } from "lumi/utils";
+import { EXPIRE_TASK } from "./keys.js";
 import { getBlock, removeBlock, setBlock, type ActiveBlock } from "./store.js";
-import { syncRule } from "./automod.js";
 import { sendLog } from "./log.js";
-import { formatMinutes, formatRemaining, roleLabel } from "./format.js";
+import { formatMinutes, formatRemaining, roleLabel, roleMention } from "./format.js";
 
-const expiryJobId = (guildId: string, roleId: string) =>
-  `rm-expire:${guildId}:${roleId}`;
-
-async function scheduleExpiry(
+export async function applyBlock(
   guildId: string,
   roleId: string,
-  delayMs: number,
-): Promise<void> {
-  await container.tasks
-    .create(
-      { name: "rolementions-expire", payload: { guildId, roleId } },
-      {
-        repeated: false,
-        delay: Math.max(delayMs, 0),
-        customJobOptions: {
-          jobId: expiryJobId(guildId, roleId),
-          removeOnComplete: true,
-          removeOnFail: true,
-        },
-      },
-    )
-    .catch((err: unknown) =>
-      container.logger.error(
-        `[rolementions] Failed to schedule expiry for ${guildId}/${roleId}:`,
-        err,
-      ),
-    );
-}
-
-/** Add a role to the active block list, sync AutoMod, schedule expiry, and log. */
-export async function applyBlock(
-  guild: Guild,
-  role: Role,
   durationMinutes: number,
   manual: boolean,
-): Promise<{ block: ActiveBlock; synced: boolean }> {
+  roleName?: string,
+): Promise<ActiveBlock> {
   const now = Date.now();
   const block: ActiveBlock = {
-    roleId: role.id,
-    roleName: role.name,
+    roleId,
+    roleName,
     createdAt: now,
     expiresAt: now + durationMinutes * 60_000,
     durationMinutes,
     manual,
   };
 
-  await setBlock(guild.id, block);
-  const synced = await syncRule(guild);
-  await scheduleExpiry(guild.id, role.id, durationMinutes * 60_000);
-
-  await sendLog(
-    guild.id,
-    makeWarningCard(
-      `${Emojis.SHIELD} Role Protection Activated`,
-      [
-        `Mentions of ${roleLabel(guild, role.id)} are now blocked.`,
-        [
-          `**Duration:** ${formatMinutes(durationMinutes)}`,
-          `**Expires:** ${relativeTimestamp(block.expiresAt)}`,
-          `**Trigger:** ${manual ? "Manual" : "Mention spam"}`,
-        ].join("\n"),
-        ...(synced
-          ? []
-          : [
-              `${Emojis.WARNING_SIGN} **AutoMod rule could not be updated** — mentions may not actually be blocked yet. Verify the bot has Manage Server permission.`,
-            ]),
-      ],
-      { footer: "Protection auto-removes when it expires." },
+  await setBlock(guildId, block);
+  await schedule(
+    EXPIRE_TASK,
+    { guildId, roleId },
+    { delay: durationMinutes * 60_000 },
+  ).catch((err: unknown) =>
+    logger.error(
+      `[rolementions] Failed to schedule expiry for ${guildId}/${roleId}: ${String(err)}`,
     ),
   );
 
-  return { block, synced };
+  await sendLog(
+    guildId,
+    makeWarningCard(`${Emojis.Shield} Role Protection Activated`, [
+      `Mentions of ${roleMention(roleId)} are now blocked.`,
+      [
+        `**Duration:** ${formatMinutes(durationMinutes)}`,
+        `**Expires:** ${relativeTimestamp(block.expiresAt)}`,
+        `**Trigger:** ${manual ? "Manual" : "Mention spam"}`,
+      ].join("\n"),
+    ], { footer: "Protection auto-removes when it expires." }),
+  );
+
+  return block;
 }
 
-/**
- * Remove an active block (on expiry or manual unblock), sync AutoMod, and log.
- * Returns the block that was removed, or null if none was active.
- */
 export async function liftBlock(
-  guild: Guild,
+  guildId: string,
   roleId: string,
   reason: "expired" | "manual",
 ): Promise<ActiveBlock | null> {
-  const block = await getBlock(guild.id, roleId);
+  const block = await getBlock(guildId, roleId);
   if (!block) return null;
 
-  await removeBlock(guild.id, roleId);
-  await syncRule(guild);
+  await removeBlock(guildId, roleId);
 
   const title =
     reason === "expired"
-      ? `${Emojis.UNLOCK} Role Protection Expired`
-      : `${Emojis.UNLOCK} Role Protection Removed`;
+      ? `${Emojis.Unlock} Role Protection Expired`
+      : `${Emojis.Unlock} Role Protection Removed`;
 
   await sendLog(
-    guild.id,
+    guildId,
     makeSuccessCard(title, [
-      `Mentions of ${roleLabel(guild, roleId, block.roleName)} are allowed again.`,
+      `Mentions of ${roleLabel(roleId, block.roleName)} are allowed again.`,
       reason === "manual"
         ? `**Removed early** — ${formatRemaining(block.expiresAt)} was remaining.`
         : `**Was protected for** ${formatMinutes(block.durationMinutes)}.`,
@@ -112,4 +76,11 @@ export async function liftBlock(
   );
 
   return block;
+}
+
+export async function handleRoleBlockExpire(
+  guildId: string,
+  roleId: string,
+): Promise<void> {
+  await liftBlock(guildId, roleId, "expired");
 }

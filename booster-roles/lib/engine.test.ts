@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { validateRoleName, parseHexColor, colorToHex } from "./engine.js";
+import { validateRoleName, parseHexColor, colorToHex, isBoosterEligible } from "./engine.js";
 
 describe("validateRoleName", () => {
   it("accepts a normal name and trims it", () => {
@@ -48,5 +48,23 @@ describe("colorToHex", () => {
     expect(colorToHex(0xff8800)).toBe("#FF8800");
     expect(colorToHex(0x000000)).toBe("#000000");
     expect(colorToHex(parseHexColor("#0a0b0c")!)).toBe("#0A0B0C");
+  });
+});
+
+describe("isBoosterEligible", () => {
+  it("returns true if member has premiumSince timestamp", () => {
+    expect(isBoosterEligible([], 12345678, ["role-booster-1"])).toBe(true);
+  });
+
+  it("returns true if member has one of qualifying boosterRoleIds", () => {
+    expect(isBoosterEligible(["role-booster-2"], null, ["role-booster-1", "role-booster-2"])).toBe(true);
+  });
+
+  it("returns false if member has neither", () => {
+    expect(isBoosterEligible(["some-other-role"], null, ["role-booster-1", "role-booster-2"])).toBe(false);
+  });
+
+  it("returns false if qualifying roles empty and not premium booster", () => {
+    expect(isBoosterEligible(["role-booster-1"], null, [])).toBe(false);
   });
 });

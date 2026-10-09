@@ -1,50 +1,20 @@
-import { container } from "@sapphire/framework";
-import { tryParseJSON } from "@sapphire/utilities";
-import { DragmeKeys, type DragRequest } from "../keys.js";
+import { get, remove, set } from "lumi/kv";
+import { REQUEST_KEY, type DragRequestRecord } from "../keys.js";
 
 export async function getRequest(
   guildId: string,
-  userId: string,
-): Promise<DragRequest | null> {
-  const raw = await container.valkey.get(DragmeKeys.request(guildId, userId));
-  if (!raw) return null;
-  const parsed = tryParseJSON(raw) as DragRequest | string;
-  return typeof parsed === "string" ? null : parsed;
+  requestId: string,
+): Promise<DragRequestRecord | null> {
+  return get<DragRequestRecord>(guildId, requestId, REQUEST_KEY);
 }
 
-export async function setRequest(req: DragRequest): Promise<void> {
-  const ttlSec = Math.max(1, Math.ceil((req.expiresAt - Date.now()) / 1000));
-  await container.valkey
-    .multi()
-    .set(
-      DragmeKeys.request(req.guildId, req.userId),
-      JSON.stringify(req),
-      "EX",
-      ttlSec,
-    )
-    .sadd(DragmeKeys.activeSet(req.guildId), req.userId)
-    .exec();
+export async function setRequest(req: DragRequestRecord): Promise<void> {
+  await set(req.guildId, req.requestId, REQUEST_KEY, req);
 }
 
 export async function deleteRequest(
   guildId: string,
-  userId: string,
+  requestId: string,
 ): Promise<void> {
-  await container.valkey
-    .multi()
-    .del(DragmeKeys.request(guildId, userId))
-    .srem(DragmeKeys.activeSet(guildId), userId)
-    .exec();
-}
-
-/** Live requests for a guild; self-heals set members whose key expired. */
-export async function listRequests(guildId: string): Promise<DragRequest[]> {
-  const ids = await container.valkey.smembers(DragmeKeys.activeSet(guildId));
-  const out: DragRequest[] = [];
-  for (const userId of ids) {
-    const req = await getRequest(guildId, userId);
-    if (req) out.push(req);
-    else await container.valkey.srem(DragmeKeys.activeSet(guildId), userId);
-  }
-  return out;
+  await remove(guildId, requestId, REQUEST_KEY);
 }

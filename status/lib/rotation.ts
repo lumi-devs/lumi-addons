@@ -1,9 +1,6 @@
-// Pure rotation logic — no framework imports so `bun test` runs it standalone.
-
 export interface PlaceholderStats {
   guilds: number;
   users: number;
-  shard: number;
 }
 
 export function resolvePlaceholders(
@@ -12,8 +9,14 @@ export function resolvePlaceholders(
 ): string {
   return text
     .replaceAll("{guilds}", String(stats.guilds))
-    .replaceAll("{users}", String(stats.users))
-    .replaceAll("{shard}", String(stats.shard));
+    .replaceAll("{users}", String(stats.users));
+}
+
+export function isDue(
+  state: { enabled: boolean; nextAtMs: number },
+  now: number,
+): boolean {
+  return state.enabled && now >= state.nextAtMs;
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -25,12 +28,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-/**
- * Pop the next entry id to apply. `queue` holds ids not yet played this cycle;
- * when exhausted it is refilled with a shuffle of `allIds`, avoiding an
- * immediate repeat of `lastId` (unless it is the only entry). Ids in the queue
- * that no longer exist in `allIds` (removed entries) are skipped.
- */
+/** Pop the next entry id, refilling from a shuffle of `allIds` when empty. */
 export function nextFromQueue(
   queue: number[],
   allIds: number[],
@@ -41,7 +39,6 @@ export function nextFromQueue(
   if (live.length === 0) {
     const refill = shuffle(allIds);
     if (refill.length > 1 && refill[0] === lastId) {
-      // Swap the head with a random later slot so we never repeat back-to-back.
       const j = 1 + Math.floor(Math.random() * (refill.length - 1));
       [refill[0], refill[j]] = [refill[j]!, refill[0]!];
     }

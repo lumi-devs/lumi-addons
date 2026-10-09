@@ -1,10 +1,3 @@
-import type { Guild } from "discord.js";
-
-/**
- * Parse a duration string into whole minutes.
- * Accepts bare numbers ("60" = 60 minutes), or unit suffixes: "90m", "2h", "1d".
- * Returns null when unparseable or non-positive.
- */
 export function parseMinutes(input: string): number | null {
   const trimmed = input.trim().toLowerCase();
   const match = /^(\d+)\s*(m|min|h|hr|hour|d|day)?s?$/.exec(trimmed);
@@ -20,11 +13,10 @@ export function parseMinutes(input: string): number | null {
     case "day":
       return value * 60 * 24;
     default:
-      return value; // minutes
+      return value;
   }
 }
 
-/** Compact human duration from a minute count, e.g. 150 → "2h 30m". */
 export function formatMinutes(minutes: number): string {
   if (minutes <= 0) return "0m";
   const days = Math.floor(minutes / 1440);
@@ -37,23 +29,17 @@ export function formatMinutes(minutes: number): string {
   return parts.join(" ");
 }
 
-/** Human remaining time until an epoch-ms timestamp. */
 export function formatRemaining(expiresAt: number): string {
   const ms = expiresAt - Date.now();
   if (ms <= 0) return "expired";
   return formatMinutes(Math.ceil(ms / 60_000));
 }
 
-/**
- * Safe role label that never pings: "Name (`id`)".
- * Falls back to "Unknown Role" for deleted roles, optionally using a cached name.
- */
-export function roleLabel(
-  guild: Guild,
-  roleId: string,
-  fallbackName?: string,
-): string {
-  const role = guild.roles.cache.get(roleId);
-  const name = role?.name ?? fallbackName ?? "Unknown Role";
+export function roleLabel(roleId: string, fallbackName?: string): string {
+  const name = fallbackName ?? "Unknown Role";
   return `**${name}** (\`${roleId}\`)`;
+}
+
+export function roleMention(roleId: string): string {
+  return `<@&${roleId}>`;
 }

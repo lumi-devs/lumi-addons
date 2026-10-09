@@ -1,23 +1,24 @@
-import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "lumi";
+import { cfg, defineModule } from "lumi";
 import { registerTaskFireHandler } from "lumi/scheduling";
+import { EXPIRE_TASK } from "./keys.js";
 import { handleDragmeExpireFire } from "./lib/expire-handler.js";
-import { handleDragmeRevokeFire } from "./lib/revoke-handler.js";
-import { deleteRequest, getRequest } from "./lib/requests.js";
-import type { DragRequest } from "./keys.js";
 
-@DefineModule({
+export const meta = defineModule({
   name: "dragme",
   displayName: "Drag Me",
   emoji: "🫳",
   version: "1.0.0",
   description:
     "Voice drag requests approved by the people already in the channel.",
+  short: "Ask to be dragged into a voice channel.",
+  endUserDataStatement:
+    "Temporarily stores voice drag request metadata (requesting user ID, target channel ID, timestamp) until the request is completed, rejected, or expires.",
   configSchema: cfg.object({
     request_channel_id: cfg.channel({
       label: "Request Channel",
-      description: "Text channel where drag requests are posted and triggered.",
-      channelTypes: [ChannelType.GuildText],
+      description: "Text channel where drag request cards are posted.",
+      // 0 = GuildText; avoids importing discord.js for one enum value.
+      channelTypes: [0],
     }),
     timeout_minutes: cfg.number({
       label: "Request Timeout (minutes)",
@@ -26,48 +27,11 @@ import type { DragRequest } from "./keys.js";
       min: 1,
       max: 60,
     }),
-    grace_minutes: cfg.number({
-      label: "Connect Pass (minutes)",
-      description:
-        "How long an accepted requester who wasn't in voice keeps a temporary connect permission.",
-      default: 10,
-      min: 1,
-      max: 120,
-    }),
-    blacklist_role_ids: cfg.string({
+    blacklist_role_ids: cfg.multiRole({
       label: "Blacklisted Roles",
-      description: "Comma-separated role IDs that may not use drag requests.",
-      list: true,
-    }),
-    grant_hidden_perms: cfg.boolean({
-      label: "Grant Hidden Permissions",
-      description:
-        "Grant temporary Connect/ViewChannel permissions for hidden channels, and remove them when the user leaves.",
-      default: true,
+      description: "Roles that may not use drag requests.",
     }),
   }),
-})
-export class DragmeModule extends Module {
-  public override onLoad() {
-    registerTaskFireHandler("dragme-expire", "unicast", handleDragmeExpireFire);
-    registerTaskFireHandler("dragme-revoke", "unicast", handleDragmeRevokeFire);
-    return super.onLoad();
-  }
+});
 
-  public override async deleteUserData(userId: string): Promise<void> {
-    for (const guildId of this.container.client.guilds.cache.keys()) {
-      await deleteRequest(guildId, userId);
-    }
-  }
-
-  public override async exportUserData(
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const requests: DragRequest[] = [];
-    for (const guildId of this.container.client.guilds.cache.keys()) {
-      const req = await getRequest(guildId, userId);
-      if (req) requests.push(req);
-    }
-    return requests.length > 0 ? { activeDragRequests: requests } : null;
-  }
-}
+registerTaskFireHandler(EXPIRE_TASK, handleDragmeExpireFire);

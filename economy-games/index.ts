@@ -1,23 +1,49 @@
-import { Module, DefineModule, cfg } from "lumi";
-import { GamesKeys } from "./keys.js";
-import { deleteUserState, exportUserState } from "./lib/store.js";
+import { cfg, defineModule } from "lumi";
 
-const COOLDOWN_SCOPES = [
-  "grind-work",
-  "grind-beg",
-  "grind-fish",
-  "grind-mine",
-  "crime",
-];
-
-@DefineModule({
+export const meta = defineModule({
   name: "economy-games",
   displayName: "Economy Games",
   emoji: "🎰",
   version: "1.0.0",
   description:
-    "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — every payout settled through the core Economy ledger.",
+    "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — every payout settled through the addon's own coin ledger.",
+  short: "Casino games, crime, grinds, and a shop with its own ledger.",
+  endUserDataStatement:
+    "Stores per-server wallet balances, jail sentences, shop inventories, cooldown timestamps, and active game tables keyed by user ID. All rows live in this addon's own storage namespace and are removed on GDPR erasure.",
   configSchema: cfg.object({
+    currencyName: cfg.string({
+      label: "Currency Name",
+      description: "Name of the coins games pay out.",
+      default: "credits",
+      group: "Currency",
+    }),
+    currencyEmoji: cfg.string({
+      label: "Currency Emoji",
+      description: "Emoji shown next to amounts.",
+      default: "🪙",
+      group: "Currency",
+    }),
+    startingWallet: cfg.number({
+      label: "Starting Wallet",
+      description: "Coins a new player starts with.",
+      default: 100,
+      min: 0,
+      group: "Currency",
+    }),
+    startingBank: cfg.number({
+      label: "Starting Bank",
+      description: "Banked coins a new player starts with.",
+      default: 0,
+      min: 0,
+      group: "Currency",
+    }),
+    maxBalance: cfg.number({
+      label: "Maximum Balance",
+      description: "Winnings past this total are forfeited.",
+      default: 1000000,
+      min: 1000,
+      group: "Currency",
+    }),
     blackjackMinBet: cfg.number({
       label: "Blackjack Minimum Bet",
       description: "Smallest allowed blackjack bet.",
@@ -112,32 +138,4 @@ const COOLDOWN_SCOPES = [
       group: "Shop",
     }),
   }),
-})
-export class EconomyGamesModule extends Module {
-  public override async deleteUserData(userId: string): Promise<void> {
-    for (const guildId of this.container.client.guilds.cache.keys()) {
-      await deleteUserState(
-        guildId,
-        userId,
-        COOLDOWN_SCOPES.map((scope) =>
-          GamesKeys.cooldown(scope, guildId, userId),
-        ),
-        [
-          GamesKeys.blackjack(guildId, userId),
-          GamesKeys.roulette(guildId, userId),
-        ],
-      );
-    }
-  }
-
-  public override async exportUserData(
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const perGuild: Record<string, unknown> = {};
-    for (const guildId of this.container.client.guilds.cache.keys()) {
-      const data = await exportUserState(guildId, userId);
-      if (data) perGuild[guildId] = data;
-    }
-    return Object.keys(perGuild).length > 0 ? perGuild : null;
-  }
-}
+});

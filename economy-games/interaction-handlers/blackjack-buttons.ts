@@ -1,124 +1,108 @@
-import { ApplyOptions } from "@sapphire/decorators";
 import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import type { ButtonInteraction } from "discord.js";
-import { ephemeralCard, makeErrorCard } from "lumi/ui";
+  deferUpdate,
+  type InteractionContext,
+} from "lumi/interactions";
 import { getCurrency, getGamesConfig } from "../lib/config.js";
-import { productionLedger } from "../lib/ledger.js";
+import {
+  clearPending,
+  loadPending,
+  productionLedger,
+  savePending,
+} from "../lib/store.js";
 import {
   handValue,
   isBust,
   type BlackjackState,
 } from "../lib/blackjack.js";
 import { settleBlackjack } from "../lib/settle.js";
-import { clearPending, loadPending, savePending } from "../lib/store.js";
-import { blackjackTableCard } from "../lib/ui.js";
-import { GamesKeys } from "../keys.js";
+import { blackjackTableCard, boardUpdate } from "../lib/ui.js";
+import { BLACKJACK_KEY } from "../keys.js";
 
-interface Parsed {
-  userId: string;
-  action: "hit" | "stand";
-}
-
-@ApplyOptions<InteractionHandler.Options>({
-  name: "economy-games-blackjack",
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class BlackjackButtonHandler extends InteractionHandler {
-  public override parse(interaction: ButtonInteraction) {
-    const parts = interaction.customId.split(":");
-    if (parts[0] !== "egbj" || parts.length !== 3) return this.none();
-    const action = parts[2];
-    if (action !== "hit" && action !== "stand") return this.none();
-    return this.some({ userId: parts[1], action } as Parsed);
-  }
-
-  public async run(interaction: ButtonInteraction, data: Parsed) {
-    if (!interaction.inGuild() || !interaction.guildId) return;
-    const guildId = interaction.guildId;
-    if (interaction.user.id !== data.userId) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Not Your Table",
-            "That table belongs to someone else. Run `/blackjack` to deal your own.",
-          ),
-        ),
+export default {
+  prefix: "economy-games:blackjack",
+  run: async (ctx: InteractionContext) => {
+    const guildId = ctx.guildId;
+    if (!guildId) return;
+    const parts = ctx.customId.split(":");
+    const userId = parts[2];
+    const action = parts[3];
+    if (!userId || (action !== "hit" && action !== "stand")) {
+      await ctx.replyError("Blackjack", "That button is stale. Deal a fresh table with `/blackjack`.");
+      return;
+    }
+    if (ctx.user.id !== userId) {
+      await ctx.replyError(
+        "Not Your Table",
+        "That table belongs to someone else. Run `/blackjack` to deal your own.",
       );
       return;
     }
-    const key = GamesKeys.blackjack(guildId, data.userId);
-    const state = await loadPending<BlackjackState>(key);
+    const state = await loadPending<BlackjackState>(
+      guildId,
+      userId,
+      BLACKJACK_KEY,
+    );
     if (!state) {
-      await interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Table Expired",
-            "That table is gone. Run `/blackjack` to deal a fresh one.",
-          ),
-        ),
+      await ctx.replyError(
+        "Table Expired",
+        "That table is gone. Run `/blackjack` to deal a fresh one.",
       );
       return;
     }
-    await interaction.deferUpdate();
-    const config = await getGamesConfig(guildId);
-    const currency = await getCurrency(guildId);
-    const ledger = productionLedger();
-    if (data.action === "hit") {
+    await deferUpdate();
+    if (action === "hit") {
       const next = state.deck.pop();
       if (next) state.player.push(next);
+      const config = await getGamesConfig(guildId);
+      const currency = await getCurrency(guildId);
       if (isBust(state.player)) {
-        await clearPending(key);
+        await clearPending(guildId, userId, BLACKJACK_KEY);
         const settled = await settleBlackjack(
-          ledger,
+          productionLedger(),
           currency,
           guildId,
-          data.userId,
+          userId,
           state,
           config.blackjackPayout,
         );
-        await interaction.editReply(settled.card);
+        await boardUpdate(settled.card);
         return;
       }
       if (handValue(state.player) === 21) {
-        await this.stand(interaction, guildId, data.userId, state, key);
+        await stand(guildId, userId, state);
         return;
       }
-      await savePending(key, state, 300);
-      await interaction.editReply(
+      await savePending(guildId, userId, BLACKJACK_KEY, state, 300);
+      await boardUpdate(
         blackjackTableCard(
           state.player,
           state.dealer,
           state.bet,
           currency,
-          data.userId,
+          userId,
         ),
       );
       return;
     }
-    await this.stand(interaction, guildId, data.userId, state, key);
-  }
+    await stand(guildId, userId, state);
+  },
+};
 
-  private async stand(
-    interaction: ButtonInteraction,
-    guildId: string,
-    userId: string,
-    state: BlackjackState,
-    key: string,
-  ): Promise<void> {
-    const config = await getGamesConfig(guildId);
-    const currency = await getCurrency(guildId);
-    await clearPending(key);
-    const settled = await settleBlackjack(
-      productionLedger(),
-      currency,
-      guildId,
-      userId,
-      state,
-      config.blackjackPayout,
-    );
-    await interaction.editReply(settled.card);
-  }
+async function stand(
+  guildId: string,
+  userId: string,
+  state: BlackjackState,
+): Promise<void> {
+  const config = await getGamesConfig(guildId);
+  const currency = await getCurrency(guildId);
+  await clearPending(guildId, userId, BLACKJACK_KEY);
+  const settled = await settleBlackjack(
+    productionLedger(),
+    currency,
+    guildId,
+    userId,
+    state,
+    config.blackjackPayout,
+  );
+  await boardUpdate(settled.card);
 }

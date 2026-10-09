@@ -1,7 +1,11 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { BaseCommand, type CommandContext } from "lumi/commands";
+import { defineCommand, type CommandContext } from "lumi/commands";
 import { getCurrency, getGamesConfig, validateBet } from "../lib/config.js";
-import { debitBet, LedgerInsufficientFunds, productionLedger } from "../lib/ledger.js";
+import { debitBet, LedgerInsufficientFunds } from "../lib/ledger.js";
+import {
+  clearPending,
+  productionLedger,
+  savePending,
+} from "../lib/store.js";
 import {
   buildDeck,
   isBlackjack,
@@ -9,41 +13,40 @@ import {
   type BlackjackState,
 } from "../lib/blackjack.js";
 import { settleBlackjack } from "../lib/settle.js";
-import { clearPending, savePending } from "../lib/store.js";
 import { blackjackTableCard } from "../lib/ui.js";
-import { GamesKeys } from "../keys.js";
+import { BLACKJACK_KEY } from "../keys.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export default defineCommand({
   name: "blackjack",
   description: "Play blackjack against the dealer for wallet currency.",
-  preconditions: ["GuildOnly"],
-  prefixEnabled: true,
-  cooldownLimit: 2,
-  cooldownDelay: 5000,
-})
-export class BlackjackCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: BaseCommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addIntegerOption((opt) =>
-          opt
-            .setName("bet")
-            .setDescription("How much to bet.")
-            .setMinValue(1)
-            .setRequired(true),
-        ),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
-    const guildId = ctx.guildId!;
+  build: () => ({
+    name: "blackjack",
+    description: "Play blackjack against the dealer for wallet currency.",
+    options: [
+      {
+        type: 4,
+        name: "bet",
+        description: "How much to bet.",
+        required: true,
+        min_value: 1,
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    const guildId = ctx.guildId;
+    if (!guildId) {
+      await ctx.replyError("Guild Only", "This command only works inside a server.");
+      return;
+    }
     const config = await getGamesConfig(guildId);
     const currency = await getCurrency(guildId);
     const bet = await ctx.getInteger("bet", { required: true });
+    if (bet === null) {
+      await ctx.replyError("Blackjack", "Tell me how much to bet.");
+      return;
+    }
     const invalid = validateBet(
-      bet!,
+      bet,
       config.blackjackMinBet,
       config.blackjackMaxBet,
     );
@@ -58,7 +61,7 @@ export class BlackjackCommand extends BaseCommand {
         currency,
         guildId,
         ctx.user.id,
-        bet!,
+        bet,
         "games_blackjack_bid",
         `blackjack bid ${bet}`,
       );
@@ -66,7 +69,7 @@ export class BlackjackCommand extends BaseCommand {
       if (err instanceof LedgerInsufficientFunds) {
         await ctx.replyError(
           "Blackjack",
-          `You need ${bet!.toLocaleString("en-US")} in your wallet to place that bet.`,
+          `You need ${bet.toLocaleString("en-US")} in your wallet to place that bet.`,
         );
         return;
       }
@@ -75,7 +78,7 @@ export class BlackjackCommand extends BaseCommand {
     const deck = shuffleDeck(buildDeck());
     const state: BlackjackState = {
       userId: ctx.user.id,
-      bet: bet!,
+      bet,
       deck,
       player: [deck.pop()!, deck.pop()!],
       dealer: [deck.pop()!, deck.pop()!],
@@ -89,11 +92,11 @@ export class BlackjackCommand extends BaseCommand {
         state,
         config.blackjackPayout,
       );
-      await clearPending(GamesKeys.blackjack(guildId, ctx.user.id));
+      await clearPending(guildId, ctx.user.id, BLACKJACK_KEY);
       await ctx.reply(settled.card, { ephemeral: false });
       return;
     }
-    await savePending(GamesKeys.blackjack(guildId, ctx.user.id), state, 300);
+    await savePending(guildId, ctx.user.id, BLACKJACK_KEY, state, 300);
     await ctx.reply(
       blackjackTableCard(
         state.player,
@@ -104,5 +107,5 @@ export class BlackjackCommand extends BaseCommand {
       ),
       { ephemeral: false },
     );
-  }
-}
+  },
+});

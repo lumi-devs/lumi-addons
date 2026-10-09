@@ -1,15 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { statusMatches, vanityMatchTerms, wearsServerTag } from "./matching.js";
-
-describe("vanityMatchTerms", () => {
-  it("derives the bare code and full invite form", () => {
-    expect(vanityMatchTerms("lumi")).toEqual(["lumi", "discord.gg/lumi"]);
-  });
-
-  it("is empty when the guild has no vanity code", () => {
-    expect(vanityMatchTerms(null)).toEqual([]);
-  });
-});
+import { statusMatches, wearsServerTag } from "./matching.js";
 
 describe("statusMatches", () => {
   const terms = [".gg/lumi", "discord.gg/lumi", "LUMI"];
@@ -34,36 +24,19 @@ describe("statusMatches", () => {
 });
 
 describe("wearsServerTag", () => {
-  const guildId = "111";
-
   it("is true only when the identity is enabled and points at this guild", () => {
     expect(
-      wearsServerTag(
-        { identityEnabled: true, identityGuildId: "111" },
-        guildId,
-      ),
+      wearsServerTag({ identityGuildId: "111", identityEnabled: true }, "111"),
     ).toBe(true);
   });
 
-  it("is false for another guild's tag", () => {
+  it("is false otherwise", () => {
     expect(
-      wearsServerTag(
-        { identityEnabled: true, identityGuildId: "222" },
-        guildId,
-      ),
+      wearsServerTag({ identityGuildId: "222", identityEnabled: true }, "111"),
     ).toBe(false);
-  });
-
-  it("is false when the identity is disabled or absent", () => {
     expect(
-      wearsServerTag(
-        { identityEnabled: false, identityGuildId: "111" },
-        guildId,
-      ),
+      wearsServerTag({ identityGuildId: "111", identityEnabled: false }, "111"),
     ).toBe(false);
-    expect(wearsServerTag(null, guildId)).toBe(false);
-    expect(
-      wearsServerTag({ identityEnabled: null, identityGuildId: null }, guildId),
-    ).toBe(false);
+    expect(wearsServerTag(null, "111")).toBe(false);
   });
 });

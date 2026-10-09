@@ -1,15 +1,11 @@
+import { editReply } from "lumi/interactions";
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
-} from "@discordjs/builders";
-import { ButtonStyle } from "discord.js";
-import {
+  actionRow,
   makeErrorCard,
   makeInfoCard,
   makeSuccessCard,
   makeWarningCard,
+  selectRow,
   type CardReply,
 } from "lumi/ui";
 import {
@@ -25,6 +21,10 @@ import {
   type RouletteColor,
 } from "./roulette.js";
 import type { CurrencyConfig } from "./config.js";
+
+export function boardUpdate(card: CardReply): Promise<void> {
+  return editReply({ components: card.components.map((c) => c.toJSON()) });
+}
 
 const BET_EMOJI: Record<RouletteBetType, string> = {
   red: "🔴",
@@ -44,25 +44,26 @@ export function blackjackTableCard(
   currency: CurrencyConfig,
   userId: string,
 ): CardReply {
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`egbj:${userId}:hit`)
-      .setLabel("Hit")
-      .setEmoji({ name: "🃏" })
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`egbj:${userId}:stand`)
-      .setLabel("Stand")
-      .setEmoji({ name: "✋" })
-      .setStyle(ButtonStyle.Secondary),
-  );
   return makeInfoCard("🂡 Blackjack", [
     `Bet: **${currency.emoji} ${bet.toLocaleString("en-US")}**`,
     `**You (${handValue(player)}):** ${handLabel(player, false)}`,
     `**Dealer (?):** ${handLabel(dealer, true)}`,
   ].join("\n"), {
     footer: "Hit or stand — dealer stands on 17",
-    actionRows: [row],
+    actionRows: [
+      actionRow([
+        {
+          customId: `economy-games:blackjack:${userId}:hit`,
+          label: "Hit",
+          emoji: "🃏",
+        },
+        {
+          customId: `economy-games:blackjack:${userId}:stand`,
+          label: "Stand",
+          emoji: "✋",
+        },
+      ]),
+    ],
   });
 }
 
@@ -72,40 +73,33 @@ export function roulettePickerCard(
   currency: CurrencyConfig,
   userId: string,
 ): CardReply {
-  const select = new StringSelectMenuBuilder()
-    .setCustomId(`egrl:${userId}`)
-    .setPlaceholder("Pick your bet type")
-    .addOptions(
-      ROULETTE_BET_TYPES.map((type) =>
-        new StringSelectMenuOptionBuilder()
-          .setLabel(
+  return makeInfoCard("🎡 Roulette", [
+    `Bet: **${currency.emoji} ${bet.toLocaleString("en-US")}**`,
+    target !== null
+      ? `Exact number: **${target}** (pick it below for 35:1)`
+      : "Pass a `number` option to enable the exact-number bet.",
+  ].join("\n"), {
+    footer: "Single-zero wheel — pick a bet type to spin",
+    actionRows: [
+      selectRow({
+        customId: `economy-games:roulette:${userId}`,
+        placeholder: "Pick your bet type",
+        options: ROULETTE_BET_TYPES.map((type) => ({
+          label:
             type === "number" && target !== null
               ? `Number ${target}`
               : type === "number"
                 ? "Exact number"
                 : rouletteBetLabel(type, null),
-          )
-          .setValue(type)
-          .setEmoji({ name: BET_EMOJI[type] })
-          .setDescription(
+          value: type,
+          description:
             type === "green" || type === "number"
               ? "Pays 35 to 1"
               : "Pays 1 to 1",
-          ),
-      ),
-    );
-  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-    select,
-  );
-  const lines = [
-    `Bet: **${currency.emoji} ${bet.toLocaleString("en-US")}**`,
-    target !== null
-      ? `Exact number: **${target}** (pick it below for 35:1)`
-      : "Pass a `number` option to enable the exact-number bet.",
-  ];
-  return makeInfoCard("🎡 Roulette", lines.join("\n"), {
-    footer: "Single-zero wheel — pick a bet type to spin",
-    actionRows: [row],
+          emoji: BET_EMOJI[type],
+        })),
+      }),
+    ],
   });
 }
 
@@ -120,29 +114,27 @@ export function rouletteSpinCard(
 }
 
 export function crimePickerCard(userId: string): CardReply {
-  const select = new StringSelectMenuBuilder()
-    .setCustomId(`egcr:${userId}`)
-    .setPlaceholder("Pick your crime")
-    .addOptions(
-      CRIME_TIERS.map((tier) =>
-        new StringSelectMenuOptionBuilder()
-          .setLabel(tier.label)
-          .setValue(tier.id)
-          .setEmoji({ name: tier.emoji })
-          .setDescription(
-            `${Math.round(tier.successRate * 100)}% · up to ${tier.payoutMax} · jail up to ${tier.jailMaxMinutes}m`.slice(0, 100),
-          ),
-      ),
-    );
-  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-    select,
-  );
   return makeWarningCard(
     "🌃 Crime",
     "Bigger scores, bigger risks. Fail and you pay a fine plus jail time.",
     {
       footer: "Jail blocks further crime until release",
-      actionRows: [row],
+      actionRows: [
+        selectRow({
+          customId: `economy-games:crime:${userId}`,
+          placeholder: "Pick your crime",
+          options: CRIME_TIERS.map((tier) => ({
+            label: tier.label,
+            value: tier.id,
+            description:
+              `${Math.round(tier.successRate * 100)}% · up to ${tier.payoutMax} · jail up to ${tier.jailMaxMinutes}m`.slice(
+                0,
+                100,
+              ),
+            emoji: tier.emoji,
+          })),
+        }),
+      ],
     },
   );
 }

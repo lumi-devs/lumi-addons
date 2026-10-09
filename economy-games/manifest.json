@@ -1,14 +1,22 @@
 {
   "name": "economy-games",
   "displayName": "Economy Games",
-  "emoji": "⚙️",
-  "description": "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — all settled through the core Economy ledger.",
-  "short": "Casino games, crime, grinds, and a shop for the core economy.",
+  "emoji": "🎰",
+  "description": "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — every payout settled through the addon's own coin ledger.",
+  "short": "Casino games, crime, grinds, and a shop with its own ledger.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
   "subStores": [
-    "commands"
+    "commands",
+    "interaction-handlers"
   ],
+  "capabilities": {
+    "discord": [
+      "reply",
+      "manageRoles"
+    ],
+    "kv": true
+  },
   "configFields": []
 }

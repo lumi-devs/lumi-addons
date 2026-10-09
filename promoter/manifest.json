@@ -1,16 +1,20 @@
 {
   "name": "promoter",
   "displayName": "Promoter",
-  "emoji": "⚙️",
-  "description": "Rewards members who advertise the server in their custom status (invite link or server tag) with a configurable role, removed automatically when the status changes. Includes a self-heal sweep, log cards, and a persistent check-me panel.",
+  "emoji": "📣",
+  "description": "Rewards members who advertise the server in their custom status (invite link or server tag) with a configurable role, removed automatically when the status changes. Includes log cards and a persistent check-me panel.",
   "short": "Auto-role for members advertising the server.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
   "subStores": [
     "commands",
-    "listeners",
-    "scheduled-tasks"
+    "interaction-handlers"
   ],
-  "configFields": []
+  "configFields": [],
+  "capabilities": {
+    "discord": ["reply", "sendMessage", "manageRoles"],
+    "scheduling": true,
+    "kv": true
+  }
 }

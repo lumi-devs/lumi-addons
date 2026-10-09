@@ -1,61 +1,51 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { Command } from "@sapphire/framework";
-import type { ChatInputCommandInteraction } from "discord.js";
-import { BaseCommand } from "lumi/commands";
-import { ephemeralCard, makeErrorCard, makeWarningCard } from "lumi/ui";
+import { defineCommand, type CommandContext } from "lumi/commands";
+import { makeInfoCard } from "lumi/ui";
 import { getConfessionsConfig } from "../lib/config.js";
 import { authorHashFor, isBanned, onCooldown } from "../lib/data.js";
-import { buildConfessionModal } from "../lib/ui.js";
+import { buildConfessionModal, openFormRow } from "../lib/ui.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export default defineCommand({
   name: "confess",
   description: "Submit an anonymous confession.",
-  preconditions: ["GuildOnly"],
-  cooldownLimit: 2,
-  cooldownDelay: 5000,
-})
-export class ConfessCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: Command.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description),
-    );
-  }
-
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const guildId = interaction.guildId!;
+  build: () => ({ name: "confess", description: "Submit an anonymous confession." }),
+  run: async (ctx: CommandContext) => {
+    if (!ctx.guildId) {
+      return ctx.replyError("Guild Only", "This command only works inside a server.");
+    }
+    const guildId = ctx.guildId;
     const config = await getConfessionsConfig(guildId);
 
-    if (!config.channelId)
-      return interaction.reply(
-        ephemeralCard(
-          makeWarningCard(
-            "Not Configured",
-            "An admin needs to set the confession channel in `/lumi` → **Modules** → **Confessions**.",
-          ),
+    if (!config.channelId) {
+      return ctx.replyWarning(
+        "Not Configured",
+        "An admin needs to configure the confession channel first.",
+      );
+    }
+
+    const hash = await authorHashFor(guildId, ctx.user.id);
+    if (await isBanned(guildId, hash)) {
+      return ctx.replyError(
+        "Blocked",
+        "You can no longer submit confessions in this server.",
+      );
+    }
+
+    if (await onCooldown(guildId, hash, config.cooldownMinutes)) {
+      return ctx.replyWarning(
+        "Slow Down",
+        `Please wait before your next confession (cooldown: ${config.cooldownMinutes}m).`,
+      );
+    }
+
+    if (!ctx.isSlash) {
+      return ctx.reply(
+        makeInfoCard(
+          "🕊️ Anonymous Confession",
+          "Press the button below to open the anonymous confession form.",
+          { actionRows: [openFormRow()] },
         ),
       );
-
-    const hash = await authorHashFor(guildId, interaction.user.id);
-    if (await isBanned(guildId, hash))
-      return interaction.reply(
-        ephemeralCard(
-          makeErrorCard(
-            "Blocked",
-            "You can no longer submit confessions in this server.",
-          ),
-        ),
-      );
-
-    if (await onCooldown(guildId, hash))
-      return interaction.reply(
-        ephemeralCard(
-          makeWarningCard(
-            "Slow Down",
-            `Please wait before your next confession (cooldown: ${config.cooldownMinutes}m).`,
-          ),
-        ),
-      );
-
-    return interaction.showModal(buildConfessionModal(config.allowAttachments));
-  }
-}
+    }
+    return ctx.showModal(buildConfessionModal(config.allowAttachments));
+  },
+});

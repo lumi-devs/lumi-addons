@@ -1,67 +1,54 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import { type ChatInputCommandInteraction, type GuildMember } from "discord.js";
-import { channelMention } from "@discordjs/formatters";
-import { BaseCommand, replySuccess, replyError } from "lumi/commands";
+import { defineCommand, type CommandContext } from "lumi/commands";
 import { createDragRequest } from "../lib/create-request.js";
+import { channelMention } from "../lib/cards.js";
 
-@ApplyOptions<BaseCommand.Options>({
+export default defineCommand({
   name: "dragme",
   description: "Ask the people in a member's voice channel to drag you in.",
-  preconditions: ["GuildOnly"],
-  cooldownLimit: 2,
-  cooldownDelay: 5000,
-})
-export class DragmeCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addUserOption((o) =>
-          o
-            .setName("user")
-            .setDescription("The user in the voice channel you want to join")
-            .setRequired(true),
-        ),
-    );
-  }
-
-  public override async chatInputRun(
-    interaction: ChatInputCommandInteraction<"cached">,
-  ) {
-    const targetUser = interaction.options.getUser("user", true);
-    const targetMember = await interaction.guild.members
-      .fetch(targetUser.id)
-      .catch(() => null);
-    if (!targetMember) {
-      return replyError(
-        interaction,
-        "Can't Do That",
-        "Could not find that member in the server.",
-      );
+  build: () => ({
+    name: "dragme",
+    description: "Ask the people in a member's voice channel to drag you in.",
+    options: [
+      {
+        type: 6,
+        name: "user",
+        description: "A user in the voice channel you want to join",
+        required: true,
+      },
+      {
+        type: 7,
+        name: "channel",
+        description: "The voice channel you want to join",
+        required: true,
+        channel_types: [2],
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    if (!ctx.guildId) {
+      return ctx.replyError("Guild Only", "This command only works inside a server.");
     }
-    const targetChannel = targetMember.voice.channel;
-    if (!targetChannel) {
-      return replyError(
-        interaction,
+    const target = await ctx.getUser("user");
+    const channel = await ctx.getChannel("channel");
+    if (!target || !channel) {
+      return ctx.replyError(
         "Can't Do That",
-        "That user isn't in a voice channel right now.",
+        "Run this as a slash command and pick a user and a voice channel.",
       );
     }
 
-    const result = await createDragRequest(
-      interaction.member as GuildMember,
-      targetMember,
+    const result = await createDragRequest({
+      guildId: ctx.guildId,
+      requesterId: ctx.user.id,
+      requesterRoles: ctx.member?.roles ?? [],
+      targetUserId: target.id,
+      targetChannelId: channel.id,
+    });
+    if (!result.ok) return ctx.replyError("Can't Do That", result.reason);
+
+    return ctx.replySuccess(
+      "Request Posted",
+      `Asked the members of ${channelMention(channel.id)} to drag you in.`,
     );
-    return result.ok
-      ? replySuccess(
-          interaction,
-          "Request Posted",
-          `Asked the members of ${channelMention(targetChannel.id)} to drag you in.`,
-        )
-      : replyError(interaction, "Can't Do That", result.reason);
-  }
-}
+  },
+});

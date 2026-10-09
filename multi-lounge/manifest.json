@@ -1,16 +1,17 @@
 {
   "name": "multi-lounge",
   "displayName": "Multi Lounge",
-  "emoji": "⚙️",
-  "description": "Auto-scaling voice lounges: clones a base channel when every lounge fills up and removes the extras when they empty, keeping numbering contiguous.",
-  "short": "Voice lounges that scale with demand.",
+  "emoji": "🛋️",
+  "description": "Dynamic voice lounges: creates temporary child voice channels on demand and removes them when empty.",
+  "short": "Dynamic voice lounges that scale with demand.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
-  "subStores": [
-    "commands",
-    "listeners",
-    "scheduled-tasks"
-  ],
+  "capabilities": {
+    "discord": ["reply", "manageChannels", "manageVoice"],
+    "scheduling": true,
+    "kv": true
+  },
+  "subStores": ["commands"],
   "configFields": []
 }

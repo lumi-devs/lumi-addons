@@ -1,16 +1,20 @@
 {
   "name": "dragme",
-  "displayName": "Dragme",
-  "emoji": "⚙️",
-  "description": "Voice drag requests: ask to be pulled into a voice channel and let the people inside approve with one click. Approvals move you or grant a temporary connect pass.",
+  "displayName": "Drag Me",
+  "emoji": "🫳",
+  "description": "Voice drag requests: ask to be pulled into a voice channel and let the people inside approve with one click. Accepting moves you straight in.",
   "short": "Ask to be dragged into a voice channel.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
   "subStores": [
     "commands",
-    "listeners",
-    "scheduled-tasks"
+    "interaction-handlers"
   ],
-  "configFields": []
+  "configFields": [],
+  "capabilities": {
+    "discord": ["reply", "sendMessage", "editMessage", "manageRoles", "manageVoice"],
+    "scheduling": true,
+    "kv": true
+  }
 }

@@ -1,74 +1,69 @@
-import { container } from "@sapphire/framework";
-import { tryParseJSON } from "@sapphire/utilities";
+import { get, incr, list, remove, set } from "lumi/kv";
 import {
-  MODULE_NAME,
+  BLOCK_KEY,
+  COUNT_KEY,
   PROTECTED_KEY,
-  RmKeys,
-  COUNT_TTL_SECONDS,
+  countTarget,
+  dayStamp,
 } from "./keys.js";
-
-/**
- * Persistence split:
- *  - Protected-role config → Postgres (ModuleData) — durable admin config.
- *  - Mention counters + active blocks + rule id → Redis — ephemeral, fast, daily-rolling.
- * This keeps the addon self-contained (no schema migration) per the addons contract.
- */
 
 export interface ActiveBlock {
   roleId: string;
-  roleName: string;
+  roleName?: string;
   createdAt: number;
   expiresAt: number;
   durationMinutes: number;
-  /** True if an admin added the block manually rather than it triggering from a mention. */
   manual: boolean;
 }
 
-// ── Mention counters (Redis, per UTC day) ────────────────────────────────────
-
-export async function incrementMention(
-  guildId: string,
-  roleId: string,
-): Promise<void> {
-  const key = RmKeys.count(guildId);
-  await container.valkey
-    .multi()
-    .hincrby(key, roleId, 1)
-    .expire(key, COUNT_TTL_SECONDS)
-    .exec();
+function parseBlock(value: unknown): ActiveBlock | null {
+  if (!value || typeof value !== "object") return null;
+  const b = value as Partial<ActiveBlock>;
+  if (typeof b["roleId"] !== "string" || typeof b["expiresAt"] !== "number") {
+    return null;
+  }
+  return {
+    roleId: b["roleId"],
+    roleName: typeof b["roleName"] === "string" ? b["roleName"] : undefined,
+    createdAt: typeof b["createdAt"] === "number" ? b["createdAt"] : Date.now(),
+    expiresAt: b["expiresAt"],
+    durationMinutes:
+      typeof b["durationMinutes"] === "number" ? b["durationMinutes"] : 0,
+    manual: b["manual"] === true,
+  };
 }
 
-/**
- * Batched increment for every role mentioned in a single message — one pipelined
- * round-trip instead of N. `HINCRBY` returns the post-increment value, so callers
- * get today's counts back for free and never need a follow-up `getRoleCount`.
- */
 export async function incrementMentions(
   guildId: string,
   roleIds: string[],
 ): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   if (roleIds.length === 0) return counts;
-
-  const key = RmKeys.count(guildId);
-  const pipeline = container.valkey.multi();
-  for (const roleId of roleIds) pipeline.hincrby(key, roleId, 1);
-  pipeline.expire(key, COUNT_TTL_SECONDS);
-  const replies = await pipeline.exec();
-
-  // Replies are positional: one per queued HINCRBY, in roleIds order, then EXPIRE.
-  roleIds.forEach((roleId, i) => {
-    const value = Number(replies?.[i]?.[1]);
-    counts.set(roleId, Number.isNaN(value) ? 0 : value);
-  });
+  const day = dayStamp();
+  for (const roleId of roleIds) {
+    const value = await incr(guildId, countTarget(day, roleId), COUNT_KEY, 1);
+    counts.set(roleId, value);
+  }
   return counts;
 }
 
 export async function getCounts(guildId: string): Promise<Map<string, number>> {
-  const raw = await container.valkey.hgetall(RmKeys.count(guildId));
+  const rows = await list<number>(COUNT_KEY, guildId);
   const out = new Map<string, number>();
-  for (const [roleId, value] of Object.entries(raw)) {
-    const n = Number(value);
+  const today = dayStamp();
+  for (const row of rows) {
+    const sep = row.targetId.indexOf(":");
+    if (sep < 0) {
+      await remove(guildId, row.targetId, COUNT_KEY);
+      continue;
+    }
+    const day = row.targetId.slice(0, sep);
+    const roleId = row.targetId.slice(sep + 1);
+    if (day !== today) {
+      await remove(guildId, row.targetId, COUNT_KEY);
+      continue;
+    }
+    const n = Number(row.value);
     if (!Number.isNaN(n) && n > 0) out.set(roleId, n);
   }
   return out;
@@ -78,73 +73,52 @@ export async function getRoleCount(
   guildId: string,
   roleId: string,
 ): Promise<number> {
-  const raw = await container.valkey.hget(RmKeys.count(guildId), roleId);
+  const raw = await get<number>(guildId, countTarget(dayStamp(), roleId), COUNT_KEY);
   const n = Number(raw);
   return Number.isNaN(n) ? 0 : n;
 }
 
 export async function resetCounts(guildId: string): Promise<void> {
-  await container.valkey.del(RmKeys.count(guildId));
+  const rows = await list<number>(COUNT_KEY, guildId);
+  for (const row of rows) await remove(guildId, row.targetId, COUNT_KEY);
 }
-
-// ── Protected roles (Postgres, durable) ──────────────────────────────────────
 
 export async function setProtectedRole(
   guildId: string,
   roleId: string,
   durationMinutes: number,
 ): Promise<void> {
-  await container.db.guildKV.setModuleData(
-    guildId,
-    MODULE_NAME,
-    roleId,
-    PROTECTED_KEY,
-    { durationMinutes },
-  );
+  await set(guildId, roleId, PROTECTED_KEY, { durationMinutes });
 }
 
 export async function removeProtectedRole(
   guildId: string,
   roleId: string,
 ): Promise<boolean> {
-  const count = await container.db.guildKV.deleteModuleData(
-    guildId,
-    MODULE_NAME,
-    roleId,
-    PROTECTED_KEY,
-  );
-  return count > 0;
+  return (await remove(guildId, roleId, PROTECTED_KEY)) > 0;
 }
 
 export async function getProtectedRoles(
   guildId: string,
 ): Promise<Map<string, number>> {
-  const rows = await container.db.guildKV.listModuleData<{
-    durationMinutes?: number;
-  }>({ module: MODULE_NAME, key: PROTECTED_KEY, guildId });
+  const rows = await list<{ durationMinutes?: number }>(PROTECTED_KEY, guildId);
   return new Map(rows.map((r) => [r.targetId, r.value?.durationMinutes ?? 0]));
 }
-
-export async function getProtectedDuration(
-  guildId: string,
-  roleId: string,
-): Promise<number | null> {
-  const v = await container.db.guildKV.getModuleData<{
-    durationMinutes?: number;
-  }>(guildId, MODULE_NAME, roleId, PROTECTED_KEY);
-  return v?.durationMinutes ?? null;
-}
-
-// ── Active blocks (Redis) ────────────────────────────────────────────────────
 
 export async function getBlocks(
   guildId: string,
 ): Promise<Map<string, ActiveBlock>> {
-  const raw = await container.valkey.hgetall(RmKeys.blocks(guildId));
+  const rows = await list<unknown>(BLOCK_KEY, guildId);
   const out = new Map<string, ActiveBlock>();
-  for (const [roleId, value] of Object.entries(raw)) {
-    const parsed = tryParseJSON(value) as ActiveBlock | null;
-    if (parsed) out.set(roleId, parsed);
+  const now = Date.now();
+  for (const row of rows) {
+    const parsed = parseBlock(row.value);
+    if (!parsed) continue;
+    if (parsed.expiresAt <= now) {
+      await remove(guildId, row.targetId, BLOCK_KEY);
+      continue;
+    }
+    out.set(row.targetId, parsed);
   }
   return out;
 }
@@ -153,42 +127,25 @@ export async function getBlock(
   guildId: string,
   roleId: string,
 ): Promise<ActiveBlock | null> {
-  const raw = await container.valkey.hget(RmKeys.blocks(guildId), roleId);
-  return raw ? ((tryParseJSON(raw) as ActiveBlock | null) ?? null) : null;
+  const block = parseBlock(await get(guildId, roleId, BLOCK_KEY));
+  if (!block) return null;
+  if (block.expiresAt <= Date.now()) {
+    await remove(guildId, roleId, BLOCK_KEY);
+    return null;
+  }
+  return block;
 }
 
 export async function setBlock(
   guildId: string,
   block: ActiveBlock,
 ): Promise<void> {
-  await container.valkey.hset(
-    RmKeys.blocks(guildId),
-    block.roleId,
-    JSON.stringify(block),
-  );
+  await set(guildId, block.roleId, BLOCK_KEY, block);
 }
 
 export async function removeBlock(
   guildId: string,
   roleId: string,
 ): Promise<boolean> {
-  const removed = await container.valkey.hdel(RmKeys.blocks(guildId), roleId);
-  return removed > 0;
-}
-
-// ── Managed AutoMod rule id (Redis) ──────────────────────────────────────────
-
-export async function getRuleId(guildId: string): Promise<string | null> {
-  return container.valkey.get(RmKeys.ruleId(guildId));
-}
-
-export async function setRuleId(
-  guildId: string,
-  ruleId: string,
-): Promise<void> {
-  await container.valkey.set(RmKeys.ruleId(guildId), ruleId);
-}
-
-export async function clearRuleId(guildId: string): Promise<void> {
-  await container.valkey.del(RmKeys.ruleId(guildId));
+  return (await remove(guildId, roleId, BLOCK_KEY)) > 0;
 }

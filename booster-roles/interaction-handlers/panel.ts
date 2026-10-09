@@ -1,106 +1,53 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import {
-  InteractionHandler,
-  InteractionHandlerTypes,
-} from "@sapphire/framework";
-import type { ButtonInteraction, GuildMember } from "discord.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "lumi/ui";
+import type { InteractionContext } from "lumi/interactions";
 import { getBoosterConfig } from "../lib/config.js";
-import { getRole } from "../lib/data.js";
+import { deleteBoosterRole, getRole } from "../lib/data.js";
 import { accessDenial } from "../lib/access.js";
-import { removeOwnerRole } from "../lib/cleanup.js";
-import { colorToHex } from "../lib/engine.js";
 import {
   IDS,
+  PREFIX_BUTTONS,
   buildColorModal,
   buildDeleteConfirm,
   buildNameModal,
-  buildSharePrompt,
+  buildShareModal,
   buildUnsharePrompt,
 } from "../lib/ui.js";
 
-const BUTTON_IDS = new Set<string>([
-  IDS.create,
-  IDS.rename,
-  IDS.recolor,
-  IDS.share,
-  IDS.shares,
-  IDS.delete,
-  IDS.deleteConfirm,
-]);
+export default {
+  prefix: PREFIX_BUTTONS,
+  run: async (ctx: InteractionContext) => {
+    if (!ctx.guildId) return ctx.replyError("Guild Only", "This only works inside a server.");
+    const guildId = ctx.guildId;
+    const config = await getBoosterConfig(guildId);
 
-@ApplyOptions<InteractionHandler.Options>({
-  name: "booster-roles-panel",
-  interactionHandlerType: InteractionHandlerTypes.Button,
-})
-export class BoosterPanelHandler extends InteractionHandler {
-  public override parse(interaction: ButtonInteraction) {
-    return BUTTON_IDS.has(interaction.customId)
-      ? this.some(interaction.customId)
-      : this.none();
-  }
-
-  public async run(interaction: ButtonInteraction, id: string) {
-    if (!interaction.inCachedGuild()) return;
-    const { member } = interaction;
-    const config = await getBoosterConfig(member.guild.id);
-
-    // "create" needs eligibility; everything else operates on an existing role.
-    if (id === IDS.create) {
-      const denial = await accessDenial(member, config);
-      if (denial) return this.#reject(interaction, denial);
-      if (await getRole(member.guild.id, member.id))
-        return this.#reject(interaction, "You already have a custom role.");
-      return interaction.showModal(buildNameModal("create"));
+    if (ctx.customId === IDS.create) {
+      const denial = await accessDenial(guildId, ctx.user.id, config);
+      if (denial) return ctx.replyError("Error", denial);
+      if (await getRole(guildId, ctx.user.id)) return ctx.replyError("Error", "You already have a custom role.");
+      return ctx.showModal(buildNameModal("create", config.nameMaxLength));
     }
 
-    const record = await getRole(member.guild.id, member.id);
-    if (!record)
-      return this.#reject(interaction, "You don't have a custom role anymore.");
+    const role = await getRole(guildId, ctx.user.id);
+    if (!role) return ctx.replyError("Error", "You don't have a custom role anymore.");
 
-    switch (id) {
+    switch (ctx.customId) {
       case IDS.rename:
-        return interaction.showModal(buildNameModal("rename", record.name));
+        return ctx.showModal(buildNameModal("rename", config.nameMaxLength, role.name));
       case IDS.recolor:
-        return interaction.showModal(buildColorModal(colorToHex(record.color)));
+        return ctx.showModal(buildColorModal(role.color ?? undefined));
       case IDS.share:
-        return interaction.reply(
-          ephemeralCard(
-            buildSharePrompt(config.maxShares, record.sharedWith.length),
-          ),
-        );
+        if (role.sharedWith.length >= config.maxShares) {
+          return ctx.replyError("Can't Share", `You can share with at most ${config.maxShares} member(s).`);
+        }
+        return ctx.showModal(buildShareModal());
       case IDS.shares:
-        return interaction.reply(
-          ephemeralCard(
-            buildUnsharePrompt(this.#shareOptions(member, record.sharedWith)),
-          ),
-        );
+        return ctx.reply(buildUnsharePrompt(role.sharedWith));
       case IDS.delete:
-        return interaction.reply(ephemeralCard(buildDeleteConfirm(record)));
+        return ctx.reply(buildDeleteConfirm(role));
       case IDS.deleteConfirm:
-        await removeOwnerRole(
-          member.guild,
-          record,
-          `Deleted by owner ${member.user.tag}`,
-          config,
-          "deleted by the owner",
-        );
-        return interaction.update(
-          makeSuccessCard("Deleted", "Your custom role has been removed."),
-        );
+        await deleteBoosterRole(guildId, role, config, "deleted by the owner");
+        return ctx.replySuccess("Deleted", "Your custom role has been removed.");
       default:
         return undefined;
     }
-  }
-
-  #shareOptions(member: GuildMember, ids: string[]) {
-    return ids.map((id) => ({
-      value: id,
-      label: member.guild.members.cache.get(id)?.user.tag ?? id,
-    }));
-  }
-
-  #reject(interaction: ButtonInteraction, message: string) {
-    return interaction.reply(ephemeralCard(makeErrorCard("Error", message)));
-  }
-}
+  },
+};

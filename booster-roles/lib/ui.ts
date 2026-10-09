@@ -1,196 +1,166 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ModalBuilder,
-  StringSelectMenuBuilder,
-  StringSelectMenuOptionBuilder,
-  TextInputBuilder,
-  UserSelectMenuBuilder,
-} from "@discordjs/builders";
-import { ButtonStyle, TextInputStyle } from "discord.js";
-import { roleMention, userMention } from "@discordjs/formatters";
-import { makeInfoCard, makeCard, resolveCardColor, defaultCardColors, type CardReply } from "lumi/ui";
-import { colorToHex } from "./engine.js";
-import type { RoleRecord } from "../keys.js";
+  BrandColors,
+  actionRow,
+  makeCard,
+  makeInfoCard,
+  modal,
+  resolveCardColor,
+  selectRow,
+  type CardReply,
+} from "lumi/ui";
+import { parseHexColor } from "./engine.js";
+import type { BoosterRole } from "./data.js";
 
-// ── Custom-id constants ──────────────────────────────────────────────────────
 export const IDS = {
-  create: "br:create",
-  rename: "br:rename",
-  recolor: "br:recolor",
-  share: "br:share",
-  shares: "br:shares",
-  delete: "br:delete",
-  deleteConfirm: "br:delete:confirm",
-  nameModal: (mode: "create" | "rename") => `br:namemodal:${mode}`,
-  colorModal: "br:colormodal",
-  shareSelect: "br:sharesel",
-  unshareSelect: "br:unsharesel",
+  create: "booster-roles:role:create",
+  rename: "booster-roles:role:rename",
+  recolor: "booster-roles:role:recolor",
+  share: "booster-roles:role:share",
+  shares: "booster-roles:role:shares",
+  delete: "booster-roles:role:delete",
+  deleteConfirm: "booster-roles:role:delete:confirm",
+  nameModalCreate: "booster-roles:modal:name:create",
+  nameModalRename: "booster-roles:modal:name:rename",
+  colorModal: "booster-roles:modal:color",
+  shareModal: "booster-roles:modal:share",
+  unshareSelect: "booster-roles:select:unshare",
 } as const;
 
-// ── Member panel ─────────────────────────────────────────────────────────────
+export const PREFIX_BUTTONS = "booster-roles:role:";
+export const PREFIX_MODALS = "booster-roles:modal:";
+export const PREFIX_SELECTS = "booster-roles:select:";
 
-export function buildPanel(record: RoleRecord | null): CardReply {
+export function buildPanel(record: BoosterRole | null): CardReply {
   if (!record) {
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(IDS.create)
-        .setLabel("Create My Role")
-        .setEmoji({ name: "✨" })
-        .setStyle(ButtonStyle.Success),
-    );
     return makeInfoCard(
       "🎨 Your Booster Role",
       "You don't have a custom role yet. As a booster, you can create one with your own name and colour — and share it with a few friends.",
-      { footer: "Thanks for boosting!", actionRows: [row] },
+      {
+        footer: "Thanks for boosting!",
+        actionRows: [
+          actionRow([
+            { customId: IDS.create, label: "Create My Role", style: 3, emoji: "✨" },
+          ]),
+        ],
+      },
     );
   }
 
+  const hex = record.color ?? "*default*";
   const body = [
-    `**Role:** ${roleMention(record.roleId)}`,
-    `**Colour:** \`${colorToHex(record.color)}\``,
+    `**Role:** <@&${record.roleId}>`,
+    `**Colour:** \`${hex}\``,
+    ...(record.icon ? [`**Icon:** ${record.icon}`] : []),
     `**Shared with:** ${
       record.sharedWith.length
-        ? record.sharedWith.map(userMention).join(", ")
+        ? record.sharedWith.map((id) => `<@${id}>`).join(", ")
         : "*no one*"
     }`,
   ].join("\n");
 
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(IDS.rename)
-      .setLabel("Rename")
-      .setEmoji({ name: "✏️" })
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(IDS.recolor)
-      .setLabel("Recolour")
-      .setEmoji({ name: "🎨" })
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(IDS.share)
-      .setLabel("Share")
-      .setEmoji({ name: "🤝" })
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(IDS.shares)
-      .setLabel("Manage Shares")
-      .setEmoji({ name: "👥" })
-      .setStyle(ButtonStyle.Secondary)
-      .setDisabled(record.sharedWith.length === 0),
-    new ButtonBuilder()
-      .setCustomId(IDS.delete)
-      .setLabel("Delete")
-      .setEmoji({ name: "🗑️" })
-      .setStyle(ButtonStyle.Danger),
-  );
-
+  const accent = record.color ? parseHexColor(record.color) ?? undefined : undefined;
   return makeCard(
-    record.color || resolveCardColor("primary") || defaultCardColors.primary,
+    accent ?? resolveCardColor("primary") ?? BrandColors.primary,
     "🎨 Your Booster Role",
     body,
     {
-      actionRows: [row],
+      actionRows: [
+        actionRow([
+          { customId: IDS.rename, label: "Rename", style: 2, emoji: "✏️" },
+          { customId: IDS.recolor, label: "Recolour", style: 2, emoji: "🎨" },
+          { customId: IDS.share, label: "Share", style: 2, emoji: "🤝" },
+          {
+            customId: IDS.shares,
+            label: "Manage Shares",
+            style: 2,
+            emoji: "👥",
+            disabled: record.sharedWith.length === 0,
+          },
+          { customId: IDS.delete, label: "Delete", style: 4, emoji: "🗑️" },
+        ]),
+      ],
     },
   );
 }
 
-// ── Modals ───────────────────────────────────────────────────────────────────
-
-function line(
-  id: string,
-  label: string,
-  required: boolean,
-  value?: string,
-  placeholder?: string,
-  maxLength = 100,
-): ActionRowBuilder<TextInputBuilder> {
-  const input = new TextInputBuilder()
-    .setCustomId(id)
-    .setLabel(label)
-    .setStyle(TextInputStyle.Short)
-    .setRequired(required)
-    .setMaxLength(maxLength);
-  if (value) input.setValue(value);
-  if (placeholder) input.setPlaceholder(placeholder);
-  return new ActionRowBuilder<TextInputBuilder>().addComponents(input);
+export function buildNameModal(mode: "create" | "rename", maxLength: number, current?: string) {
+  return modal({
+    title: mode === "create" ? "Create Your Role" : "Rename Your Role",
+    customId: mode === "create" ? IDS.nameModalCreate : IDS.nameModalRename,
+    fields: [
+      {
+        customId: "name",
+        label: "Role name",
+        placeholder: "e.g. Stardust",
+        maxLength,
+        ...(current ? { value: current } : {}),
+      },
+    ],
+  });
 }
 
-export function buildNameModal(
-  mode: "create" | "rename",
-  current?: string,
-): ModalBuilder {
-  return new ModalBuilder()
-    .setCustomId(IDS.nameModal(mode))
-    .setTitle(mode === "create" ? "Create Your Role" : "Rename Your Role")
-    .addComponents(line("name", "Role name", true, current, "e.g. Stardust"));
+export function buildColorModal(current?: string) {
+  return modal({
+    title: "Recolour Your Role",
+    customId: IDS.colorModal,
+    fields: [
+      {
+        customId: "color",
+        label: "Hex colour",
+        placeholder: "#5865F2",
+        maxLength: 9,
+        ...(current ? { value: current } : {}),
+      },
+    ],
+  });
 }
 
-export function buildColorModal(current?: string): ModalBuilder {
-  return new ModalBuilder()
-    .setCustomId(IDS.colorModal)
-    .setTitle("Recolour Your Role")
-    .addComponents(line("color", "Hex colour", true, current, "#5865F2", 9));
+export function buildShareModal() {
+  return modal({
+    title: "Share Your Role",
+    customId: IDS.shareModal,
+    fields: [
+      {
+        customId: "user",
+        label: "Member",
+        placeholder: "@mention or user ID",
+      },
+    ],
+  });
 }
 
-// ── Share / unshare prompts ──────────────────────────────────────────────────
-
-export function buildSharePrompt(maxShares: number, used: number): CardReply {
-  const row = new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(
-    new UserSelectMenuBuilder()
-      .setCustomId(IDS.shareSelect)
-      .setPlaceholder("Pick a member to share with")
-      .setMinValues(1)
-      .setMaxValues(1),
-  );
-  return makeInfoCard(
-    "🤝 Share Your Role",
-    `Choose someone to grant your role to. (${used}/${maxShares} shares used.)`,
-    { actionRows: [row] },
-  );
-}
-
-export function buildUnsharePrompt(
-  options: { value: string; label: string }[],
-): CardReply {
-  const menu = new StringSelectMenuBuilder()
-    .setCustomId(IDS.unshareSelect)
-    .setPlaceholder("Pick a member to remove")
-    .setMinValues(1)
-    .setMaxValues(1)
-    .addOptions(
-      options
-        .slice(0, 25)
-        .map((o) =>
-          new StringSelectMenuOptionBuilder()
-            .setValue(o.value)
-            .setLabel(o.label),
-        ),
-    );
-  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
-    menu,
-  );
+export function buildUnsharePrompt(ids: string[]): CardReply {
   return makeInfoCard(
     "👥 Manage Shares",
     "Remove the role from a member you've shared it with.",
-    { actionRows: [row] },
+    {
+      actionRows: [
+        selectRow({
+          customId: IDS.unshareSelect,
+          placeholder: "Pick a member to remove",
+          options: ids.map((id) => ({ label: id, value: id })),
+        }),
+      ],
+    },
   );
 }
 
-// ── Delete confirmation ──────────────────────────────────────────────────────
-
-export function buildDeleteConfirm(record: RoleRecord): CardReply {
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(IDS.deleteConfirm)
-      .setLabel("Delete Permanently")
-      .setEmoji({ name: "🗑️" })
-      .setStyle(ButtonStyle.Danger),
-  );
+export function buildDeleteConfirm(record: BoosterRole): CardReply {
   return makeCard(
-    resolveCardColor("warning") || defaultCardColors.warning,
+    resolveCardColor("warning") || BrandColors.primary,
     "⚠️ Delete Your Role",
-    `This permanently deletes ${roleMention(record.roleId)} and removes it from everyone. This can't be undone.`,
-    { actionRows: [row] },
+    `This permanently deletes <@&${record.roleId}> and removes it from everyone. This can't be undone.`,
+    {
+      actionRows: [
+        actionRow([
+          {
+            customId: IDS.deleteConfirm,
+            label: "Delete Permanently",
+            style: 4,
+            emoji: "🗑️",
+          },
+        ]),
+      ],
+    },
   );
 }

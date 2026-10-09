@@ -1,24 +1,13 @@
-import { DefineModule, Module } from "lumi";
+import { defineModule } from "lumi";
 
-@DefineModule({
+export const meta = defineModule({
   name: "utility",
-  displayName: "Utility Addons",
+  displayName: "Utility",
   emoji: "⚙️",
   version: "1.0.0",
-  description: "General utility addons including translations and emoji stealing.",
-})
-export class UtilityAddonModule extends Module {
-  public override async deleteUserData(
-    _userId: string,
-    _requester?: string,
-  ): Promise<void> {
-    // No-op: utility addons like translate and emoji-stealer do not store user data
-  }
-
-  public override async exportUserData(
-    _userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    // Same as deleteUserData: no per-user data stored.
-    return null;
-  }
-}
+  description:
+    "General utility addons including auto-translate and emoji-stealer.",
+  short: "General utility tools.",
+  endUserDataStatement:
+    "Processes transient translation and emoji extraction requests in real-time. Does not collect, persist, or retain any personal user data or message content.",
+});

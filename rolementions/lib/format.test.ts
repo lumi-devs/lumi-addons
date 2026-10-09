@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
-import type { Guild } from "discord.js";
 import {
   parseMinutes,
   formatMinutes,
   formatRemaining,
   roleLabel,
+  roleMention,
 } from "./format.js";
 
 describe("parseMinutes", () => {
@@ -61,23 +61,21 @@ describe("formatRemaining", () => {
 });
 
 describe("roleLabel", () => {
-  const guildWith = (roles: Record<string, { name: string }>): Guild =>
-    ({
-      roles: { cache: new Map(Object.entries(roles)) },
-    }) as unknown as Guild;
-
   it("labels a known role with its live name", () => {
-    const guild = guildWith({ "1": { name: "Mods" } });
-    expect(roleLabel(guild, "1")).toBe("**Mods** (`1`)");
+    expect(roleLabel("1", "Mods")).toBe("**Mods** (`1`)");
   });
 
   it("falls back to the cached name when the role is gone", () => {
-    const guild = guildWith({});
-    expect(roleLabel(guild, "1", "Old Mods")).toBe("**Old Mods** (`1`)");
+    expect(roleLabel("1", "Old Mods")).toBe("**Old Mods** (`1`)");
   });
 
   it("falls back to 'Unknown Role' with no cached name", () => {
-    const guild = guildWith({});
-    expect(roleLabel(guild, "1")).toBe("**Unknown Role** (`1`)");
+    expect(roleLabel("1")).toBe("**Unknown Role** (`1`)");
+  });
+});
+
+describe("roleMention", () => {
+  it("renders raw mention syntax for ping-suppressed logs", () => {
+    expect(roleMention("123")).toBe("<@&123>");
   });
 });

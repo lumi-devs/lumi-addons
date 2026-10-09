@@ -1,5 +1,4 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import { BaseCommand, type CommandContext } from "lumi/commands";
+import { defineCommand, type CommandContext } from "lumi/commands";
 import { makeSuccessCard } from "lumi/ui";
 import { formatDuration } from "lumi/utils";
 import {
@@ -7,16 +6,19 @@ import {
   getCurrency,
   getGamesConfig,
 } from "../lib/config.js";
-import { productionLedger } from "../lib/ledger.js";
+import { productionLedger } from "../lib/store.js";
 import { GRIND_DEFS, playGrind, type GrindKind } from "../lib/grinds.js";
 import { claimCooldown } from "../lib/store.js";
-import { GamesKeys } from "../keys.js";
 
 export async function runGrindCommand(
   ctx: CommandContext,
   kind: GrindKind,
 ): Promise<void> {
-  const guildId = ctx.guildId!;
+  const guildId = ctx.guildId;
+  if (!guildId) {
+    await ctx.replyError("Guild Only", "This command only works inside a server.");
+    return;
+  }
   const config = await getGamesConfig(guildId);
   const currency = await getCurrency(guildId);
   const def = GRIND_DEFS[kind];
@@ -29,10 +31,7 @@ export async function runGrindCommand(
           ? config.fishCooldownMs
           : config.mineCooldownMs;
   if (
-    !(await claimCooldown(
-      GamesKeys.cooldown(`grind-${kind}`, guildId, ctx.user.id),
-      cooldownMs,
-    ))
+    !(await claimCooldown(guildId, ctx.user.id, `grind-${kind}`, cooldownMs))
   ) {
     await ctx.replyError(
       def.label,
@@ -62,22 +61,14 @@ export async function runGrindCommand(
   );
 }
 
-@ApplyOptions<BaseCommand.Options>({
+export default defineCommand({
   name: "work",
   description: "Work a shift for a steady paycheck.",
-  preconditions: ["GuildOnly"],
-  prefixEnabled: true,
-  cooldownLimit: 2,
-  cooldownDelay: 5000,
-})
-export class WorkCommand extends BaseCommand {
-  public override registerApplicationCommands(registry: BaseCommand.Registry) {
-    registry.registerChatInputCommand((builder) =>
-      builder.setName(this.name).setDescription(this.description),
-    );
-  }
-
-  public override async run(ctx: CommandContext) {
+  build: () => ({
+    name: "work",
+    description: "Work a shift for a steady paycheck.",
+  }),
+  run: async (ctx: CommandContext) => {
     await runGrindCommand(ctx, "work");
-  }
-}
+  },
+});

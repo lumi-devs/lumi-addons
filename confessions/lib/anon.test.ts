@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { hashAuthor, replyLabel, sanitizeAttachmentUrl } from "./anon.js";
+import { confessionTarget, replyKey } from "../keys.js";
 
 describe("anon", () => {
   it("hashAuthor is deterministic per (salt, user) and 64 hex chars", () => {
@@ -23,5 +24,10 @@ describe("anon", () => {
     expect(sanitizeAttachmentUrl("javascript:alert(1)")).toBeNull();
     expect(sanitizeAttachmentUrl("not a url")).toBeNull();
     expect(sanitizeAttachmentUrl("")).toBeNull();
+  });
+
+  it("targets and keys are properly formatted", () => {
+    expect(confessionTarget(42)).toBe("c:42");
+    expect(replyKey(7)).toBe("r:7");
   });
 });

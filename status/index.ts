@@ -1,48 +1,30 @@
-import { Module, DefineModule } from "lumi";
+import { defineModule } from "lumi";
+import { onEvent } from "lumi/events";
 import { registerTaskFireHandler } from "lumi/scheduling";
-import { handleStatusRotateFire } from "./lib/rotate-handler.js";
-import { getEntries, saveEntries } from "./lib/data.js";
+import { handleStatusRotateFire, nudgeGuild } from "./lib/rotate-handler.js";
 
-@DefineModule({
+export const meta = defineModule({
   name: "status",
   displayName: "Status Rotator",
   emoji: "🔁",
   version: "1.0.0",
   description:
-    "Rotating bot presence managed by the bot owner via /status. Global — not per-guild.",
-})
-export class StatusModule extends Module {
-  public override onLoad() {
-    // "broadcast": each WS-owning process applies presence to its own shards.
-    registerTaskFireHandler(
-      "status-rotate",
-      "broadcast",
-      handleStatusRotateFire,
-    );
-    return super.onLoad();
-  }
+    "Rotating bot presence managed by the bot owner via /status. Entries and rotation state are scoped per server.",
+  short: "Owner-managed rotating presence.",
+  endUserDataStatement:
+    "Stores rotating bot status entries configured by bot owners, scoped per server. Records the owner user ID who created each status entry for audit purposes.",
+});
 
-  public override onUnload() {
-    this.container.logger.info("[StatusModule] Unloaded Status Rotator task handlers.");
-    return super.onUnload();
-  }
+registerTaskFireHandler("status:rotate", handleStatusRotateFire);
 
-  public override async deleteUserData(userId: string): Promise<void> {
-    // Only per-user data is the `addedBy` audit field on entries.
-    const entries = await getEntries();
-    if (!entries.some((e) => e.addedBy === userId)) return;
-    await saveEntries(
-      entries.map((e) =>
-        e.addedBy === userId ? { ...e, addedBy: "deleted" } : e,
-      ),
-    );
-  }
-
-  public override async exportUserData(
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const entries = await getEntries();
-    const addedByUser = entries.filter((e) => e.addedBy === userId);
-    return addedByUser.length > 0 ? { statusEntriesAdded: addedByUser } : null;
-  }
+async function nudgeFromEvent(data: Record<string, unknown>): Promise<void> {
+  const guildId = data["guildId"];
+  if (typeof guildId !== "string" || guildId.length === 0) return;
+  await nudgeGuild(guildId).catch(() => undefined);
 }
+
+onEvent("presenceUpdate", nudgeFromEvent);
+onEvent("voiceStateUpdate", nudgeFromEvent);
+onEvent("guildMemberUpdate", nudgeFromEvent);
+onEvent("messageCreate", nudgeFromEvent);
+onEvent("threadCreate", nudgeFromEvent);

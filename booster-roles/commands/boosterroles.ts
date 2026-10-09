@@ -1,369 +1,222 @@
-import { ApplyOptions } from "@sapphire/decorators";
-import type { ApplicationCommandRegistry } from "@sapphire/framework";
-import type { ChatInputCommandInteraction } from "discord.js";
-import {
-  roleMention,
-  userMention,
-  time,
-  TimestampStyles,
-} from "@discordjs/formatters";
-import { BaseCommand } from "lumi/commands";
-import { hasRequiredPermit } from "lumi/permissions";
-import {
-  ephemeralCard,
-  makeSuccessCard,
-  makeErrorCard,
-  makeInfoCard,
-  makeWarningCard,
-  noPingCard,
-  paginateList,
-} from "lumi/ui";
+import { defineCommand, type CommandContext } from "lumi/commands";
 import { getBoosterConfig } from "../lib/config.js";
 import {
   addBlacklist,
+  deleteBoosterRole,
   getRole,
   isBlacklisted,
   listBlacklist,
   listRoles,
   removeBlacklist,
 } from "../lib/data.js";
-import { isEligible } from "../lib/roles.js";
+import { accessDenial } from "../lib/access.js";
 import { buildPanel } from "../lib/ui.js";
-import { removeOwnerRole } from "../lib/cleanup.js";
-import { colorToHex } from "../lib/engine.js";
 
-@ApplyOptions<BaseCommand.Options>({
+const ACTION_CHOICES = [
+  { name: "stats", value: "stats" },
+  { name: "list", value: "list" },
+  { name: "info", value: "info" },
+  { name: "delete", value: "delete" },
+  { name: "blacklist", value: "blacklist" },
+];
+
+const BLACKLIST_CHOICES = [
+  { name: "add", value: "add" },
+  { name: "remove", value: "remove" },
+  { name: "list", value: "list" },
+];
+
+function relative(ms: number): string {
+  return `<t:${Math.floor(ms / 1000)}:R>`;
+}
+
+export default defineCommand({
   name: "boosterroles",
   description: "Create, manage, or administer custom booster roles.",
-  preconditions: ["GuildOnly"],
-})
-export class BoosterRolesCommand extends BaseCommand {
-  public override registerApplicationCommands(
-    registry: ApplicationCommandRegistry,
-  ) {
-    registry.registerChatInputCommand((builder) =>
-      builder
-        .setName(this.name)
-        .setDescription(this.description)
-        .addStringOption((o) =>
-          o
-            .setName("action")
-            .setDescription(
-              "Admin action (optional — leave empty for personal role controls).",
-            )
-            .setRequired(false)
-            .addChoices(
-              { name: "stats", value: "stats" },
-              { name: "list", value: "list" },
-              { name: "info", value: "info" },
-              { name: "delete", value: "delete" },
-              { name: "blacklist", value: "blacklist" },
-            ),
-        )
-        .addUserOption((o) =>
-          o
-            .setName("user")
-            .setDescription("Target user for admin actions.")
-            .setRequired(false),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("reason")
-            .setDescription("Reason for delete or blacklist add.")
-            .setRequired(false),
-        )
-        .addStringOption((o) =>
-          o
-            .setName("blacklist_action")
-            .setDescription("Blacklist operation (add, remove, list).")
-            .setRequired(false)
-            .addChoices(
-              { name: "add", value: "add" },
-              { name: "remove", value: "remove" },
-              { name: "list", value: "list" },
-            ),
-        ),
-    );
-  }
+  build: () => ({
+    name: "boosterroles",
+    description: "Create, manage, or administer custom booster roles.",
+    options: [
+      {
+        type: 3,
+        name: "action",
+        description: "Admin action (optional — leave empty for personal role controls).",
+        required: false,
+        choices: ACTION_CHOICES,
+      },
+      {
+        type: 6,
+        name: "user",
+        description: "Target user for admin actions.",
+        required: false,
+      },
+      {
+        type: 3,
+        name: "reason",
+        description: "Reason for delete or blacklist add.",
+        required: false,
+      },
+      {
+        type: 3,
+        name: "blacklist_action",
+        description: "Blacklist operation (add, remove, list).",
+        required: false,
+        choices: BLACKLIST_CHOICES,
+      },
+    ],
+  }),
+  run: async (ctx: CommandContext) => {
+    if (!ctx.guildId) return ctx.replyError("Guild Only", "This command only works inside a server.");
+    const guildId = ctx.guildId;
 
-  public override async chatInputRun(interaction: ChatInputCommandInteraction) {
-    const action = interaction.options.getString("action");
+    const action = await ctx.getString("action");
+    if (!action) return runPanel(ctx, guildId);
 
-    // If no action is specified, it opens the user panel (personal role controls)
-    if (!action) {
-      return this.runPanel(interaction);
+    if (!(await isMod(ctx))) {
+      return ctx.replyError("Permission Denied", "This action is restricted to moderators.");
     }
-
-    // Admin commands require MOD permission level
-    if (!(await this.assertMod(interaction))) return;
 
     switch (action) {
       case "stats":
-        return this.runStats(interaction);
+        return runStats(ctx, guildId);
       case "list":
-        return this.runList(interaction);
+        return runList(ctx, guildId);
       case "info":
-        return this.runInfo(interaction);
+        return runInfo(ctx, guildId);
       case "delete":
-        return this.runDelete(interaction);
+        return runDelete(ctx, guildId);
       case "blacklist":
-        return this.runBlacklist(interaction);
+        return runBlacklist(ctx, guildId);
       default:
-        return interaction.reply({
-          ...ephemeralCard(
-            noPingCard(makeErrorCard("Error", "Invalid action specified.")),
-          ),
-        });
+        return ctx.replyError("Error", "Invalid action specified.");
+    }
+  },
+});
+
+async function isMod(ctx: CommandContext): Promise<boolean> {
+  for (const node of ["mod.*", "admin.*", "boosterroles.admin"]) {
+    try {
+      await ctx.checkPermit(node);
+      return true;
+    } catch {
+      continue;
+    }
+  }
+  return false;
+}
+
+async function runPanel(ctx: CommandContext, guildId: string): Promise<void> {
+  const config = await getBoosterConfig(guildId);
+  const role = await getRole(guildId, ctx.user.id);
+
+  const denial = await accessDenial(guildId, ctx.user.id, config);
+  if (denial) {
+    const blocked = denial === "You're blacklisted from using custom roles here.";
+    if (!role || blocked) {
+      if (blocked) return ctx.replyWarning("Blocked", denial);
+      return ctx.replyWarning("Boosters Only", denial);
     }
   }
 
-  private async runPanel(interaction: ChatInputCommandInteraction) {
-    const member = await interaction
-      .guild!.members.fetch(interaction.user.id)
-      .catch(() => null);
-    if (!member)
-      return interaction.reply(
-        ephemeralCard(
-          noPingCard(
-            makeErrorCard("Error", "Couldn't resolve your membership."),
-          ),
-        ),
-      );
+  return ctx.reply(buildPanel(role));
+}
 
-    const config = await getBoosterConfig(member.guild.id);
-    const record = await getRole(member.guild.id, member.id);
+async function runStats(ctx: CommandContext, guildId: string): Promise<void> {
+  const [roles, blacklist] = await Promise.all([listRoles(guildId), listBlacklist(guildId)]);
+  const shares = roles.reduce((n, r) => n + r.sharedWith.length, 0);
+  return ctx.replyInfo(
+    "📊 Booster Roles",
+    [`**Custom roles:** ${roles.length}`, `**Active shares:** ${shares}`, `**Blacklisted:** ${blacklist.length}`].join(
+      "\n",
+    ),
+  );
+}
 
-    // Blacklisted members are locked out entirely.
-    if (await isBlacklisted(member.guild.id, member.id))
-      return interaction.reply(
-        ephemeralCard(
-          makeWarningCard(
-            "Blocked",
-            "You're blacklisted from using custom roles here.",
-          ),
-        ),
-      );
+const PAGE_SIZE = 10;
 
-    // Non-boosters with no existing role can't do anything useful.
-    if (!record && !isEligible(member, config))
-      return interaction.reply(
-        ephemeralCard(
-          makeWarningCard(
-            "Boosters Only",
-            "You need to be a server booster to create a custom role. Thanks for considering it!",
-          ),
-        ),
-      );
+async function runList(ctx: CommandContext, guildId: string): Promise<void> {
+  const roles = await listRoles(guildId);
+  if (roles.length === 0) return ctx.replyInfo("Custom Roles", "No custom roles yet.");
+  const lines = roles
+    .slice(0, PAGE_SIZE)
+    .map((r) => `<@&${r.roleId}> — <@${r.ownerId}>${r.sharedWith.length ? ` (+${r.sharedWith.length} shared)` : ""}`);
+  if (roles.length > PAGE_SIZE) lines.push(`*…and ${roles.length - PAGE_SIZE} more.*`);
+  return ctx.replyInfo("Custom Roles", lines.join("\n"));
+}
 
-    return interaction.reply(ephemeralCard(buildPanel(record)));
+async function runInfo(ctx: CommandContext, guildId: string): Promise<void> {
+  const target = await ctx.getUser("user");
+  if (!target) return ctx.replyError("Error", "Please specify a target user.");
+  const role = await getRole(guildId, target.id);
+  if (!role) return ctx.replyError("Error", `<@${target.id}> has no custom role.`);
+
+  return ctx.replyInfo(
+    "🎨 Custom Role",
+    [
+      `**Owner:** <@${role.ownerId}>`,
+      `**Role:** <@&${role.roleId}>`,
+      `**Name:** ${role.name}`,
+      `**Colour:** \`${role.color ?? "default"}\``,
+      ...(role.icon ? [`**Icon:** ${role.icon}`] : []),
+      `**Shared with:** ${role.sharedWith.length ? role.sharedWith.map((id) => `<@${id}>`).join(", ") : "*no one*"}`,
+    ].join("\n"),
+  );
+}
+
+async function runDelete(ctx: CommandContext, guildId: string): Promise<void> {
+  const target = await ctx.getUser("user");
+  if (!target) return ctx.replyError("Error", "Please specify a target user.");
+  const reason = (await ctx.getString("reason")) ?? "No reason given";
+  const role = await getRole(guildId, target.id);
+  if (!role) return ctx.replyError("Error", `<@${target.id}> has no custom role.`);
+
+  const config = await getBoosterConfig(guildId);
+  await deleteBoosterRole(guildId, role, config, `deleted by a moderator (${reason})`);
+  return ctx.replySuccess("Role Deleted", `Removed <@${target.id}>'s custom role.`);
+}
+
+async function runBlacklist(ctx: CommandContext, guildId: string): Promise<void> {
+  const blacklistAction = await ctx.getString("blacklist_action");
+  if (!blacklistAction) {
+    return ctx.replyError("Error", "Please specify a blacklist_action (add, remove, list).");
   }
 
-  private async runStats(interaction: ChatInputCommandInteraction) {
-    const guildId = interaction.guild!.id;
-    const [roles, blacklist] = await Promise.all([
-      listRoles(guildId),
-      listBlacklist(guildId),
-    ]);
-    const shares = roles.reduce((n, r) => n + r.sharedWith.length, 0);
-    return interaction.reply(
-      ephemeralCard(
-        makeInfoCard("📊 Booster Roles", [
-          `**Custom roles:** ${roles.length}`,
-          `**Active shares:** ${shares}`,
-          `**Blacklisted:** ${blacklist.length}`,
-        ]),
-      ),
-    );
-  }
-
-  private async runList(interaction: ChatInputCommandInteraction) {
-    const roles = await listRoles(interaction.guild!.id);
-    const lines = roles.map(
-      (r) =>
-        `${roleMention(r.roleId)} — ${userMention(r.ownerId)}${
-          r.sharedWith.length ? ` (+${r.sharedWith.length} shared)` : ""
-        }`,
-    );
-    await paginateList({
-      interactionOrMessage: interaction,
-      userId: interaction.user.id,
-      title: "Custom Roles",
-      items: lines,
-      perPage: 5,
-      ephemeral: true,
-    });
-  }
-
-  private async runInfo(interaction: ChatInputCommandInteraction) {
-    const guildId = interaction.guild!.id;
-    const user = interaction.options.getUser("user");
-    if (!user) {
-      return this.err(interaction, "Please specify a target user.");
-    }
-    const record = await getRole(guildId, user.id);
-    if (!record)
-      return this.err(
-        interaction,
-        `${userMention(user.id)} has no custom role.`,
-      );
-
-    return interaction.reply(
-      ephemeralCard(
-        noPingCard(
-          makeInfoCard("🎨 Custom Role", [
-            `**Owner:** ${userMention(record.ownerId)}`,
-            `**Role:** ${roleMention(record.roleId)}`,
-            `**Colour:** \`${colorToHex(record.color)}\``,
-            `**Created:** ${time(new Date(record.createdAt), TimestampStyles.RelativeTime)}`,
-            `**Shared with:** ${
-              record.sharedWith.length
-                ? record.sharedWith.map(userMention).join(", ")
-                : "*no one*"
-            }`,
-          ]),
-        ),
-      ),
-    );
-  }
-
-  private async runDelete(interaction: ChatInputCommandInteraction) {
-    const guild = interaction.guild!;
-    const user = interaction.options.getUser("user");
-    if (!user) {
-      return this.err(interaction, "Please specify a target user.");
-    }
-    const reason = interaction.options.getString("reason") ?? "No reason given";
-    const record = await getRole(guild.id, user.id);
-    if (!record)
-      return this.err(
-        interaction,
-        `${userMention(user.id)} has no custom role.`,
-      );
-
-    const config = await getBoosterConfig(guild.id);
-    await removeOwnerRole(
-      guild,
-      record,
-      `Admin delete by ${interaction.user.tag}: ${reason}`,
-      config,
-      `deleted by a moderator (${reason})`,
-    );
-    return interaction.reply(
-      ephemeralCard(
-        makeSuccessCard(
-          "Role Deleted",
-          `Removed ${userMention(user.id)}'s custom role.`,
-        ),
-      ),
-    );
-  }
-
-  private async runBlacklist(interaction: ChatInputCommandInteraction) {
-    const guildId = interaction.guild!.id;
-    const blacklistAction = interaction.options.getString("blacklist_action");
-    if (!blacklistAction) {
-      return this.err(
-        interaction,
-        "Please specify a blacklist_action (add, remove, list).",
-      );
-    }
-
-    if (blacklistAction === "list") {
-      const rows = await listBlacklist(guildId);
-      const lines = rows.map(
+  if (blacklistAction === "list") {
+    const rows = await listBlacklist(guildId);
+    if (rows.length === 0) return ctx.replyInfo("Blacklist", "Nobody is blacklisted.");
+    const lines = rows
+      .slice(0, PAGE_SIZE)
+      .map(
         (r) =>
-          `${userMention(r.userId)} — ${time(new Date(r.record.at), TimestampStyles.RelativeTime)} by ${userMention(r.record.by)}${
-            r.record.reason ? ` · ${r.record.reason}` : ""
-          }`,
+          `<@${r.userId}> — ${relative(r.record.at)} by <@${r.record.by}>${r.record.reason ? ` · ${r.record.reason}` : ""}`,
       );
-      await paginateList({
-        interactionOrMessage: interaction,
-        userId: interaction.user.id,
-        title: "Blacklist",
-        items: lines,
-        perPage: 5,
-        ephemeral: true,
-      });
-      return;
-    }
-
-    const user = interaction.options.getUser("user");
-    if (!user) return this.err(interaction, "Specify a user for add / remove.");
-
-    if (blacklistAction === "add") {
-      if (await isBlacklisted(guildId, user.id))
-        return this.err(
-          interaction,
-          `${userMention(user.id)} is already blacklisted.`,
-        );
-      const reason = interaction.options.getString("reason") ?? undefined;
-      await addBlacklist(guildId, user.id, interaction.user.id, reason);
-
-      // If they currently own a role, retire it too.
-      const record = await getRole(guildId, user.id);
-      if (record) {
-        const config = await getBoosterConfig(guildId);
-        await removeOwnerRole(
-          interaction.guild!,
-          record,
-          `Blacklisted by ${interaction.user.tag}`,
-          config,
-          "the owner was blacklisted",
-        );
-      }
-      return interaction.reply(
-        ephemeralCard(
-          makeSuccessCard(
-            "Blacklisted",
-            `${userMention(user.id)} can no longer use custom roles.`,
-          ),
-        ),
-      );
-    }
-
-    // remove
-    const removed = await removeBlacklist(guildId, user.id);
-    if (removed === 0)
-      return this.err(
-        interaction,
-        `${userMention(user.id)} is not blacklisted.`,
-      );
-    return interaction.reply(
-      ephemeralCard(
-        makeSuccessCard(
-          "Removed",
-          `${userMention(user.id)} can use custom roles again.`,
-        ),
-      ),
-    );
+    if (rows.length > PAGE_SIZE) lines.push(`*…and ${rows.length - PAGE_SIZE} more.*`);
+    return ctx.replyInfo("Blacklist", lines.join("\n"));
   }
 
-  private async assertMod(
-    interaction: ChatInputCommandInteraction,
-  ): Promise<boolean> {
-    const isAllowed =
-      (await hasRequiredPermit(interaction, "mod.*")) ||
-      (await hasRequiredPermit(interaction, "admin.*")) ||
-      (await hasRequiredPermit(interaction, "boosterroles.admin"));
-    if (!isAllowed) {
-      await interaction.reply(
-        ephemeralCard(
-          noPingCard(
-            makeErrorCard(
-              "Permission Denied",
-              "This action is restricted to moderators.",
-            ),
-          ),
-        ),
-      );
-      return false;
+  const target = await ctx.getUser("user");
+  if (!target) return ctx.replyError("Error", "Specify a user for add / remove.");
+
+  if (blacklistAction === "add") {
+    if (await isBlacklisted(guildId, target.id)) {
+      return ctx.replyError("Error", `<@${target.id}> is already blacklisted.`);
     }
-    return true;
+    const reason = (await ctx.getString("reason")) ?? undefined;
+    await addBlacklist(guildId, target.id, ctx.user.id, reason);
+
+    const config = await getBoosterConfig(guildId);
+    const role = await getRole(guildId, target.id);
+    if (role) {
+      await deleteBoosterRole(guildId, role, config, "the owner was blacklisted");
+    }
+    return ctx.replySuccess("Blacklisted", `<@${target.id}> can no longer use custom roles.`);
   }
 
-  private err(interaction: ChatInputCommandInteraction, message: string) {
-    return interaction.reply(
-      ephemeralCard(noPingCard(makeErrorCard("Error", message))),
-    );
+  if (blacklistAction === "remove") {
+    const removed = await removeBlacklist(guildId, target.id);
+    if (removed === 0) return ctx.replyError("Error", `<@${target.id}> is not blacklisted.`);
+    return ctx.replySuccess("Removed", `<@${target.id}> can use custom roles again.`);
   }
+
+  return ctx.replyError("Error", "Invalid blacklist_action specified.");
 }

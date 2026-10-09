@@ -1,16 +1,17 @@
 {
   "name": "rolementions",
-  "displayName": "Rolementions",
-  "emoji": "⚙️",
-  "description": "Tracks role mentions with daily stats and auto-protects sensitive roles from mention spam via Discord AutoMod rules.",
+  "displayName": "Role Mentions",
+  "emoji": "🛡️",
+  "description": "Tracks role mentions with daily stats and auto-protects sensitive roles from mention spam via timed mention blocks.",
   "short": "Role-mention tracking + auto-protection.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
-  "subStores": [
-    "commands",
-    "listeners",
-    "scheduled-tasks"
-  ],
+  "capabilities": {
+    "discord": ["reply", "sendMessage"],
+    "scheduling": true,
+    "kv": true
+  },
+  "subStores": ["commands"],
   "configFields": []
 }

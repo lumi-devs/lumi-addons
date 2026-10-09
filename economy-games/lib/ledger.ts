@@ -1,4 +1,3 @@
-import { container } from "@sapphire/framework";
 import type { CurrencyConfig } from "./config.js";
 
 export interface WalletView {
@@ -49,28 +48,6 @@ function isInsufficient(err: unknown): boolean {
     err instanceof Error &&
     (err as Error & { code?: string }).code === "InsufficientFunds"
   );
-}
-
-function toView(account: { wallet: number; bank: number }): WalletView {
-  return {
-    wallet: account.wallet,
-    bank: account.bank,
-    total: account.wallet + account.bank,
-  };
-}
-
-export function productionLedger(): GamesLedger {
-  const repo = container.db.economy;
-  return {
-    findAccount: async (guildId, userId) => {
-      const account = await repo.findAccount(guildId, userId);
-      return account ? toView(account) : null;
-    },
-    ensureAccount: async (guildId, userId, startWallet, startBank) =>
-      toView(await repo.ensureAccount(guildId, userId, startWallet, startBank)),
-    applyMutation: async (input) =>
-      toView((await repo.applyMutation(input)).account),
-  };
 }
 
 export async function debitBet(

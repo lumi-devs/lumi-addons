@@ -1,16 +1,17 @@
 {
   "name": "thread-cleaner",
   "displayName": "Thread Cleaner",
-  "emoji": "⚙️",
-  "description": "Automatically archives or locks threads after a configurable period of inactivity. Watches new threads in selected channels and schedules a one-shot cleanup job per thread.",
+  "emoji": "🧹",
+  "description": "Automatically archives or locks threads after a configurable period of inactivity.",
   "short": "Auto-archive/lock inactive threads.",
   "version": "1.0.0",
   "disableable": true,
   "targetUtility": "worker",
-  "subStores": [
-    "commands",
-    "listeners",
-    "scheduled-tasks"
-  ],
+  "capabilities": {
+    "discord": ["manageThreads"],
+    "scheduling": true,
+    "kv": true
+  },
+  "subStores": [],
   "configFields": []
 }

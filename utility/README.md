@@ -1,98 +1,25 @@
-# ⚙️ Utility Addons
+# ⚙️ Utility
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Lumi-Addon-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Lumi Addon" />
-  <img src="https://img.shields.io/badge/Module-utility-slate?style=for-the-badge" alt="Module Name" />
-  <img src="https://img.shields.io/badge/Version-1.0.0-emerald?style=for-the-badge" alt="Version" />
-</p>
+General utility tools: custom emoji stealing and text translation.
 
-> **Essential server utility suite featuring custom emoji stealing and auto-translation.**
+## Commands
 
----
-
-## 🌟 Overview
-
-The **Utility Addons** module bundles high-frequency server tools into one lightweight addon. It empowers administrators and members with custom emoji/sticker stealing capabilities and multi-language text translation.
-
----
-
-## ✨ Features
-
-- **Emoji & Sticker Stealer (`/steal`)**:
-  - Steals custom animated or static emojis from messages, image URLs, or raw input.
-  - Automatically uploads custom stickers directly to your server.
-  - Supports custom naming and permission validation (**Manage Emojis and Stickers**).
-- **Multi-Language Translator (`/translate`)**:
-  - Automatically detects source language from input text.
-  - Translates text into target languages (e.g., English, Spanish, French, German, Japanese).
-  - Formats results into clean, readable card outputs.
-
----
-
-## 📥 Installation & Activation
-
-Install the addon via Lumi's dynamic downloader:
-
-```bash
-# Download and activate utility addons
-,download lumi-addons utility
-```
-
----
-
-## ⚙️ Configuration Options
-
-Utility commands operate dynamically based on user inputs and Discord role permissions:
-
-| Utility Feature | Required Permission | Description |
+| Command | Option | Description |
 | :--- | :--- | :--- |
-| `/steal` | **Manage Emojis and Stickers** | Requires bot and user permissions to upload custom emojis. |
-| `/translate` | *None* | Available to all server members. |
+| `/steal` | `emoji_or_url` | Custom emoji, image URL, or message link/ID to steal from. |
+| `/steal` | `name` | *(Optional)* Custom name for the new emoji. Required when stealing from a URL. |
+| `/translate` | `text` | Text to translate (source language auto-detected). |
+| `/translate` | `target` | *(Optional)* Target language code or name, e.g. `es`, `Japanese`. Defaults to English. |
 
----
+Prefix usage: `steal <:emoji:> [name]`, `translate [target] <text>`
+(e.g. `translate es Hello world`).
 
-## 💻 Commands & Usage
+## Permissions
 
-| Command | Option | Type | Description |
-| :--- | :--- | :--- | :--- |
-| `/steal` | `emoji` | `String` | Raw custom emoji or emoji URL to steal into the server. |
-| `/steal` | `name` | `String` | *(Optional)* Custom name for the newly created emoji/sticker. |
-| `/translate` | `text` | `String` | Text string to translate. |
-| `/translate` | `target` | `String` | Target language code or language name (e.g. `es`, `fr`, `Japanese`). |
+- `/steal` requires the invoker to have **Manage Emojis and Stickers** (or Administrator), and the bot to have it too.
+- `/translate` is available to all members.
 
----
+## Notes
 
-## 📡 Events & Listeners
-
-- **Command Handlers**:
-  - `commands/steal.ts`: Parses emoji payload, validates dimensions/format, and posts payload to Discord API.
-  - `commands/translate.ts`: Interfaces with translation services and returns card embeds.
-- **GDPR Standard**:
-  `deleteUserData(userId)` is a documented no-op as this module does not store any user data.
-
----
-
-## 🎨 Code Examples
-
-### Emoji Stealing Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Admin as Moderator
-    participant Command as /steal Command
-    participant API as Discord Guild API
-
-    Admin->>Command: /steal emoji: <:pepe:12345> name: rare_pepe
-    Command->>Command: Extract asset URL & file type
-    Command->>API: Upload new guild emoji "rare_pepe"
-    API-->>Command: Emoji created successfully
-    Command-->>Admin: Return Success Card
-```
-
-### Translate Command Usage Example
-
-```bash
-# Slash command invocation
-/translate text:"Bonjour tout le monde!" target:"en"
-```
+- `/steal` grabs custom emojis from a message and the message it replies to (up to 5 per command). Images must be under 256 KB.
+- No user data is stored (`deleteUserData` is a no-op).

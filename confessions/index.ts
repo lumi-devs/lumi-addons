@@ -1,52 +1,48 @@
-import { ChannelType } from "discord.js";
-import { Module, DefineModule, cfg } from "lumi";
-import { deleteForUser, exportForUser } from "./lib/data.js";
+import { cfg, defineModule } from "lumi";
 
-@DefineModule({
+export const meta = defineModule({
   name: "confessions",
   displayName: "Confessions",
   emoji: "🕊️",
   version: "1.0.0",
   description:
-    "Anonymous confessions posted through /confess, with optional threads, anonymous replies, per-author cooldowns, and moderator bans — identities are never stored in the clear.",
+    "Anonymous confessions posted through /confess, with optional anonymous replies, per-author cooldowns, and moderator bans — identities are never stored in the clear.",
+  short: "Anonymous confessions + replies.",
+  endUserDataStatement:
+    "Stores cryptographic one-way hashes of author IDs per guild for moderation purposes (banning abusers, managing replies) without storing plaintext user identities. Author mappings can be purged via GDPR deletion.",
   configSchema: cfg.object({
     confession_channel_id: cfg.channel({
       label: "Confession Channel",
       description: "Where anonymous confessions are posted.",
-      channelTypes: [ChannelType.GuildText],
+      channelTypes: [0],
     }),
     log_channel_id: cfg.channel({
       label: "Moderator Log Channel",
       description:
-        "Logs confessions with hashed author IDs (keeps them anonymous to moderators).",
-      channelTypes: [ChannelType.GuildText],
+        "Logs confessions with hashed author IDs for moderation audit.",
+      channelTypes: [0],
     }),
     report_channel_id: cfg.channel({
       label: "Report Log Channel",
       description:
-        "Where confession/reply reports submitted by users are sent.",
-      channelTypes: [ChannelType.GuildText],
+        "Where confession and reply reports submitted by users are sent.",
+      channelTypes: [0],
     }),
     report_ping_role_id: cfg.role({
       label: "Report Ping Role",
       description:
         "Optional role to ping in the report log channel when a new report is submitted.",
     }),
-    media_channel_id: cfg.channel({
-      label: "Media Re-hosting Channel",
-      description:
-        "Optional channel where the bot re-uploads images to generate permanent URLs.",
-      channelTypes: [ChannelType.GuildText],
-    }),
     auto_thread: cfg.boolean({
       label: "Auto-Thread",
-      description: "Open a thread under each confession for anonymous replies.",
+      description:
+        "Open a discussion thread on each confession; replies are posted inside it.",
       default: true,
     }),
     allow_attachments: cfg.boolean({
       label: "Allow Image Attachments",
       description:
-        "Allow users to upload images directly to their confessions and replies.",
+        "Allow users to attach an image URL to their confessions and replies.",
       default: true,
     }),
     cooldown_minutes: cfg.number({
@@ -57,27 +53,4 @@ import { deleteForUser, exportForUser } from "./lib/data.js";
       max: 1440,
     }),
   }),
-})
-export class ConfessionsModule extends Module {
-  /**
-   * GDPR erasure: drop this user's ban record, cooldown, authored confessions,
-   * and reply-author rows in every guild. Author hashes are salted per guild, so
-   * this must run guild-by-guild.
-   */
-  public override async deleteUserData(userId: string): Promise<void> {
-    for (const guildId of this.container.client.guilds.cache.keys())
-      await deleteForUser(guildId, userId);
-  }
-
-  /** Mirrors deleteUserData's per-guild hash lookup, but reads instead of erasing. */
-  public override async exportUserData(
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const perGuild: Record<string, unknown> = {};
-    for (const guildId of this.container.client.guilds.cache.keys()) {
-      const data = await exportForUser(guildId, userId);
-      if (data) perGuild[guildId] = data;
-    }
-    return Object.keys(perGuild).length > 0 ? perGuild : null;
-  }
-}
+});
