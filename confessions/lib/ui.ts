@@ -14,7 +14,8 @@ export function confessionPayload(
 ): CardReply {
   const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
   return noPingCard(
-    makeCard(0x131313, `🕊️ ${displayTitle}`, [text, `-# Confession #${number}`], {
+    makeCard(0x131313, `🕊️ ${displayTitle}`, text, {
+      footer: `Confession #${number}`,
       headerImages: imageUrl ? [imageUrl] : undefined,
       actionRows: [
         actionRow([
@@ -33,21 +34,24 @@ export function replyPayload(
   text: string,
   imageUrl?: string | null,
   isOp = false,
-  parentQuote?: string | null,
   parentRef?: { label: string; quote: string | null },
 ): CardReply {
-  const body = parentQuote
-    ? [parentQuote, text]
-    : parentRef
-      ? [`🔗 ${parentRef.label}`, ...(parentRef.quote ? [parentRef.quote] : []), text]
-      : text;
+  const body: string[] = [];
+  if (parentRef) {
+    body.push(`🔗 ${parentRef.label}`);
+    if (parentRef.quote) {
+      body.push(parentRef.quote);
+    }
+  }
+  body.push(text);
+
   return noPingCard(
     makeCard(
       isOp ? 0xeab308 : 0xab766f,
       `↩️ Reply to Confession #${confessionNumber}`,
       body,
       {
-        footer: isOp ? "👑 OP · Anonymous reply" : "Anonymous reply",
+        footer: isOp ? `👑 OP · Reply #${confessionNumber}.${k}` : `Reply #${confessionNumber}.${k}`,
         headerImages: imageUrl ? [imageUrl] : undefined,
         actionRows: [
           actionRow([
