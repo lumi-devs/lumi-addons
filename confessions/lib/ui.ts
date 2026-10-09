@@ -27,7 +27,6 @@ export function confessionPayload(
     makeCard(0x131313, `💌 ${displayTitle}`, text, {
       footer: `Confession #${number}`,
       headerImages: imageUrl ? [imageUrl] : undefined,
-      separatorAboveActionRows: true,
       actionRows: [actionRow(buttons)],
     }),
   );
@@ -55,7 +54,7 @@ export function replyPayload(
       {
         footer: isOp ? "👑 OP" : undefined,
         headerImages: imageUrl ? [imageUrl] : undefined,
-        separatorAboveActionRows: true,
+        separatorAboveActionRows: !isOp,
         actionRows: [
           actionRow([
             {
