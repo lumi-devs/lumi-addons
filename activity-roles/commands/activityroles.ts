@@ -1,5 +1,5 @@
 import { defineCommand, type CommandContext } from "lumi/commands";
-import { Emojis, makeInfoCard, makeSuccessCard } from "lumi/ui";
+import { makeInfoCard, makeSuccessCard } from "lumi/ui";
 import { VALID_ACTIVITY_TYPES } from "../lib/matcher.js";
 import { addMapping, getMappings, mappingId, removeMapping } from "../lib/store.js";
 
@@ -102,7 +102,7 @@ async function list(ctx: CommandContext): Promise<void> {
   if (mappings.length === 0) {
     await ctx.reply(
       makeInfoCard(
-        `${Emojis.Gear} Activity Roles`,
+        "⚙️ Activity Roles",
         "No activity roles are configured for this server.",
       ),
     );
@@ -111,11 +111,11 @@ async function list(ctx: CommandContext): Promise<void> {
 
   const lines = mappings.map(
     (m) =>
-      `**${m.type}** (\`${m.match}\`) ${Emojis.ArrowRight} <@&${m.roleId}>`,
+      `**${m.type}** (\`${m.match}\`) ➡️ <@&${m.roleId}>`,
   );
 
   await ctx.reply(
-    makeInfoCard(`${Emojis.Gear} Activity Roles`, lines.join("\n")),
+    makeInfoCard("⚙️ Activity Roles", lines.join("\n")),
   );
 }
 

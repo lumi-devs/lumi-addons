@@ -2,7 +2,6 @@ import { cfg, defineModule } from "lumi";
 import { onEvent } from "lumi/events";
 import { registerTaskFireHandler, schedule } from "lumi/scheduling";
 import { get, set } from "lumi/kv";
-import { guilds } from "lumi/discord";
 import {
   converge,
   getPromoterConfig,
@@ -35,7 +34,6 @@ export const meta = defineModule({
       label: "Match Terms",
       description:
         'Comma-separated invite slugs / tags to look for in statuses, e.g. ".gg/lumi, LUMI". Leave empty to only use server-tag detection.',
-      list: true,
     }),
     detect_server_tag: cfg.boolean({
       label: "Detect Server Tag",

@@ -1,5 +1,5 @@
 import { get, incr, list, remove, set } from "lumi/kv";
-import { randomBytes } from "node:crypto";
+import { randomHex } from "lumi/utils";
 import {
   BAN_KEY,
   CONFIG_SCOPE,
@@ -22,7 +22,7 @@ import { hashAuthor } from "./anon.js";
 export async function getSalt(guildId: string): Promise<string> {
   const existing = await get<string>(guildId, CONFIG_SCOPE, SALT_KEY);
   if (existing) return existing;
-  const salt = randomBytes(32).toString("hex");
+  const salt = await randomHex(32);
   await set(guildId, CONFIG_SCOPE, SALT_KEY, salt);
   return salt;
 }

@@ -3,7 +3,7 @@ import { getModuleConfig } from "lumi/config";
 import { modules } from "lumi/discord";
 import { onEvent } from "lumi/events";
 import { registerTaskFireHandler } from "lumi/scheduling";
-import { Emojis, makeInfoCard } from "lumi/ui";
+import { makeInfoCard } from "lumi/ui";
 import { EXPIRE_TASK, MODULE_NAME } from "./lib/keys.js";
 import { getBlocks, getProtectedRoles, incrementMentions } from "./lib/store.js";
 import { applyBlock, liftBlock } from "./lib/protection.js";
@@ -67,12 +67,12 @@ onEvent("messageCreate", async (data) => {
   const authorId = data["authorId"] as string;
   const lines = roleIds.map(
     (roleId) =>
-      `${Emojis.Bullet} ${roleMention(roleId)} — **${counts.get(roleId) ?? 0}** today`,
+      `⚡ ${roleMention(roleId)} — **${counts.get(roleId) ?? 0}** today`,
   );
   await sendLog(
     guildId,
     makeInfoCard(
-      `${Emojis.Bell} Role Mention${roleIds.length === 1 ? "" : "s"} Detected`,
+      `🔔 Role Mention${roleIds.length === 1 ? "" : "s"} Detected`,
       [
         `By <@${authorId}> in <#${channelId}> — https://discord.com/channels/${guildId}/${channelId}/${messageId}`,
         lines.join("\n"),

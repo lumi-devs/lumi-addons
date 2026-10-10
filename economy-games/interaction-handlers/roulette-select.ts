@@ -1,4 +1,4 @@
-import { setTimeout as sleep } from "node:timers/promises";
+import { sleep } from "lumi/utils";
 import {
   deferUpdate,
   type InteractionContext,

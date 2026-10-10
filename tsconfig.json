@@ -28,7 +28,8 @@
       "lumi": ["./.lumi/packages/core/src/lib/addon-sandbox/sdk/index.ts"],
       "lumi/*": ["./.lumi/packages/core/src/lib/addon-sandbox/sdk/*.ts"],
       "@lumi/contracts": ["./.lumi/packages/contracts/src/index.ts"],
-      "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"]
+      "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"],
+      "@lumi/lib/*": ["./.lumi/packages/core/src/lib/*"]
     }
   },
   // Core SDK entrypoints are resolved via paths; addon source files are checked here.

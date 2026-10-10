@@ -1,5 +1,4 @@
 import { defineCommand, type CommandContext } from "lumi/commands";
-import { relativeTimestamp } from "lumi/utils";
 import { isJailed } from "../lib/crime.js";
 import { getJail } from "../lib/store.js";
 import { crimePickerCard } from "../lib/ui.js";
@@ -22,7 +21,7 @@ export default defineCommand({
     if (isJailed(jail)) {
       await ctx.replyError(
         "Jailed",
-        `You are serving time for **${jail!.reason}**. Released ${relativeTimestamp(jail!.until)}.`,
+        `You are serving time for **${jail!.reason}**. Released <t:${Math.floor(jail!.until / 1000)}:R>.`,
       );
       return;
     }

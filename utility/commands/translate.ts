@@ -1,5 +1,6 @@
 import { logger } from "lumi";
 import { defineCommand, type CommandContext } from "lumi/commands";
+import { fetchJson } from "lumi/net";
 import { makeInfoCard } from "lumi/ui";
 import {
   DEFAULT_TARGET,
@@ -13,9 +14,7 @@ async function fetchTranslation(
 ): Promise<{ text: string; source: string | null } | null> {
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    return parseGtxResponse(await res.json());
+    return parseGtxResponse(await fetchJson<unknown>(url));
   } catch {
     await logger.error("Translation request failed");
     return null;

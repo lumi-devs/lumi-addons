@@ -1,6 +1,7 @@
 import { defineCommand, type CommandContext } from "lumi/commands";
 import { emoji, messages } from "lumi/discord";
-import { Emojis, makeInfoCard } from "lumi/ui";
+import { fetchUrl } from "lumi/net";
+import { makeInfoCard } from "lumi/ui";
 import {
   emojiImageUrl,
   emojiMention,
@@ -14,29 +15,20 @@ import {
 const MAX_STEALS = 5;
 const MAX_IMAGE_BYTES = 256 * 1024;
 
-async function downloadImage(
-  url: string,
-): Promise<{ bytes: Uint8Array; contentType: string } | { error: string }> {
-  let res: Response;
+async function downloadImage(url: string): Promise<{ attachment: string } | { error: string }> {
+  let res;
   try {
-    res = await fetch(url);
+    res = await fetchUrl(url, { timeoutMs: 10_000, maxBytes: MAX_IMAGE_BYTES });
   } catch {
     return { error: "Could not download the source image." };
   }
-  if (!res.ok) {
+  if (res.status < 200 || res.status >= 300) {
     return { error: `Could not download the source image (status ${res.status}).` };
   }
-  const contentType = (res.headers.get("content-type") ?? "")
-    .split(";")[0]!
-    .trim();
-  if (!contentType.startsWith("image/")) {
+  if (!res.contentType.startsWith("image/") || res.encoding !== "base64") {
     return { error: "The URL does not point to an image." };
   }
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  if (bytes.length > MAX_IMAGE_BYTES) {
-    return { error: "The image is too large (must be under 256 KB)." };
-  }
-  return { bytes, contentType };
+  return { attachment: `data:${res.contentType};base64,${res.body}` };
 }
 
 async function uploadEmoji(
@@ -46,9 +38,8 @@ async function uploadEmoji(
 ): Promise<{ id: string } | { error: string }> {
   const image = await downloadImage(imageUrl);
   if ("error" in image) return image;
-  const attachment = `data:${image.contentType};base64,${Buffer.from(image.bytes).toString("base64")}`;
   try {
-    return await emoji.create(guildId, name, attachment);
+    return await emoji.create(guildId, name, image.attachment);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     if (/maximum number of .* emojis/i.test(message)) {
@@ -115,7 +106,7 @@ async function stealFromMessage(
   await ctx.reply(
     makeInfoCard(
       "Stealing Emojis",
-      `${Emojis.Loading} Uploading ${sources.length} emoji(s)...`,
+      `⏳ Uploading ${sources.length} emoji(s)...`,
     ),
   );
 

@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { randomHex } from "lumi/utils";
 import { channels, guilds, voiceChannels } from "lumi/discord";
 import { schedule } from "lumi/scheduling";
 import { EXPIRE_TASK, type DragRequestRecord } from "../keys.js";
@@ -55,7 +55,7 @@ export async function createDragRequest(
     return { ok: false, reason: "You already have a pending drag request." };
   }
 
-  const requestId = randomBytes(6).toString("hex");
+  const requestId = await randomHex(6);
   const now = Date.now();
   const req: DragRequestRecord = {
     requestId,

@@ -1,6 +1,5 @@
 import { defineCommand, type CommandContext } from "lumi/commands";
-import { Emojis, makeInfoCard, makeSuccessCard } from "lumi/ui";
-import { relativeTimestamp } from "lumi/utils";
+import { makeInfoCard, makeSuccessCard } from "lumi/ui";
 import {
   getBlock,
   getBlocks,
@@ -110,7 +109,7 @@ async function list(ctx: CommandContext): Promise<void> {
     protectedRoles.size > 0
       ? [...protectedRoles.entries()].map(
         ([roleId, minutes]) =>
-          `${Emojis.Bullet} ${roleLabel(roleId)} — ${formatMinutes(minutes)}`,
+          `⚡ ${roleLabel(roleId)} — ${formatMinutes(minutes)}`,
       )
       : ["*None configured.*"];
 
@@ -118,12 +117,12 @@ async function list(ctx: CommandContext): Promise<void> {
     blocks.size > 0
       ? [...blocks.values()].map(
         (b) =>
-          `${Emojis.Lock} ${roleLabel(b.roleId, b.roleName)} — expires ${relativeTimestamp(b.expiresAt)} (${formatRemaining(b.expiresAt)} left)`,
+          `🔒 ${roleLabel(b.roleId, b.roleName)} — expires <t:${Math.floor(b.expiresAt / 1000)}:R> (${formatRemaining(b.expiresAt)} left)`,
       )
       : ["*No active blocks.*"];
 
   await ctx.reply(
-    makeInfoCard(`${Emojis.Shield} Role Mention Protection`, [
+    makeInfoCard("🛡️ Role Mention Protection", [
       `**Protected roles (${protectedRoles.size})**\n${protectedLines.join("\n")}`,
       `**Active blocks (${blocks.size})**\n${blockLines.join("\n")}`,
     ]),
@@ -153,7 +152,7 @@ async function block(ctx: CommandContext): Promise<void> {
   await ctx.reply(
     makeSuccessCard(
       "Role Blocked",
-      `Mentions of ${roleLabel(role.id, role.name)} are blocked until ${relativeTimestamp(result.expiresAt)}.`,
+      `Mentions of ${roleLabel(role.id, role.name)} are blocked until <t:${Math.floor(result.expiresAt / 1000)}:R>.`,
     ),
   );
 }

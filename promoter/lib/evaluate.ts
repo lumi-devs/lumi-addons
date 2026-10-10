@@ -4,7 +4,7 @@ import { get, incr, list, set } from "lumi/kv";
 import { channels, guilds, members } from "lumi/discord";
 import { makeSuccessCard, makeWarningCard, noPingCard } from "lumi/ui";
 import { PromoterData, type PromoterStats } from "../keys.js";
-import { statusMatches, wearsServerTag, type WornTag } from "./matching.js";
+import { statusMatches, wearsServerTag } from "./matching.js";
 
 export interface PromoterConfig {
   roleId: string | null;

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { sha256Hex } from "lumi/utils";
 
 /**
  * Stable per-guild anonymization. The author of a confession is only ever
@@ -6,8 +6,8 @@ import { createHash } from "node:crypto";
  * mapping can't be reversed without the salt and can't be correlated across
  * guilds. Moderation acts on the hash; identity is never persisted.
  */
-export function hashAuthor(salt: string, userId: string): string {
-  return createHash("sha256").update(`${salt}:${userId}`).digest("hex");
+export function hashAuthor(salt: string, userId: string): Promise<string> {
+  return sha256Hex(`${salt}:${userId}`);
 }
 
 /** Human reply label within a confession thread: `#<confession>.<k>`. */

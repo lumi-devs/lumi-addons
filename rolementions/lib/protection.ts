@@ -1,7 +1,6 @@
 import { logger } from "lumi";
 import { schedule } from "lumi/scheduling";
-import { Emojis, makeSuccessCard, makeWarningCard } from "lumi/ui";
-import { relativeTimestamp } from "lumi/utils";
+import { makeSuccessCard, makeWarningCard } from "lumi/ui";
 import { EXPIRE_TASK } from "./keys.js";
 import { getBlock, removeBlock, setBlock, type ActiveBlock } from "./store.js";
 import { sendLog } from "./log.js";
@@ -37,11 +36,11 @@ export async function applyBlock(
 
   await sendLog(
     guildId,
-    makeWarningCard(`${Emojis.Shield} Role Protection Activated`, [
+    makeWarningCard("🛡️ Role Protection Activated", [
       `Mentions of ${roleMention(roleId)} are now blocked.`,
       [
         `**Duration:** ${formatMinutes(durationMinutes)}`,
-        `**Expires:** ${relativeTimestamp(block.expiresAt)}`,
+        `**Expires:** <t:${Math.floor(block.expiresAt / 1000)}:R>`,
         `**Trigger:** ${manual ? "Manual" : "Mention spam"}`,
       ].join("\n"),
     ], { footer: "Protection auto-removes when it expires." }),
@@ -62,8 +61,8 @@ export async function liftBlock(
 
   const title =
     reason === "expired"
-      ? `${Emojis.Unlock} Role Protection Expired`
-      : `${Emojis.Unlock} Role Protection Removed`;
+      ? "🔓 Role Protection Expired"
+      : "🔓 Role Protection Removed";
 
   await sendLog(
     guildId,

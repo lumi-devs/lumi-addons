@@ -21,7 +21,6 @@ export const meta = defineModule({
       label: "Qualifying Roles",
       description:
         "Comma-separated role IDs that grant custom-role access. Leave empty to use native server-boost status.",
-      list: true,
     }),
     anchor_role_id: cfg.role({
       label: "Anchor Role",

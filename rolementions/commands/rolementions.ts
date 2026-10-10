@@ -1,5 +1,5 @@
 import { defineCommand, type CommandContext } from "lumi/commands";
-import { Emojis, makeInfoCard, makeSuccessCard } from "lumi/ui";
+import { makeInfoCard, makeSuccessCard } from "lumi/ui";
 import { getCounts, getRoleCount, resetCounts } from "../lib/store.js";
 import { roleLabel } from "../lib/format.js";
 import { sendLog } from "../lib/log.js";
@@ -17,7 +17,7 @@ async function showStats(ctx: CommandContext): Promise<void> {
     const count = await getRoleCount(guildId, ref.id);
     await ctx.reply(
       makeInfoCard(
-        `${Emojis.Analytics} Mention Stats`,
+        "📊 Mention Stats",
         `${roleLabel(ref.id, ref.name)} was mentioned **${count}** time${count === 1 ? "" : "s"} today.`,
       ),
     );
@@ -28,7 +28,7 @@ async function showStats(ctx: CommandContext): Promise<void> {
   if (counts.size === 0) {
     await ctx.reply(
       makeInfoCard(
-        `${Emojis.Analytics} Mention Stats`,
+        "📊 Mention Stats",
         "No role mentions recorded yet today.",
       ),
     );
@@ -43,7 +43,7 @@ async function showStats(ctx: CommandContext): Promise<void> {
   );
 
   await ctx.reply(
-    makeInfoCard(`${Emojis.Analytics} Role Mention Stats`, [
+    makeInfoCard("📊 Role Mention Stats", [
       `**Total:** ${total} · **Unique roles:** ${counts.size}`,
       lines.join("\n"),
     ], {
@@ -69,7 +69,7 @@ async function showTop(ctx: CommandContext): Promise<void> {
   if (counts.size === 0) {
     await ctx.reply(
       makeInfoCard(
-        `${Emojis.Analytics} Top Roles`,
+        "📊 Top Roles",
         "No role mentions recorded yet today.",
       ),
     );
@@ -85,7 +85,7 @@ async function showTop(ctx: CommandContext): Promise<void> {
 
   await ctx.reply(
     makeInfoCard(
-      `${Emojis.Star} Top ${top.length} Mentioned Role${top.length === 1 ? "" : "s"}`,
+      `⭐ Top ${top.length} Mentioned Role${top.length === 1 ? "" : "s"}`,
       lines.join("\n"),
       { footer: `Total ${total} mentions across ${counts.size} roles today` },
     ),
@@ -104,7 +104,7 @@ async function reset(ctx: CommandContext): Promise<void> {
   await sendLog(
     guildId,
     makeInfoCard(
-      `${Emojis.Cleanup} Mention Counters Reset`,
+      "🧹 Mention Counters Reset",
       `Counters were manually reset by <@${ctx.user.id}>.`,
     ),
   );

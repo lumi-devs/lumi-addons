@@ -2,7 +2,7 @@ import {
   deferUpdate,
   type InteractionContext,
 } from "lumi/interactions";
-import { formatDuration, relativeTimestamp } from "lumi/utils";
+import { formatDuration } from "lumi/utils";
 import {
   formatAmount,
   getCurrency,
@@ -45,7 +45,7 @@ export default {
     if (isJailed(jail)) {
       await ctx.replyError(
         "Jailed",
-        `Released ${relativeTimestamp(jail!.until)}.`,
+        `Released <t:${Math.floor(jail!.until / 1000)}:R>.`,
       );
       return;
     }
@@ -113,7 +113,7 @@ export default {
     await boardUpdate(
       settledLossCard(`${tier.emoji} ${tier.label} — Busted!`, [
         `Fine: **${formatAmount(currency, fine)}**`,
-        `Sentence: **${outcome.jailMinutes} minutes** (out ${relativeTimestamp(until)})`,
+        `Sentence: **${outcome.jailMinutes} minutes** (out <t:${Math.floor(until / 1000)}:R>)`,
       ].join("\n")),
     );
   },
