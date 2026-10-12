@@ -22,7 +22,7 @@ export async function rehostUpload(
   if (!res || !res.ok) return null;
 
   const data = Buffer.from(await res.arrayBuffer());
-  if (data.length === 0 || data.length > 8_000_000) return null;
+  if (data.length === 0 || data.length > 20_000_000) return null;
 
   const channel = await services.client.channels.fetch(channelId).catch(() => null);
   if (!channel || !channel.isSendable()) return null;
