@@ -26,6 +26,9 @@
     }
   ],
   "category": "Moderation",
-  "author": ["Antigravity"],
-  "min_bot_version": "0.6.0"
+  "author": [
+    "Antigravity"
+  ],
+  "min_bot_version": "0.6.0",
+  "end_user_data_statement": "Tracks role mention counts and cooldown timestamps in guild storage. Does not store personal end-user data or message contents."
 }

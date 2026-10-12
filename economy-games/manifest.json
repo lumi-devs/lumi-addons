@@ -6,10 +6,15 @@
   "short": "Casino games, crime, grinds, and a shop backed by the bank.",
   "endUserDataStatement": "Stores jail sentences, shop inventories, and active game tables keyed by user ID in this addon's own storage namespace. Wallet balances live in the guild bank. All addon rows are removed on GDPR erasure.",
   "version": "1.0.0",
-  "author": ["Lumi Developers"],
+  "author": [
+    "Lumi Developers"
+  ],
   "min_bot_version": "0.6.0",
   "disableable": true,
-  "dependencies": ["economy"],
+  "dependencies": [
+    "economy"
+  ],
   "configFields": [],
-  "category": "Community"
+  "category": "Community",
+  "end_user_data_statement": "Stores jail sentences, shop inventories, and active game tables keyed by user ID in this addon's own storage namespace. Wallet balances live in the guild bank. All addon rows are removed on GDPR erasure."
 }

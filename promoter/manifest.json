@@ -7,5 +7,10 @@
   "version": "1.0.0",
   "category": "Community",
   "endUserDataStatement": "Processes Discord user presence text in real-time to check for server promotions. Stores per-member cached state (status text, tag flag, role flag) per guild; does not store personal profile data outside the bot instance.",
-  "disableable": true
+  "disableable": true,
+  "end_user_data_statement": "Processes Discord user presence text in real-time to check for server promotions. Stores per-member cached state (status text, tag flag, role flag) per guild; does not store personal profile data outside the bot instance.",
+  "author": [
+    "Antigravity"
+  ],
+  "configFields": []
 }

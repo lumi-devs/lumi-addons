@@ -41,8 +41,8 @@ function withButtons(
   requestId: string,
   disabled: boolean,
 ): CardReply {
-  const container = card.components[0] as ContainerBuilder;
-  container.addActionRowComponents((row) => {
+  const box = card.components[0] as ContainerBuilder;
+  box.addActionRowComponents((row) => {
     row.addComponents(...buttonRow(requestId, disabled).components);
     return row;
   });

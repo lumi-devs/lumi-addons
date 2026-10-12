@@ -24,18 +24,30 @@
       "label": "Inactivity Duration",
       "description": "Duration of inactivity before cleanup runs (e.g. 24h, 3d).",
       "default": "3d",
-      "quickPicks": ["1h", "6h", "24h", "3d", "7d"]
+      "quickPicks": [
+        "1h",
+        "6h",
+        "24h",
+        "3d",
+        "7d"
+      ]
     },
     {
       "key": "action",
-      "type": "ENUM",
+      "type": "STRING",
       "label": "Cleanup Action",
       "description": "Action to perform on inactive threads.",
       "default": "archive",
-      "choices": ["archive", "lock"]
+      "choices": [
+        "archive",
+        "lock"
+      ]
     }
   ],
   "category": "Utility",
-  "author": ["Lumi Developers"],
-  "min_bot_version": "0.6.0"
+  "author": [
+    "Lumi Developers"
+  ],
+  "min_bot_version": "0.6.0",
+  "end_user_data_statement": "Does not collect or store personal end-user data. Stores thread IDs and cleanup metadata."
 }

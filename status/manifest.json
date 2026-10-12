@@ -5,7 +5,9 @@
   "description": "Rotating bot presence managed at runtime by the bot owner: custom statuses with activity type, online status, and live placeholders.",
   "short": "Owner-managed rotating presence.",
   "version": "1.0.0",
-  "author": ["Antigravity"],
+  "author": [
+    "Antigravity"
+  ],
   "min_bot_version": "0.6.0",
   "disableable": true,
   "endUserDataStatement": "Stores rotating bot status entries configured by bot owners, scoped per server. Records the owner user ID who created each status entry for audit purposes.",
@@ -15,8 +17,12 @@
   "configFields": [],
   "category": "Utility",
   "capabilities": {
-    "discord": ["reply", "clientPresence"],
+    "discord": [
+      "reply",
+      "clientPresence"
+    ],
     "scheduling": true,
     "kv": true
-  }
+  },
+  "end_user_data_statement": "Stores rotating bot status entries configured by bot owners, scoped per server. Records the owner user ID who created each status entry for audit purposes."
 }
