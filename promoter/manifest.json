@@ -12,5 +12,30 @@
   "author": [
     "Antigravity"
   ],
-  "configFields": []
+  "configFields": [
+    {
+      "key": "promoter_role_id",
+      "type": "ROLE",
+      "label": "Promoter Role",
+      "description": "Role granted to members advertising the server."
+    },
+    {
+      "key": "log_channel_id",
+      "type": "CHANNEL",
+      "label": "Log Channel",
+      "description": "Channel for grant/revoke log cards. Leave blank to disable."
+    },
+    {
+      "key": "match_terms",
+      "type": "STRING_LIST",
+      "label": "Match Terms",
+      "description": "Phrases to look for in custom status (e.g. the server invite slug)."
+    },
+    {
+      "key": "detect_server_tag",
+      "type": "BOOLEAN",
+      "label": "Detect Server Tag",
+      "description": "Also grant the role to members wearing the native server tag."
+    }
+  ]
 }
