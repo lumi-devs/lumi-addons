@@ -10,7 +10,7 @@ import {
   makeCard,
   noPingCard,
   type CardReply,
-} from "#src/lib/ui/Cards.js";
+} from "@lumi-devs/lumi/lib/ui/Cards.js";
 
 export function confessionPayload(
   number: number,

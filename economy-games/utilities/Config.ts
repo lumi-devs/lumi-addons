@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { parseDuration } from "#src/lib/utilities/Time.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { parseDuration } from "@lumi-devs/lumi/lib/utilities/Time.js";
 import { MODULE_NAME } from "./Keys.js";
 
 export interface CurrencyView {

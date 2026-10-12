@@ -1,6 +1,6 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { cfg } from "#lib/module-system/ConfigSchema.js";
-import type { Container } from "#lib/Services.js";
+import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
+import { cfg } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import { oneshots } from "./tasks/CleanupFire.js";
 
 export const threadCleanerModule = defineModule({

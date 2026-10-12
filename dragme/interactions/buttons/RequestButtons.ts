@@ -1,7 +1,7 @@
 import type { ButtonInteraction } from "discord.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
+import { ephemeralCard, makeErrorCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import { channelMention, disabledPayload, userMention } from "../../utilities/Cards.js";
 import { getRequest, setRequest } from "../../utilities/Requests.js";
 

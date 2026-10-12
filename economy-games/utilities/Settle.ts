@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { makeInfoCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { makeInfoCard, type CardReply } from "@lumi-devs/lumi/lib/ui/Cards.js";
 import { formatAmount, type CurrencyView } from "./Config.js";
 import { creditWinnings } from "./Ledger.js";
 import {

@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import type { OneshotContext } from "#src/lib/scheduler/Oneshot.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { OneshotContext } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
 import { channelMention, disabledPayload, userMention } from "../utilities/Cards.js";
 import { getRequest, setRequest } from "../utilities/Requests.js";
 import type { ExpireOneshotData } from "../utilities/Keys.js";

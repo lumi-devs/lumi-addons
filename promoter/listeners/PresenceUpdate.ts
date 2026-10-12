@@ -1,7 +1,7 @@
 import type { Presence } from "discord.js";
 import { ActivityType, Events } from "discord.js";
-import { defineListener } from "#lib/listeners/ListenerDef.js";
-import type { Container } from "#lib/Services.js";
+import { defineListener } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import { MODULE_NAME } from "../utilities/Keys.js";
 import { converge } from "../Index.js";
 import { wearsServerTag } from "../utilities/Matching.js";

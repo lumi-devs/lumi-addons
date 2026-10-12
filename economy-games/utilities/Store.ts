@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { claimCooldown as claimValkeyCooldown } from "#src/lib/valkey/Cooldown.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { claimCooldown as claimValkeyCooldown } from "@lumi-devs/lumi/lib/valkey/Cooldown.js";
 import {
   INVENTORY_KEY,
   JAIL_KEY,

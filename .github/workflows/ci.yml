@@ -1,122 +1,46 @@
-name: Addons CI Pipeline
+name: Addons CI
 
 on:
   push:
-    branches: [main]
+    branches: [v2/addons, main, master]
   pull_request:
-    branches: [main]
+    branches: [v2/addons, main, master]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: CI / lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Install dependencies
-        run: nix-shell --run "bun install --frozen-lockfile"
-
-      - name: Run Linter
-        run: nix-shell --run "bun run lint"
-
-  test:
-    name: CI / test
+  validate:
+    name: Validate Addons
     runs-on: ubuntu-latest
     steps:
       - name: Checkout addons
         uses: actions/checkout@v7
 
-      - name: Checkout lumi core
+      - name: Checkout lumi
         uses: actions/checkout@v7
         with:
           repository: lumi-devs/lumi
-          path: lumi-core
+          ref: develop/v2
+          path: .lumi
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
+      - uses: oven-sh/setup-bun@v2
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
+          bun-version: 1.4.2
 
-      - name: Install lumi core dependencies
-        working-directory: lumi-core
-        run: nix develop --command bash -c "bun install --frozen-lockfile"
+      - name: Install lumi dependencies
+        working-directory: .lumi
+        run: |
+          bun install --frozen-lockfile
+          bun run db:generate
 
-      - name: Link addons against lumi core
-        run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
+      - name: Link node_modules
+        run: |
+          ln -sfn .lumi/node_modules node_modules
+
+      - name: Run Addons Validator
+        run: bun scripts/validate.ts
 
       - name: Run Tests
-        run: nix-shell --run "bun run test"
-
-  typecheck:
-    name: CI / typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout addons
-        uses: actions/checkout@v7
-
-      - name: Checkout lumi core
-        uses: actions/checkout@v7
-        with:
-          repository: lumi-devs/lumi
-          path: lumi-core
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Install lumi core dependencies
-        working-directory: lumi-core
-        run: nix develop --command bash -c "bun install --frozen-lockfile"
-
-      - name: Generate Prisma client
-        working-directory: lumi-core
-        run: nix develop --command bash -c "bun run db:generate"
-
-      - name: Link addons against lumi core
-        run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
-
-      - name: Run Typecheck
-        run: nix-shell --run "bun run typecheck"
-
-  mock-integration:
-    name: CI / mock-lumi-check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout addons
-        uses: actions/checkout@v7
-
-      - name: Checkout lumi core
-        uses: actions/checkout@v7
-        with:
-          repository: lumi-devs/lumi
-          path: lumi-core
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - name: Install lumi core dependencies
-        working-directory: lumi-core
-        run: nix develop --command bash -c "bun install --frozen-lockfile"
-
-      - name: Generate Prisma client
-        working-directory: lumi-core
-        run: nix develop --command bash -c "bun run db:generate"
-
-      - name: Link addons against lumi core
-        run: LUMI_PATH=lumi-core nix-shell --run "sh scripts/setup.sh"
-
-      - name: Run Full Mock Loader & Dashboard Compatibility Suite
-        run: LUMI_PATH=lumi-core nix-shell --run "bun run check:loader"
+        run: bun run test

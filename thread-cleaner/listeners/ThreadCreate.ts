@@ -1,9 +1,9 @@
 import type { ThreadChannel } from "discord.js";
-import type { Container } from "#lib/Services.js";
-import { defineListener } from "#lib/listeners/ListenerDef.js";
-import { scheduleOneshot } from "#lib/scheduler/Oneshot.js";
-import { toStringArray } from "#lib/module-system/ConfigSchema.js";
-import { defineModuleConfig } from "#lib/module-system/ModuleConfig.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { defineListener } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
+import { scheduleOneshot } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
+import { toStringArray } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
+import { defineModuleConfig } from "@lumi-devs/lumi/lib/module-system/ModuleConfig.js";
 import { Duration } from "@sapphire/duration";
 import type { ThreadState } from "../utilities/Keys.js";
 import { THREAD_STATE_KEY, CLEANUP_ONESHOT } from "../utilities/Keys.js";

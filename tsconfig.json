@@ -23,10 +23,16 @@
     "noImplicitOverride": true,
     "verbatimModuleSyntax": true,
     "paths": {
-      "#lib/*.js": ["./.lumi/src/lib/*.ts"],
-      "#lib/*": ["./.lumi/src/lib/*"],
-      "#src/*.js": ["./.lumi/src/*.ts"],
-      "#src/*": ["./.lumi/src/*"]
+      "@lumi-devs/lumi/module": ["./.lumi/src/lib/module-system/Module.ts"],
+      "@lumi-devs/lumi/commands": ["./.lumi/src/lib/commands/CommandDef.ts"],
+      "@lumi-devs/lumi/context": ["./.lumi/src/lib/commands/Context.ts"],
+      "@lumi-devs/lumi/listeners": ["./.lumi/src/lib/listeners/ListenerDef.ts"],
+      "@lumi-devs/lumi/interactions": ["./.lumi/src/lib/interactions/InteractionDef.ts"],
+      "@lumi-devs/lumi/ui": ["./.lumi/src/lib/ui/Cards.ts"],
+      "@lumi-devs/lumi/config": ["./.lumi/src/lib/module-system/ConfigSchema.ts"],
+      "@lumi-devs/lumi/api": ["./.lumi/src/lib/ModuleApi.ts"],
+      "@lumi-devs/lumi/lib/*": ["./.lumi/src/lib/*"],
+      "@lumi-devs/lumi": ["./.lumi/src/Index.ts"]
     }
   },
   "include": ["*/Index.ts", "*/commands/**/*.ts", "*/listeners/**/*.ts", "*/interactions/**/*.ts", "*/tasks/**/*.ts", "*/services/**/*.ts", "*/data/**/*.ts", "*/utilities/**/*.ts", "*/lib/**/*.ts"],

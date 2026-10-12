@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { toStringArray } from "#src/lib/module-system/ConfigSchema.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { toStringArray } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
 import { MODULE_NAME } from "./Keys.js";
 
 export interface BoosterConfig {

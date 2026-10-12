@@ -1,12 +1,12 @@
 import type { ButtonInteraction, GuildMember } from "discord.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
+import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
 import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
-} from "#src/lib/ui/Cards.js";
-import { permitSubject } from "#src/lib/api/permissions/Subject.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@lumi-devs/lumi/lib/ui/Cards.js";
+import { permitSubject } from "@lumi-devs/lumi/lib/api/permissions/Subject.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import { MODULE_NAME } from "../../utilities/Keys.js";
 import { getConfessionsConfig } from "../../utilities/Config.js";
 import { deleteConfession, getConfession, getReply } from "../../utilities/Data.js";

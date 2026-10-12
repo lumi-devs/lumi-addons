@@ -1,8 +1,8 @@
 import { Events } from "discord.js";
 import type { Message } from "discord.js";
-import { defineListener } from "#src/lib/listeners/ListenerDef.js";
-import type { Container } from "#src/lib/Services.js";
-import { makeInfoCard } from "#src/lib/ui/Cards.js";
+import { defineListener } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { makeInfoCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
 import { MODULE_NAME } from "../utilities/Keys.js";
 import {
   getBlocks,

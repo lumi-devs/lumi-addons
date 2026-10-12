@@ -1,15 +1,15 @@
-import { defineModule } from "#lib/module-system/Module.js";
-import { cfg } from "#lib/module-system/ConfigSchema.js";
-import type { Container } from "#lib/Services.js";
+import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
+import { cfg } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import type { Presence } from "discord.js";
 import { ActivityType, Events } from "discord.js";
-import { addListenerDef, defineListener } from "#lib/listeners/ListenerDef.js";
+import { addListenerDef, defineListener } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
 import {
   makeSuccessCard,
   makeWarningCard,
   noPingCard,
-} from "#lib/ui/Cards.js";
-import { toStringArray } from "#lib/module-system/ConfigSchema.js";
+} from "@lumi-devs/lumi/lib/ui/Cards.js";
+import { toStringArray } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
 import { MODULE_NAME, PromoterData, type MemberState, type PromoterStats } from "./utilities/Keys.js";
 import { statusMatches, wearsServerTag } from "./utilities/Matching.js";
 

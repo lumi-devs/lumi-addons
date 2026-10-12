@@ -1,8 +1,8 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
 import { ButtonStyle } from "discord.js";
-import type { CommandDef } from "#lib/commands/CommandDef.js";
-import type { CommandContext } from "#lib/commands/Context.js";
-import { makeInfoCard, ephemeralCard, makeErrorCard } from "#lib/ui/Cards.js";
+import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
+import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
+import { makeInfoCard, ephemeralCard, makeErrorCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
 import { getPromoterConfig, getStats } from "../Index.js";
 
 export const promoterDef: CommandDef = {

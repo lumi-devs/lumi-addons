@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
+import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
+import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
 import { MODULE_NAME } from "../utilities/Keys.js";
 import { runGrindCommand } from "./Work.js";
 

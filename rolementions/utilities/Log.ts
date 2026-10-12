@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { noPingCard, type CardReply } from "#src/lib/ui/Cards.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { noPingCard, type CardReply } from "@lumi-devs/lumi/lib/ui/Cards.js";
 import { MODULE_NAME } from "./Keys.js";
 
 export async function sendLog(

@@ -1,8 +1,8 @@
 import type { StringSelectMenuInteraction } from "discord.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
-import { ephemeralCard, makeErrorCard } from "#src/lib/ui/Cards.js";
-import type { Container } from "#src/lib/Services.js";
-import { currencyName, deposit } from "#src/lib/api/economy/Bank.js";
+import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
+import { ephemeralCard, makeErrorCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { currencyName, deposit } from "@lumi-devs/lumi/lib/api/economy/Bank.js";
 import { MODULE_NAME, ROULETTE_KEY } from "../../utilities/Keys.js";
 import { formatAmount } from "../../utilities/Config.js";
 import { LedgerInsufficientFunds, debitBet } from "../../utilities/Ledger.js";

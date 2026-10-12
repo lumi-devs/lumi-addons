@@ -1,12 +1,12 @@
 import type { ModalSubmitInteraction } from "discord.js";
-import { defineInteraction } from "#src/lib/interactions/InteractionDef.js";
+import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
 import {
   ephemeralCard,
   makeErrorCard,
   makeInfoCard,
   makeSuccessCard,
-} from "#src/lib/ui/Cards.js";
-import type { Container } from "#src/lib/Services.js";
+} from "@lumi-devs/lumi/lib/ui/Cards.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import { getBoosterConfig } from "../../utilities/Config.js";
 import {
   addShare,

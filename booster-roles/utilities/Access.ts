@@ -1,4 +1,4 @@
-import type { Container } from "#src/lib/Services.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import type { BoosterConfig } from "./Config.js";
 import { isBlacklisted } from "./Data.js";
 import { isBoosterEligible } from "./Engine.js";

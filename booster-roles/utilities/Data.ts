@@ -1,5 +1,5 @@
-import type { Container } from "#src/lib/Services.js";
-import { makeInfoCard } from "#src/lib/ui/Cards.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { makeInfoCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
 import type { BoosterConfig } from "./Config.js";
 import { BoosterKeys, MODULE_NAME } from "./Keys.js";
 

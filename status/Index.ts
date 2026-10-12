@@ -1,5 +1,5 @@
-import { defineModule } from "#src/lib/module-system/Module.js";
-import type { Container } from "#src/lib/Services.js";
+import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
+import type { Container } from "@lumi-devs/lumi/lib/Services.js";
 import { handleRotateFire, ensureScheduled } from "./tasks/RotateFire.js";
 import {
   MODULE_NAME,

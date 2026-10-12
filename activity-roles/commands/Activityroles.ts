@@ -1,10 +1,10 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "#src/lib/commands/CommandDef.js";
-import type { CommandContext } from "#src/lib/commands/Context.js";
+import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
+import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
 import {
   makeSuccessCard,
   makeInfoCard,
-} from "#src/lib/ui/Cards.js";
+} from "@lumi-devs/lumi/lib/ui/Cards.js";
 import {
   VALID_ACTIVITY_TYPES,
 } from "../utilities/Matcher.js";
