@@ -1,9 +1,8 @@
 import {
-  Events,
   type ModalSubmitInteraction,
   type SendableChannels,
 } from "discord.js";
-import { defineListener } from "@lumi-devs/lumi/listeners";
+import { defineInteraction } from "@lumi-devs/lumi/interactions";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -12,7 +11,7 @@ import {
   makeWarningCard,
 } from "@lumi-devs/lumi/ui";
 import type { Container } from "@lumi-devs/lumi/services";
-import { getConfessionsConfig } from "../utilities/Config.js";
+import { getConfessionsConfig } from "../../utilities/Config.js";
 import {
   authorHashFor,
   findConfessionAuthor,
@@ -29,9 +28,9 @@ import {
   saveConfession,
   saveReply,
   setCooldown,
-} from "../utilities/Data.js";
-import { confessionPayload, replyPayload } from "../utilities/Ui.js";
-import { rehostUpload } from "../utilities/Rehost.js";
+} from "../../utilities/Data.js";
+import { confessionPayload, replyPayload } from "../../utilities/Ui.js";
+import { rehostUpload } from "../../utilities/Rehost.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 function getUploadAttachment(interaction: ModalSubmitInteraction, customId: string) {
@@ -380,12 +379,11 @@ async function notifyTarget(
   }).catch(() => undefined);
 }
 
-export const confessionModalListener = defineListener<[ModalSubmitInteraction]>({
-  name: "confessionModalSubmit",
-  event: Events.InteractionCreate,
-  async execute(services: Container, interaction: ModalSubmitInteraction) {
-    if (!interaction.isModalSubmit()) return;
-    if (!interaction.customId.startsWith("confessions:modal")) return;
+export const confessionModalHandler = defineInteraction<ModalSubmitInteraction>({
+  module: "confessions",
+  kinds: ["modal"],
+  match: (customId) => customId.startsWith("confessions:modal:"),
+  async run(services: Container, interaction: ModalSubmitInteraction) {
     if (!interaction.guildId) return;
 
     const parts = interaction.customId.split(":");
