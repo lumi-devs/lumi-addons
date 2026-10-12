@@ -83,7 +83,7 @@ async function add(ctx: CommandContext): Promise<void> {
     addedBy: ctx.user.id,
     addedAt: Date.now(),
   });
-  await ensureScheduled(ctx.services, guildId).catch(() => undefined);
+  await nudgeGuild(ctx.services, guildId).catch(() => undefined);
   await ctx.replySuccess(
     "Status Added",
     `**#${entry.id}** - ${type === "Custom" ? "" : `${type} `}${text} *(${presence})*`,
