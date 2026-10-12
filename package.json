@@ -14,7 +14,7 @@
     "validate": "bun scripts/validate.ts"
   },
   "dependencies": {
-    "@lumi-devs/lumi": "^0.6.3",
+    "@lumi-devs/lumi": "^0.6.4",
     "discord.js": "^14.27.0"
   },
   "devDependencies": {
