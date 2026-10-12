@@ -188,7 +188,7 @@ export async function converge(
   return want ? "granted" : "revoked";
 }
 
-async function sweep(services: Container, guildId: string): Promise<number> {
+export async function sweep(services: Container, guildId: string): Promise<number> {
   const config = await getPromoterConfig(services, guildId);
   if (!config.roleId) return 0;
   const rows = await services.db.guildKV.listModuleData<MemberState>({
