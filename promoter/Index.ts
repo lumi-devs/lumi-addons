@@ -197,12 +197,17 @@ export async function sweep(services: Container, guildId: string): Promise<numbe
     guildId,
   });
   const holding = rows.filter((r) => r.value?.has);
+  if (holding.length === 0) return 0;
+
+  const guild = services.client.guilds.cache.get(guildId);
+  if (!guild) return 0;
+
+  const rolesCache = await guild.roles.fetch();
   let revoked = 0;
   for (const row of holding) {
-    const guild = services.client.guilds.cache.get(guildId);
-    const member = await guild?.members.fetch(row.targetId).catch(() => null) ?? null;
+    const member = await guild.members.fetch(row.targetId).catch(() => null);
     if (!member) continue;
-    const roles = member.roles.cache.map((r) => r.id);
+    const roles = [...rolesCache.values()].filter((r) => member.roles.cache.has(r.id)).map((r) => r.id);
     const result = await converge(services, {
       guildId,
       userId: row.targetId,
