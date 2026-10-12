@@ -1,6 +1,6 @@
-import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
-import { cfg } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { defineModule } from "@lumi-devs/lumi/module";
+import { cfg } from "@lumi-devs/lumi/config";
+import type { Container } from "@lumi-devs/lumi/services";
 
 export const economyGamesModule = defineModule({
   name: "economy-games",

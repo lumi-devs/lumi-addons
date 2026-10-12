@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
-import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
-import { makeInfoCard, makeSuccessCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
+import type { CommandDef } from "@lumi-devs/lumi/commands";
+import type { CommandContext } from "@lumi-devs/lumi/context";
+import { makeInfoCard, makeSuccessCard } from "@lumi-devs/lumi/ui";
 import { MODULE_NAME } from "../utilities/Keys.js";
 import { getCounts, getRoleCount, resetCounts } from "../utilities/Store.js";
 import { roleLabel } from "../utilities/Format.js";

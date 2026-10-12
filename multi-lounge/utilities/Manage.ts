@@ -1,6 +1,6 @@
 import { ChannelType, type VoiceChannel } from "discord.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { scheduleOneshot } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
+import type { Container } from "@lumi-devs/lumi/services";
+import { scheduleOneshot } from "@lumi-devs/lumi/scheduler";
 import {
   RECONCILE_INTERVAL_MS,
   RECONCILE_TASK,

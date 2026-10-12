@@ -1,6 +1,6 @@
-import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard, makeWarningCard, makeInfoCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
+import { defineInteraction } from "@lumi-devs/lumi/interactions";
+import type { Container } from "@lumi-devs/lumi/services";
+import { ephemeralCard, makeErrorCard, makeSuccessCard, makeWarningCard, makeInfoCard } from "@lumi-devs/lumi/ui";
 import type { ButtonInteraction } from "discord.js";
 import { MODULE_NAME } from "../../utilities/Keys.js";
 import { converge, getMemberState, getPromoterConfig } from "../../Index.js";

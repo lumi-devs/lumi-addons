@@ -1,6 +1,6 @@
-import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
-import { cfg } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { defineModule } from "@lumi-devs/lumi/module";
+import { cfg } from "@lumi-devs/lumi/config";
+import type { Container } from "@lumi-devs/lumi/services";
 import { handleExpire } from "./tasks/ExpireFire.js";
 import { MODULE_NAME } from "./utilities/Keys.js";
 

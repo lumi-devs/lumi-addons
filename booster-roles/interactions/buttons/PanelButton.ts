@@ -1,7 +1,7 @@
 import type { ButtonInteraction } from "discord.js";
-import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { defineInteraction } from "@lumi-devs/lumi/interactions";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi-devs/lumi/ui";
+import type { Container } from "@lumi-devs/lumi/services";
 import { getBoosterConfig } from "../../utilities/Config.js";
 import { deleteBoosterRole, getRole } from "../../utilities/Data.js";
 import { accessDenial } from "../../utilities/Access.js";

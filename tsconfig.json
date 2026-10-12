@@ -31,6 +31,12 @@
       "@lumi-devs/lumi/ui": ["./.lumi/src/lib/ui/Cards.ts"],
       "@lumi-devs/lumi/config": ["./.lumi/src/lib/module-system/ConfigSchema.ts"],
       "@lumi-devs/lumi/api": ["./.lumi/src/lib/ModuleApi.ts"],
+      "@lumi-devs/lumi/services": ["./.lumi/src/lib/Services.ts"],
+      "@lumi-devs/lumi/scheduler": ["./.lumi/src/lib/scheduler/Oneshot.ts"],
+      "@lumi-devs/lumi/bank": ["./.lumi/src/lib/api/economy/Bank.ts"],
+      "@lumi-devs/lumi/time": ["./.lumi/src/lib/utilities/Time.ts"],
+      "@lumi-devs/lumi/panels": ["./.lumi/src/lib/ui/Panels.ts"],
+      "@lumi-devs/lumi/cooldown": ["./.lumi/src/lib/valkey/Cooldown.ts"],
       "@lumi-devs/lumi/lib/*": ["./.lumi/src/lib/*"],
       "@lumi-devs/lumi": ["./.lumi/src/Index.ts"]
     }

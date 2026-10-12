@@ -1,10 +1,10 @@
-import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
-import { cfg } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
+import { defineModule } from "@lumi-devs/lumi/module";
+import { cfg } from "@lumi-devs/lumi/config";
 import { ChannelType } from "discord.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { Container } from "@lumi-devs/lumi/services";
 import { handleExpire } from "./tasks/ExpireFire.js";
 import { MODULE_NAME } from "./utilities/Keys.js";
-import type { OneshotContext } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
+import type { OneshotContext } from "@lumi-devs/lumi/scheduler";
 
 export const dragmeModule = defineModule({
   name: MODULE_NAME,

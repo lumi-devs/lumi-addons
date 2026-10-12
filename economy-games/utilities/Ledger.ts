@@ -1,5 +1,5 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { deposit, getBalance, withdraw } from "@lumi-devs/lumi/lib/api/economy/Bank.js";
+import type { Container } from "@lumi-devs/lumi/services";
+import { deposit, getBalance, withdraw } from "@lumi-devs/lumi/bank";
 
 export class LedgerInsufficientFunds extends Error {
   public readonly wallet: number;

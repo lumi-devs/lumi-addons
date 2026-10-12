@@ -1,7 +1,7 @@
 import type { AnySelectMenuInteraction } from "discord.js";
-import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
-import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { defineInteraction } from "@lumi-devs/lumi/interactions";
+import { ephemeralCard, makeErrorCard, makeSuccessCard } from "@lumi-devs/lumi/ui";
+import type { Container } from "@lumi-devs/lumi/services";
 import { getRole, removeShare } from "../../utilities/Data.js";
 import { InteractionIds, InteractionPrefixes, MODULE_NAME } from "../../utilities/Keys.js";
 

@@ -10,7 +10,7 @@ import {
   makeSuccessCard,
   makeWarningCard,
   type CardReply,
-} from "@lumi-devs/lumi/lib/ui/Cards.js";
+} from "@lumi-devs/lumi/ui";
 import type { DragRequestRecord } from "./Keys.js";
 
 export const userMention = (id: string): string => `<@${id}>`;

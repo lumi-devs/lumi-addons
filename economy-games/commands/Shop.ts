@@ -1,13 +1,13 @@
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
-import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
+import type { CommandDef } from "@lumi-devs/lumi/commands";
+import type { CommandContext } from "@lumi-devs/lumi/context";
 import {
   makeEmptyCard,
   makeErrorCard,
   makeListCard,
   makeSuccessCard,
-} from "@lumi-devs/lumi/lib/ui/Cards.js";
-import { currencyName } from "@lumi-devs/lumi/lib/api/economy/Bank.js";
+} from "@lumi-devs/lumi/ui";
+import { currencyName } from "@lumi-devs/lumi/bank";
 import { MODULE_NAME } from "../utilities/Keys.js";
 import {
   formatAmount,

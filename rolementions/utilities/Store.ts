@@ -1,4 +1,4 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { Container } from "@lumi-devs/lumi/services";
 import {
   BLOCK_KEY,
   COUNT_KEY,

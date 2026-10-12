@@ -1,7 +1,7 @@
 import { Events } from "discord.js";
 import type { Presence } from "discord.js";
-import { defineListener } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { defineListener } from "@lumi-devs/lumi/listeners";
+import type { Container } from "@lumi-devs/lumi/services";
 import { MODULE_NAME } from "../utilities/Store.js";
 import {
   activitiesFromPresence,

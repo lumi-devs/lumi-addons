@@ -1,6 +1,6 @@
 import { Events, type VoiceState } from "discord.js";
-import { defineListener, addListenerDef } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { defineListener, addListenerDef } from "@lumi-devs/lumi/listeners";
+import type { Container } from "@lumi-devs/lumi/services";
 import { MODULE_NAME } from "../utilities/Keys.js";
 import { getLoungeConfig } from "../utilities/Config.js";
 import { handleVoiceState } from "../utilities/Manage.js";

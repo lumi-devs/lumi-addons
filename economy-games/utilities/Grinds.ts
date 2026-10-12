@@ -1,5 +1,5 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { deposit } from "@lumi-devs/lumi/lib/api/economy/Bank.js";
+import type { Container } from "@lumi-devs/lumi/services";
+import { deposit } from "@lumi-devs/lumi/bank";
 
 export type GrindKind = "work" | "beg" | "fish" | "mine";
 

@@ -1,4 +1,4 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { Container } from "@lumi-devs/lumi/services";
 import type { ActivityRoleMapping } from "./Matcher.js";
 
 export const MODULE_NAME = "activity-roles";

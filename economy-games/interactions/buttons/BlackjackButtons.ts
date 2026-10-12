@@ -1,8 +1,8 @@
 import type { ButtonInteraction } from "discord.js";
-import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
-import { ephemeralCard, makeErrorCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { currencyName } from "@lumi-devs/lumi/lib/api/economy/Bank.js";
+import { defineInteraction } from "@lumi-devs/lumi/interactions";
+import { ephemeralCard, makeErrorCard } from "@lumi-devs/lumi/ui";
+import type { Container } from "@lumi-devs/lumi/services";
+import { currencyName } from "@lumi-devs/lumi/bank";
 import { BLACKJACK_KEY, MODULE_NAME } from "../../utilities/Keys.js";
 import { getGamesConfig } from "../../utilities/Config.js";
 import {

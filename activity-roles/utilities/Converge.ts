@@ -1,4 +1,4 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { Container } from "@lumi-devs/lumi/services";
 import type { Presence, GuildMember } from "discord.js";
 import {
   clearMemberState,

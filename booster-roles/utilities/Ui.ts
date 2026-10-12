@@ -7,8 +7,8 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { makeCard, makeInfoCard, type CardReply } from "@lumi-devs/lumi/lib/ui/Cards.js";
-import { BrandColors } from "@lumi-devs/lumi/lib/ui/Palette.js";
+import { makeCard, makeInfoCard, type CardReply } from "@lumi-devs/lumi/ui";
+import { BrandColors } from "@lumi-devs/lumi/ui";
 import { parseHexColor } from "./Engine.js";
 import type { BoosterRole } from "./Data.js";
 import { InteractionIds } from "./Keys.js";

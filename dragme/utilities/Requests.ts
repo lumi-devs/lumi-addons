@@ -1,4 +1,4 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { Container } from "@lumi-devs/lumi/services";
 import { MODULE_NAME, REQUEST_KEY, type DragRequestRecord } from "./Keys.js";
 
 export async function getRequest(

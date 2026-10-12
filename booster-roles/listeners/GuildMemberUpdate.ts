@@ -1,7 +1,7 @@
 import { Events, type GuildMember, type PartialGuildMember } from "discord.js";
-import { defineListener } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { scheduleOneshot } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
+import { defineListener } from "@lumi-devs/lumi/listeners";
+import type { Container } from "@lumi-devs/lumi/services";
+import { scheduleOneshot } from "@lumi-devs/lumi/scheduler";
 import { getBoosterConfig } from "../utilities/Config.js";
 import {
   clearGrace,

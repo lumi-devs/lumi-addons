@@ -1,5 +1,5 @@
-import type { OneshotContext } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { OneshotContext } from "@lumi-devs/lumi/scheduler";
+import type { Container } from "@lumi-devs/lumi/services";
 import type { ThreadState } from "../utilities/Keys.js";
 import { THREAD_STATE_KEY, CLEANUP_ONESHOT } from "../utilities/Keys.js";
 

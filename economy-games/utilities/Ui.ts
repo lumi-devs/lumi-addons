@@ -6,8 +6,8 @@ import {
   makeSuccessCard,
   makeWarningCard,
   type CardReply,
-} from "@lumi-devs/lumi/lib/ui/Cards.js";
-import { componentEmoji, row } from "@lumi-devs/lumi/lib/ui/Panels.js";
+} from "@lumi-devs/lumi/ui";
+import { componentEmoji, row } from "@lumi-devs/lumi/panels";
 import {
   handLabel,
   handValue,

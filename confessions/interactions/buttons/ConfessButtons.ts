@@ -11,7 +11,7 @@ import {
   makeSuccessCard,
   makeWarningCard,
 } from "@lumi-devs/lumi/ui";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import type { Container } from "@lumi-devs/lumi/services";
 import { getConfessionsConfig } from "../../utilities/Config.js";
 import {
   authorHashFor,

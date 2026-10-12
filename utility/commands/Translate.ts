@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
-import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
-import { makeInfoCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
+import type { CommandDef } from "@lumi-devs/lumi/commands";
+import type { CommandContext } from "@lumi-devs/lumi/context";
+import { makeInfoCard } from "@lumi-devs/lumi/ui";
 import { DEFAULT_TARGET, parseGtxResponse, resolveLanguage } from "../utilities/Languages.js";
 
 async function fetchTranslation(

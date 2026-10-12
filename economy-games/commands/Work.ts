@@ -1,8 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
-import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
-import { formatDuration } from "@lumi-devs/lumi/lib/utilities/Time.js";
-import { currencyName, getBalance } from "@lumi-devs/lumi/lib/api/economy/Bank.js";
+import type { CommandDef } from "@lumi-devs/lumi/commands";
+import type { CommandContext } from "@lumi-devs/lumi/context";
+import { formatDuration } from "@lumi-devs/lumi/time";
+import { currencyName, getBalance } from "@lumi-devs/lumi/bank";
 import { MODULE_NAME } from "../utilities/Keys.js";
 import { formatAmount, getGamesConfig } from "../utilities/Config.js";
 import { claimCooldown } from "../utilities/Store.js";

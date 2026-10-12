@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
-import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
-import { scheduleOneshot } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
+import type { CommandDef } from "@lumi-devs/lumi/commands";
+import type { CommandContext } from "@lumi-devs/lumi/context";
+import { scheduleOneshot } from "@lumi-devs/lumi/scheduler";
 import { MODULE_NAME, EXPIRE_ONESHOT, type DragRequestRecord } from "../utilities/Keys.js";
 import { channelMention, requestPayload, userMention } from "../utilities/Cards.js";
 import { getRequest, setRequest } from "../utilities/Requests.js";

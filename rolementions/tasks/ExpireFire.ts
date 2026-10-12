@@ -1,5 +1,5 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import type { OneshotContext } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
+import type { Container } from "@lumi-devs/lumi/services";
+import type { OneshotContext } from "@lumi-devs/lumi/scheduler";
 import { liftBlock } from "../utilities/Protection.js";
 
 export async function handleExpire(

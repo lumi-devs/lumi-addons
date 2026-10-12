@@ -1,15 +1,12 @@
-import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
-import { cfg } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import type { Presence } from "discord.js";
-import { ActivityType, Events } from "discord.js";
-import { addListenerDef, defineListener } from "@lumi-devs/lumi/lib/listeners/ListenerDef.js";
+import { defineModule } from "@lumi-devs/lumi/module";
+import { cfg } from "@lumi-devs/lumi/config";
+import type { Container } from "@lumi-devs/lumi/services";
 import {
   makeSuccessCard,
   makeWarningCard,
   noPingCard,
-} from "@lumi-devs/lumi/lib/ui/Cards.js";
-import { toStringArray } from "@lumi-devs/lumi/lib/module-system/ConfigSchema.js";
+} from "@lumi-devs/lumi/ui";
+import { toStringArray } from "@lumi-devs/lumi/config";
 import { MODULE_NAME, PromoterData, type MemberState, type PromoterStats } from "./utilities/Keys.js";
 import { statusMatches, wearsServerTag } from "./utilities/Matching.js";
 
@@ -217,34 +214,6 @@ async function sweep(services: Container, guildId: string): Promise<number> {
   return revoked;
 }
 
-const presenceUpdateListener = defineListener({
-  name: "promoterPresenceUpdate",
-  event: Events.PresenceUpdate,
-  module: MODULE_NAME,
-  guildId: (_old: Presence | null, newP: Presence) => newP.guild?.id ?? null,
-  async execute(services: Container, _old: Presence | null, newPresence: Presence) {
-    const guildId = newPresence.guild?.id;
-    if (!guildId) return;
-    const userId = newPresence.userId;
-    if (newPresence.user?.bot) return;
-
-    const customStatus = newPresence.activities.find(
-      (a) => a.type === ActivityType.Custom,
-    );
-    const statusText = customStatus?.state ?? "";
-    const worn = wearsServerTag(newPresence.member?.user.primaryGuild ?? null, guildId);
-    const roles = newPresence.member?.roles.cache.map((r) => r.id) ?? [];
-
-    await converge(services, {
-      guildId,
-      userId,
-      status: statusText,
-      worn,
-      roles,
-    });
-  },
-});
-
 export const promoterModule = defineModule({
   name: MODULE_NAME,
   displayName: "Promoter",
@@ -280,7 +249,6 @@ export const promoterModule = defineModule({
   }),
 
   onLoad(services: Container) {
-    addListenerDef(presenceUpdateListener);
     void services.client.guilds.cache.forEach((guild) => {
       void sweep(services, guild.id).catch(() => undefined);
     });

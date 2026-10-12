@@ -1,4 +1,4 @@
-import { defineModule } from "@lumi-devs/lumi/lib/module-system/Module.js";
+import { defineModule } from "@lumi-devs/lumi/module";
 
 export const utilityAddonModule = defineModule({
   name: "utility",

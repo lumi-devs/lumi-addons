@@ -1,6 +1,6 @@
-import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { scheduleOneshot } from "@lumi-devs/lumi/lib/scheduler/Oneshot.js";
-import { makeSuccessCard, makeWarningCard } from "@lumi-devs/lumi/lib/ui/Cards.js";
+import type { Container } from "@lumi-devs/lumi/services";
+import { scheduleOneshot } from "@lumi-devs/lumi/scheduler";
+import { makeSuccessCard, makeWarningCard } from "@lumi-devs/lumi/ui";
 import { EXPIRE_ONESHOT, MODULE_NAME, type ActiveBlock } from "./Keys.js";
 import { getBlock, removeBlock, setBlock } from "./Store.js";
 import { sendLog } from "./Log.js";

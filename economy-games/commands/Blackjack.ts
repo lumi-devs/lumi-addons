@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from "discord.js";
-import type { CommandDef } from "@lumi-devs/lumi/lib/commands/CommandDef.js";
-import type { CommandContext } from "@lumi-devs/lumi/lib/commands/Context.js";
-import { currencyName } from "@lumi-devs/lumi/lib/api/economy/Bank.js";
+import type { CommandDef } from "@lumi-devs/lumi/commands";
+import type { CommandContext } from "@lumi-devs/lumi/context";
+import { currencyName } from "@lumi-devs/lumi/bank";
 import { BLACKJACK_KEY, MODULE_NAME } from "../utilities/Keys.js";
 import { getGamesConfig, validateBet } from "../utilities/Config.js";
 import { debitBet, LedgerInsufficientFunds } from "../utilities/Ledger.js";
