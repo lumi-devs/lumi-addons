@@ -5,11 +5,11 @@
   "description": "General utility addons including auto-translate and emoji-stealer.",
   "short": "General utility tools.",
   "version": "1.0.0",
+  "author": ["Antigravity"],
+  "min_bot_version": "0.6.0",
   "disableable": true,
   "targetUtility": "worker",
-  "subStores": [
-    "commands"
-  ],
+  "subStores": ["commands"],
   "configFields": [],
   "endUserDataStatement": "Processes transient translation and emoji extraction requests in real-time. Does not collect, persist, or retain any personal user data or message content.",
   "capabilities": {

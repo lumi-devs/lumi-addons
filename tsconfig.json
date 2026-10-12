@@ -1,38 +1,34 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
+    "target": "ESNext",
+    "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022"],
+    "customConditions": ["bun"],
+    "lib": ["ESNext"],
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "useDefineForClassFields": true,
-    "preserveConstEnums": true,
-    "types": ["bun"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["bun", "node"],
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "noImplicitOverride": true,
-    "noEmit": true,
-    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
     "paths": {
-      "*": ["./*"],
-      "lumi": ["./.lumi/packages/core/src/lib/addon-sandbox/sdk/index.ts"],
-      "lumi/*": ["./.lumi/packages/core/src/lib/addon-sandbox/sdk/*.ts"],
-      "@lumi/contracts": ["./.lumi/packages/contracts/src/index.ts"],
-      "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"],
-      "@lumi/lib/*": ["./.lumi/packages/core/src/lib/*"]
+      "#lib/*.js": ["./.lumi/src/lib/*.ts"],
+      "#lib/*": ["./.lumi/src/lib/*"],
+      "#src/*.js": ["./.lumi/src/*.ts"],
+      "#src/*": ["./.lumi/src/*"]
     }
   },
-  // Core SDK entrypoints are resolved via paths; addon source files are checked here.
-  "include": ["*/**/*.ts"],
-  "exclude": ["node_modules", "scripts", "docs", "dist", "coverage"]
+  "include": ["*/Index.ts", "*/commands/**/*.ts", "*/listeners/**/*.ts", "*/interactions/**/*.ts", "*/tasks/**/*.ts", "*/services/**/*.ts", "*/data/**/*.ts", "*/utilities/**/*.ts", "*/lib/**/*.ts"],
+  "exclude": ["node_modules", "scripts", "docs", "dist", "coverage", "data"]
 }

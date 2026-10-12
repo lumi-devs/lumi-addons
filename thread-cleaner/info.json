@@ -1,9 +1,0 @@
-{
-  "name": "thread-cleaner",
-  "author": ["Lumi Developers"],
-  "description": "Automatically archives or locks threads after a configurable period of inactivity.",
-  "short": "Auto-archive/lock inactive threads.",
-  "version": "1.0.0",
-  "min_bot_version": "0.6.0",
-  "end_user_data_statement": "Does not collect or store personal end-user data. Stores thread IDs and cleanup metadata."
-}

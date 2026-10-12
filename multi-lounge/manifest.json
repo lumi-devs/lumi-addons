@@ -4,14 +4,55 @@
   "emoji": "🛋️",
   "description": "Dynamic voice lounges: creates temporary child voice channels on demand and removes them when empty.",
   "short": "Dynamic voice lounges that scale with demand.",
+  "endUserDataStatement": "Does not store any personal end-user data. Manages dynamic voice channels based on guild member occupancy without persisting user identities.",
   "version": "1.0.0",
   "disableable": true,
-  "targetUtility": "worker",
-  "capabilities": {
-    "discord": ["reply", "manageChannels", "manageVoice"],
-    "scheduling": true,
-    "kv": true
-  },
-  "subStores": ["commands"],
-  "configFields": []
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "configFields": [
+    {
+      "key": "base_channel_ids",
+      "type": "MULTI_CHANNEL",
+      "label": "Base Lounges",
+      "description": "Parent voice channels that trigger temporary lounge creation."
+    },
+    {
+      "key": "busy_threshold",
+      "type": "NUMBER",
+      "label": "Busy Threshold",
+      "description": "Users in a lounge before it counts as busy.",
+      "default": 2,
+      "min": 1,
+      "max": 99
+    },
+    {
+      "key": "max_extra_lounges",
+      "type": "NUMBER",
+      "label": "Max Extra Lounges",
+      "description": "Maximum temporary lounges per base.",
+      "default": 5,
+      "min": 1,
+      "max": 25
+    },
+    {
+      "key": "name_template",
+      "type": "STRING",
+      "label": "Name Template",
+      "description": "Name for created lounges; {n} is the lounge number.",
+      "default": "Lounge {n}"
+    },
+    {
+      "key": "cooldown_seconds",
+      "type": "NUMBER",
+      "label": "Creation Cooldown (seconds)",
+      "description": "Minimum gap between creating lounges.",
+      "default": 10,
+      "min": 0,
+      "max": 300
+    }
+  ],
+  "category": "Voice",
+  "author": ["Antigravity"],
+  "min_bot_version": "0.6.0"
 }

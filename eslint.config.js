@@ -2,11 +2,13 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['lumi-core/**', '.lumi/**', 'node_modules/**', 'dist/**', 'docs/**', '**/*.js', '**/*.mjs'] },
-  { files: ['**/*.ts'] },
+  {
+    ignores: ['.lumi/**', 'node_modules/**', 'docs/**', 'scripts/**', 'data/**', '**/*.js', '**/*.mjs'],
+  },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['**/*.ts'],
     rules: {
       '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/no-explicit-any': 'off',

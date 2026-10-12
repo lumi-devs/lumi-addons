@@ -1,0 +1,57 @@
+import { defineModule } from "#src/lib/module-system/Module.js";
+import { cfg } from "#src/lib/module-system/ConfigSchema.js";
+import { ChannelType } from "discord.js";
+import type { Container } from "#src/lib/Services.js";
+import { handleExpire } from "./tasks/ExpireFire.js";
+import { MODULE_NAME } from "./utilities/Keys.js";
+import type { OneshotContext } from "#src/lib/scheduler/Oneshot.js";
+
+export const dragmeModule = defineModule({
+  name: MODULE_NAME,
+  displayName: "Drag Me",
+  emoji: "🫳",
+  version: "1.0.0",
+  description:
+    "Voice drag requests: ask to be pulled into a voice channel and let the people inside approve with one click. Accepting moves you straight in.",
+  short: "Ask to be dragged into a voice channel.",
+  endUserDataStatement:
+    "Temporarily stores voice drag request metadata (requesting user ID, target channel ID, timestamp) until the request is completed, rejected, or expires.",
+  author: ["Antigravity"],
+  min_bot_version: "0.6.0",
+  category: "Community",
+  configSchema: cfg.object({
+    request_channel_id: cfg.channel({
+      label: "Request Channel",
+      description: "Text channel where drag request cards are posted.",
+      channelTypes: [ChannelType.GuildText],
+    }),
+    timeout_minutes: cfg.number({
+      label: "Request Timeout (minutes)",
+      description: "Minutes before an unanswered request expires.",
+      default: 5,
+      min: 1,
+      max: 60,
+    }),
+    blacklist_role_ids: cfg.multiRole({
+      label: "Blacklisted Roles",
+      description: "Roles that may not use drag requests.",
+    }),
+  }),
+
+  async deleteUserData(services: Container, userId: string): Promise<void> {
+    await services.db.guildKV.deleteModuleDataForTarget(MODULE_NAME, userId);
+  },
+
+  async exportUserData(
+    services: Container,
+    userId: string,
+  ): Promise<Record<string, unknown> | null> {
+    const rows = await services.db.guildKV.listModuleDataForTarget(MODULE_NAME, userId);
+    if (rows.length === 0) return null;
+    return { dragRequests: rows.map((r) => r.value) };
+  },
+});
+
+export const oneshots: Record<string, (services: Container, ctx: OneshotContext) => Promise<void>> = {
+  expire: handleExpire,
+};

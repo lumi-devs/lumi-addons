@@ -1,7 +1,7 @@
 # Confessions
 
 Anonymous confessions for your server. Members run `/confess`, type into a modal,
-and the bot posts it as a numbered card — no name attached. Anyone can reply
+and the bot posts it as a numbered card - no name attached. Anyone can reply
 anonymously from a button, optionally inside a per-confession thread. Moderators
 can ban a confession's author or delete a confession without ever learning who
 wrote it.
@@ -25,28 +25,28 @@ never leaves the database. Confession and reply messages suppress all mentions.
 
 ## Setup
 
-Configure via `/lumi` → **Modules** → **Confessions**:
+Configure via `/lumi` -> **Modules** -> **Confessions**:
 
 | Field | Default | Meaning |
 |---|---|---|
-| Confession Channel | — | Where confessions are posted. **Required.** |
-| Moderation Log | — | Optional audit channel for bans / deletes. |
+| Confession Channel | - | Where confessions are posted. **Required.** |
+| Moderation Log | - | Optional audit channel for bans / deletes. |
 | Auto-Thread | on | Open a reply thread under each confession. |
 | Allow Image URLs | on | Permit an optional image URL on confessions/replies. |
 | Cooldown (minutes) | 5 | Minimum gap between an author's confessions. |
 
 ## Commands
 
-- `/confess` — submit an anonymous confession.
-- `/confessmod ban <number>` *(Moderator)* — ban a confession's anonymous author.
-- `/confessmod unban <number | hash>` *(Moderator)* — lift a ban.
-- `/confessmod list` *(Moderator)* — list banned author hashes.
-- `/confessmod delete <number> [reason]` *(Moderator)* — remove a confession and its thread.
+- `/confess` - submit an anonymous confession.
+- `/confessmod ban <number>` *(Moderator)* - ban a confession's anonymous author.
+- `/confessmod unban <number | hash>` *(Moderator)* - lift a ban.
+- `/confessmod list` *(Moderator)* - list banned author hashes.
+- `/confessmod delete <number> [reason]` *(Moderator)* - remove a confession and its thread.
 
 ## Privacy & data
 
 - Stores per guild: the salt, a confession counter, per-confession metadata
   (number, message/thread IDs, **author hash**), per-reply author hashes, and
-  ban records — all keyed by hash, never by user ID.
+  ban records - all keyed by hash, never by user ID.
 - Implements GDPR erasure: deleting a user drops their ban, cooldown, authored
   confessions, and reply rows across every guild.

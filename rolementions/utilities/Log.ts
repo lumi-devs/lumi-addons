@@ -1,0 +1,21 @@
+import type { Container } from "#src/lib/Services.js";
+import { noPingCard, type CardReply } from "#src/lib/ui/Cards.js";
+import { MODULE_NAME } from "./Keys.js";
+
+export async function sendLog(
+  services: Container,
+  guildId: string,
+  card: CardReply,
+): Promise<void> {
+  const logChannelId = await services.db.config.getModuleConfig(
+    guildId,
+    MODULE_NAME,
+    "log_channel_id",
+  );
+  if (!logChannelId || typeof logChannelId !== "string") return;
+  const channel = await services.client.channels
+    .fetch(logChannelId)
+    .catch(() => null);
+  if (!channel || !channel.isSendable()) return;
+  await channel.send(noPingCard(card)).catch(() => null);
+}

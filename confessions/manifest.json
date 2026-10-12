@@ -2,24 +2,13 @@
   "name": "confessions",
   "displayName": "Confessions",
   "emoji": "🕊️",
-  "description": "Anonymous confessions posted through /confess, with optional anonymous replies, per-author cooldowns, and moderator bans — identities are never stored in the clear.",
+  "description": "Anonymous confessions with numbered Components-v2 cards, optional threads, anonymous replies, and hash-based moderation that never exposes author identity.",
   "short": "Anonymous confessions + replies.",
+  "endUserDataStatement": "Stores cryptographic one-way hashes of author IDs per guild for moderation, plus your user ID linked to confessions/replies you author so reply notifications can reach you, and your notification opt-out choice. ID-linked rows are keyed to you and removed by GDPR deletion.",
   "version": "1.0.0",
+  "author": ["Antigravity"],
+  "min_bot_version": "0.6.0",
   "disableable": true,
-  "targetUtility": "worker",
-  "subStores": [
-    "commands",
-    "interaction-handlers"
-  ],
-  "configFields": [],
-  "capabilities": {
-    "discord": [
-      "reply",
-      "sendMessage",
-      "sendDirectMessage",
-      "editMessage",
-      "manageThreads"
-    ],
-    "kv": true
-  }
+  "category": "Community",
+  "configFields": []
 }

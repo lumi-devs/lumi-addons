@@ -1,8 +1,0 @@
-{
-  "name": "economy-games",
-  "author": ["Lumi Developers"],
-  "description": "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop — every payout settled through the addon's own coin ledger.",
-  "short": "Casino games, crime, grinds, and a shop with its own ledger.",
-  "version": "1.0.0",
-  "end_user_data_statement": "Stores per-server wallet balances, jail sentences, shop inventories, cooldown timestamps, and active game tables keyed by user ID. All rows live in this addon's own storage namespace and are removed on GDPR erasure."
-}

@@ -4,14 +4,38 @@
   "emoji": "🧹",
   "description": "Automatically archives or locks threads after a configurable period of inactivity.",
   "short": "Auto-archive/lock inactive threads.",
+  "endUserDataStatement": "Does not collect or store personal end-user data. Stores thread IDs and cleanup metadata.",
   "version": "1.0.0",
   "disableable": true,
-  "targetUtility": "worker",
-  "capabilities": {
-    "discord": ["manageThreads"],
-    "scheduling": true,
-    "kv": true
-  },
-  "subStores": [],
-  "configFields": []
+  "dependencies": [],
+  "conflicts": [],
+  "configOverrides": true,
+  "configFields": [
+    {
+      "key": "enabled_channels",
+      "type": "MULTI_CHANNEL",
+      "label": "Enabled Channels",
+      "description": "Channels where new threads should be scheduled for cleanup.",
+      "default": []
+    },
+    {
+      "key": "inactive_duration",
+      "type": "DURATION",
+      "label": "Inactivity Duration",
+      "description": "Duration of inactivity before cleanup runs (e.g. 24h, 3d).",
+      "default": "3d",
+      "quickPicks": ["1h", "6h", "24h", "3d", "7d"]
+    },
+    {
+      "key": "action",
+      "type": "ENUM",
+      "label": "Cleanup Action",
+      "description": "Action to perform on inactive threads.",
+      "default": "archive",
+      "choices": ["archive", "lock"]
+    }
+  ],
+  "category": "Utility",
+  "author": ["Lumi Developers"],
+  "min_bot_version": "0.6.0"
 }

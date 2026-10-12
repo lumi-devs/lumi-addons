@@ -1,127 +1,87 @@
 # Contributing to Lumi Addons
 
-Thank you for your interest in contributing to **Lumi Addons**! This repository houses first-party dynamic addons for the **Lumi** TypeScript Discord bot.
-
----
-
-## 1. Code Quality & Verification Gates
-
-The gates run against a local Lumi checkout — link one first:
+## Setup
 
 ```sh
-git clone https://github.com/lumi-devs/lumi ../lumi   # and `bun install` inside it
-bun run setup                                          # or LUMI_PATH=/path/to/lumi bun run setup
+git clone https://github.com/lumi-devs/lumi ../lumi
+bun install --cwd ../lumi
+git clone https://github.com/lumi-devs/lumi-addons
+cd lumi-addons
+bun run setup
 ```
 
-Then, before submitting a Pull Request:
+`bun run setup` creates `.lumi -> ../lumi` and `node_modules -> .lumi/node_modules`.
+If your Lumi checkout is elsewhere: `LUMI_PATH=/path/to/lumi bun run setup`.
 
-1. **Type safety**:
+## Workflow
+
+1. Create or edit your addon directory.
+2. Run verification gates:
    ```sh
    bun run typecheck
-   ```
-2. **ESLint**:
-   ```sh
    bun run lint
-   ```
-3. **Unit tests** (no Lumi checkout needed — pure `lib/*.ts` logic only):
-   ```sh
    bun run test
+   bun run validate
    ```
+3. All four must pass before opening a PR.
 
-All PRs must have **zero compile errors**, **zero lint errors**, and a **passing test suite** before they can be merged.
+## Rules
 
-If you add a pure, side-effect-free helper to a `lib/` directory (validation,
-formatting, matching, scaling decisions — no `container`, no Discord.js API
-calls, no DB/Redis), add a sibling `*.test.ts` for it using
-[Vitest](https://vitest.dev). See `booster-roles/lib/engine.test.ts` for the
-established style. Functions that touch Discord's API or persistence aren't
-good candidates — cover those manually instead.
+- **Zero cross-addon imports.** Never import from a sibling addon directory.
+- **No phantom imports.** Use `#lib/*` and `#src/*` paths only. Never import from
+  bare `lumi`, `lumi/commands`, `lumi/*`, `#core/*`, `#utilities/*`, or `#database/*`.
+- **No `new EmbedBuilder()`.** All responses go through card builders in
+  `#lib/ui/Cards.js` or `ctx.replySuccess` / `ctx.replyError`.
+- **No `container.prisma`.** Use `container.db` only.
+- **No `defaultMemberPermissions` on CommandDef.** Set `requiredPermit`, `botOwner`,
+  or `guildOwner` instead.
+- **GDPR hooks required.** Every `defineModule` must implement `deleteUserData` and
+  `exportUserData`.
+- **`endUserDataStatement` required** in both `manifest.json` and `defineModule`.
 
----
-
-## 2. Addon Architectural Conventions
-
-### A. Dynamic dependency isolation
-If your addon needs external packages:
-* List them under the `requirements` array in `info.json`.
-* The downloader creates a private `package.json` inside the addon directory and runs `bun add` there.
-* **Do not** assume anything about the bot's root `package.json`.
-
-### B. UI through the card system
-* **Never use `new EmbedBuilder()`.** All user-facing responses go through the card factories in `#utilities/cards.js` (`makeSuccessCard`, `makeErrorCard`, `makeWarningCard`, `makeInfoCard`, `makeListCard`) or the `replySuccess`/`replyError`/… helpers on `BaseCommand`.
-
-### C. Isolated state management
-* **Do not add methods to `DatabaseService`** — addons must be 100% self-contained.
-* Persist through `container.db.guildKV` — the generic per-module key/value store, keyed `guildId + module + targetId + key`. Note the semantics: `listModuleData({ module, key, guildId })` filters on `key`, so the **varying identifier goes in `targetId`** and `key` names the collection (see `activity-roles/lib/store.ts` for the pattern).
-* Use `container.redis` for high-speed ephemeral state; define your key builders in a local `keys.ts`.
-* Do **not** touch `container.prisma` — addons get no schema of their own.
-
-### D. GDPR
-If your addon stores anything keyed by a user ID (DB or Redis), override `deleteUserData(userId, requester)` on your module class and delete it there. Write a `// No-op` override with a justification if you store nothing.
-
-### E. Scheduled work
-* BullMQ pieces live in a directory named exactly **`scheduled-tasks/`** (a `tasks/` directory is silently ignored).
-* Discord/DB side-effects of a task must go through the fire bus: register with `registerTaskFireHandler(name, mode, handler)` in your module's `onLoad`. `"unicast"` = exactly one worker executes each fire (one-shot effects); `"broadcast"` = every worker executes and iterates its own `guilds.cache` (periodic sweepers).
-
----
-
-## 3. Creating a New Addon
-
-Every addon folder follows this anatomy (only `info.json` and `index.ts` are mandatory):
+## Addon structure
 
 ```
 my-addon/
-├── info.json              # Downloader metadata
-├── index.ts               # Module entrypoint (@DefineModule)
-├── README.md              # User-facing usage guide
-├── commands/              # BaseCommand / BaseSubcommand pieces
-├── listeners/             # Sapphire Listener pieces
-├── interaction-handlers/  # buttons / selects / modals
-├── scheduled-tasks/       # BullMQ ScheduledTask pieces (exact name!)
-└── lib/ keys.ts …         # plain helpers, not pieces
+  Index.ts        # defineModule({...}) entrypoint
+  manifest.json   # static discovery contract
+  commands/       # *Def exports (name + run or handlers)
+  listeners/      # defineListener + addListenerDef
+  interactions/   # defineInteraction (prefix/match + run)
+  tasks/          # task fire handlers
+  utilities/      # pure helpers
+  services/       # background services
+  data/           # db accessors
 ```
 
-The downloader registers the addon directory as a Sapphire base path, so the sub-store directories are discovered automatically — **do not call `stores.registerPath` yourself**.
+## Example Index.ts
 
-### Example `info.json`
+```ts
+import { defineModule } from "#lib/module-system/Module.js";
 
-```json
-{
-  "name": "my-addon",
-  "author": ["YourName"],
-  "description": "What your addon does, one or two sentences.",
-  "short": "One-line tagline.",
-  "version": "1.0.0",
-  "requirements": []
-}
-```
-
-### Example `index.ts`
-
-```typescript
-import { Module, DefineModule, cfg } from "#core/module-system/Module.js";
-
-@DefineModule({
+export const meta = defineModule({
   name: "my-addon",
   displayName: "My Addon",
   emoji: "🚀",
   version: "1.0.0",
-  description: "What your addon does.",
-  configSchema: cfg.object({
-    log_channel_id: cfg.channel({
-      label: "Log Channel",
-      description: "Where events are posted.",
-    }),
-  }),
-})
-export class MyAddonModule extends Module {
-  public override async deleteUserData(
-    _userId: string,
-    _requester: import("#core/lib/gdpr.js").RequesterType,
-  ): Promise<void> {
-    // Delete anything keyed by userId here, or justify a no-op.
-  }
-}
+  description: "What it does.",
+  short: "Short description.",
+  endUserDataStatement: "Describe what user data is stored and why.",
+  async deleteUserData(_userId) {},
+  async exportUserData(_userId) { return null; },
+});
 ```
 
-Configuration declared in `configSchema` is automatically editable via `/config` and the dashboard; read it with `container.db.config.getModuleConfig(guildId, "my-addon", "log_channel_id")`.
+## Example CommandDef
+
+```ts
+import { defineCommand } from "#lib/commands/Define.js";
+
+export const myCommandDef = defineCommand({
+  name: "mycommand",
+  description: "Does something.",
+  async run(ctx) {
+    await ctx.replySuccess("Done.");
+  },
+});
+```

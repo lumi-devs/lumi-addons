@@ -5,16 +5,7 @@
   "description": "Rewards members who advertise the server in their custom status (invite link or server tag) with a configurable role, removed automatically when the status changes. Includes log cards and a persistent check-me panel.",
   "short": "Auto-role for members advertising the server.",
   "version": "1.0.0",
-  "disableable": true,
-  "targetUtility": "worker",
-  "subStores": [
-    "commands",
-    "interaction-handlers"
-  ],
-  "configFields": [],
-  "capabilities": {
-    "discord": ["reply", "sendMessage", "manageRoles"],
-    "scheduling": true,
-    "kv": true
-  }
+  "category": "Community",
+  "endUserDataStatement": "Processes Discord user presence text in real-time to check for server promotions. Stores per-member cached state (status text, tag flag, role flag) per guild; does not store personal profile data outside the bot instance.",
+  "disableable": true
 }
