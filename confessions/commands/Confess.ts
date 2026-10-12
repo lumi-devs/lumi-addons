@@ -47,10 +47,10 @@ export const confessDef: CommandDef = {
         ),
       );
     }
-    const rawModal = buildConfessionModal(config.allowAttachments);
+    const modal = buildConfessionModal(config.allowAttachments);
     const interaction = ctx.interaction;
     if (interaction && "showModal" in interaction) {
-      return interaction.showModal(rawModal as never);
+      return interaction.showModal(modal);
     }
   },
 };

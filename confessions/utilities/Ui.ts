@@ -2,6 +2,8 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  FileUploadBuilder,
+  LabelBuilder,
   type ModalActionRowComponentBuilder,
   ModalBuilder,
   TextInputBuilder,
@@ -86,21 +88,17 @@ export function replyPayload(
   );
 }
 
-function makeUploadComponent(customId: string, label: string) {
-  return {
-    type: 18,
-    label: label.slice(0, 45),
-    component: {
-      type: 19,
-      custom_id: customId,
-      required: false,
-      min_values: 0,
-      max_values: 1,
-    },
-  };
+function makeUploadLabel(customId: string, label: string): LabelBuilder {
+  const fileUpload = new FileUploadBuilder()
+    .setCustomId(customId)
+    .setRequired(false);
+
+  return new LabelBuilder()
+    .setLabel(label.slice(0, 45))
+    .setFileUploadComponent(fileUpload);
 }
 
-export function buildConfessionModal(allowAttachments: boolean) {
+export function buildConfessionModal(allowAttachments: boolean): ModalBuilder {
   const modal = new ModalBuilder()
     .setCustomId("confessions:modal:new")
     .setTitle("Anonymous Confession");
@@ -128,9 +126,7 @@ export function buildConfessionModal(allowAttachments: boolean) {
   modal.addComponents(titleRow, confessionRow);
 
   if (allowAttachments) {
-    const raw = modal.toJSON();
-    (raw.components as unknown[]).push(makeUploadComponent("image", "Attach an image (optional)"));
-    return raw;
+    modal.addComponents(makeUploadLabel("image", "Attach an image (optional)"));
   }
 
   return modal;
@@ -139,7 +135,7 @@ export function buildConfessionModal(allowAttachments: boolean) {
 export function buildReplyModal(
   confessionNumber: number,
   allowAttachments: boolean,
-) {
+): ModalBuilder {
   const modal = new ModalBuilder()
     .setCustomId(`confessions:modal:reply:${confessionNumber}`)
     .setTitle(`Reply to Confession #${confessionNumber}`.slice(0, 45));
@@ -157,9 +153,7 @@ export function buildReplyModal(
   modal.addComponents(replyRow);
 
   if (allowAttachments) {
-    const raw = modal.toJSON();
-    (raw.components as unknown[]).push(makeUploadComponent("image", "Attach an image (optional)"));
-    return raw;
+    modal.addComponents(makeUploadLabel("image", "Attach an image (optional)"));
   }
 
   return modal;
@@ -169,7 +163,7 @@ export function buildReplyToReplyModal(
   confessionNumber: number,
   parentK: number,
   allowAttachments: boolean,
-) {
+): ModalBuilder {
   const modal = new ModalBuilder()
     .setCustomId(`confessions:modal:replyto:${confessionNumber}:${parentK}`)
     .setTitle(`Reply to #${confessionNumber}.${parentK}`.slice(0, 45));
@@ -187,9 +181,7 @@ export function buildReplyToReplyModal(
   modal.addComponents(replyRow);
 
   if (allowAttachments) {
-    const raw = modal.toJSON();
-    (raw.components as unknown[]).push(makeUploadComponent("image", "Attach an image (optional)"));
-    return raw;
+    modal.addComponents(makeUploadLabel("image", "Attach an image (optional)"));
   }
 
   return modal;

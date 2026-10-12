@@ -82,8 +82,8 @@ export const confessionButtons = defineInteraction<ButtonInteraction>({
           ),
         );
       }
-      const rawModal = buildConfessionModal(config.allowAttachments);
-      return interaction.showModal(rawModal as never);
+      const modal = buildConfessionModal(config.allowAttachments);
+      return interaction.showModal(modal);
     }
 
     if (!Number.isInteger(number)) return;
@@ -103,11 +103,11 @@ export const confessionButtons = defineInteraction<ButtonInteraction>({
           ),
         );
       }
-      const rawModal =
+      const modal =
         action === "reply" || !Number.isInteger(parentK)
           ? buildReplyModal(number, config.allowAttachments)
           : buildReplyToReplyModal(number, parentK!, config.allowAttachments);
-      return interaction.showModal(rawModal as never);
+      return interaction.showModal(modal);
     }
 
     if (action === "report" || action === "reportreply") {
