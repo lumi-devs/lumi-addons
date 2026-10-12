@@ -35,23 +35,30 @@ import { rehostUpload } from "../utilities/Rehost.js";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 function getUploadAttachment(interaction: ModalSubmitInteraction, customId: string) {
-  const raw = (interaction as unknown as { data?: { components?: unknown[]; resolved?: { attachments?: Record<string, { url: string; filename: string }> } } }).data;
-  if (!raw?.components || !raw.resolved?.attachments) return null;
+  try {
+    const file = interaction.fields.getUploadedFiles(customId, false)?.first();
+    if (file?.url) return { url: file.url, filename: file.name };
+  } catch {
+  }
 
-  for (const row of raw.components as { type?: number; component?: { custom_id?: string }; components?: { custom_id?: string }[] }[]) {
-    const targetComp = row.component?.custom_id === customId
-      ? row.component
-      : row.components?.find((c) => c.custom_id === customId);
+  const raw = (interaction as unknown as {
+    data?: {
+      components?: { component?: { custom_id?: string; values?: string[] } }[];
+      resolved?: { attachments?: Record<string, { url: string; filename: string }> };
+    };
+  }).data;
 
-    if (targetComp) {
-      const values = (targetComp as { values?: string[] }).values;
-      const attId = values?.[0];
-      if (attId && raw.resolved.attachments[attId]) {
-        return raw.resolved.attachments[attId];
-      }
+  const resolved = raw?.resolved?.attachments;
+  if (!resolved) return null;
+
+  for (const row of raw?.components ?? []) {
+    if (row.component?.custom_id === customId) {
+      const id = row.component.values?.[0];
+      if (id && resolved[id]) return resolved[id];
     }
   }
-  return null;
+
+  return Object.values(resolved)[0] ?? null;
 }
 
 async function handleNew(services: Container, interaction: ModalSubmitInteraction, guildId: string) {

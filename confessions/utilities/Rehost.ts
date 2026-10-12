@@ -14,7 +14,7 @@ export async function rehostUpload(
   }
   if (
     parsed.protocol !== "https:" ||
-    !/^(cdn|media)\.discordapp\.(com|net)$/.test(parsed.hostname)
+    !/(^|\.)discord(app)?\.(com|net)$/i.test(parsed.hostname)
   ) {
     return null;
   }
