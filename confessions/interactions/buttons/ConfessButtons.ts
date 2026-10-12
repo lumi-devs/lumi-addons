@@ -1,18 +1,17 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle,
   type ButtonInteraction,
+  ButtonStyle,
 } from "discord.js";
-import { defineInteraction } from "@lumi-devs/lumi/lib/interactions/InteractionDef.js";
+import { defineInteraction } from "@lumi-devs/lumi/interactions";
 import {
   ephemeralCard,
   makeErrorCard,
   makeSuccessCard,
   makeWarningCard,
-} from "@lumi-devs/lumi/lib/ui/Cards.js";
+} from "@lumi-devs/lumi/ui";
 import type { Container } from "@lumi-devs/lumi/lib/Services.js";
-import { MODULE_NAME } from "../../utilities/Keys.js";
 import { getConfessionsConfig } from "../../utilities/Config.js";
 import {
   authorHashFor,
@@ -27,19 +26,11 @@ import {
   buildReplyToReplyModal,
 } from "../../utilities/Ui.js";
 
-export const confessButtons = defineInteraction<ButtonInteraction>({
-  prefix: [
-    "confessions:btn:new",
-    "confessions:btn:reply",
-    "confessions:btn:replyto",
-    "confessions:btn:report",
-    "confessions:btn:reportreply",
-    "confessions:btn:mutedms",
-    "confessions:btn:unmutedms",
-  ],
+export const confessionButtons = defineInteraction<ButtonInteraction>({
+  prefix: ["confessions:btn"],
   kinds: ["button"],
-  module: MODULE_NAME,
-  async run(services: Container, interaction: ButtonInteraction): Promise<void> {
+  module: "confessions",
+  async run(services: Container, interaction: ButtonInteraction) {
     const parts = interaction.customId.split(":");
     const action = parts[2];
 
@@ -49,32 +40,33 @@ export const confessButtons = defineInteraction<ButtonInteraction>({
       await interaction.deferReply({ ephemeral: true });
       await setReplyDmOptOut(services, targetGuild, interaction.user.id, action === "mutedms");
       if (action === "mutedms") {
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`confessions:btn:unmutedms:${targetGuild}`)
-            .setLabel("Undo")
-            .setStyle(ButtonStyle.Secondary),
-        );
-        await interaction.editReply(
+        return interaction.editReply(
           ephemeralCard(
             makeWarningCard(
               "Reply DMs Off",
-              "You will not be DM'd about replies in that server anymore.",
-              { actionRows: [row] },
+              "You won't be DM'd about replies in that server anymore.",
+              {
+                actionRows: [
+                  new ActionRowBuilder<ButtonBuilder>().addComponents(
+                    new ButtonBuilder()
+                      .setCustomId(`confessions:btn:unmutedms:${targetGuild}`)
+                      .setLabel("Undo")
+                      .setStyle(ButtonStyle.Secondary),
+                  ),
+                ],
+              },
             ),
           ),
         );
-        return;
       }
-      await interaction.editReply(
+      return interaction.editReply(
         ephemeralCard(
-          makeSuccessCard("Reply DMs On", "You will be DM'd when someone replies to you again."),
+          makeSuccessCard("Reply DMs On", "You'll be DM'd when someone replies to you again."),
         ),
       );
-      return;
     }
 
-    if (!interaction.inGuild() || !interaction.guildId) return;
+    if (!interaction.guildId) return;
     const guildId = interaction.guildId;
     const number = Number(parts[3]);
     const parentK = parts[4] !== undefined ? Number(parts[4]) : null;
@@ -84,15 +76,14 @@ export const confessButtons = defineInteraction<ButtonInteraction>({
     if (action === "new") {
       const hash = await authorHashFor(services, guildId, interaction.user.id);
       if (await isBanned(services, guildId, hash)) {
-        await interaction.reply(
+        return interaction.reply(
           ephemeralCard(
             makeErrorCard("Blocked", "You can no longer submit confessions in this server."),
           ),
         );
-        return;
       }
-      await interaction.showModal(buildConfessionModal(config.allowAttachments));
-      return;
+      const rawModal = buildConfessionModal(config.allowAttachments);
+      return interaction.showModal(rawModal as never);
     }
 
     if (!Number.isInteger(number)) return;
@@ -100,45 +91,40 @@ export const confessButtons = defineInteraction<ButtonInteraction>({
     if (action === "reply" || action === "replyto") {
       const meta = await getConfession(services, guildId, number);
       if (!meta) {
-        await interaction.reply(
+        return interaction.reply(
           ephemeralCard(makeErrorCard("Gone", "That confession no longer exists.")),
         );
-        return;
       }
       const hash = await authorHashFor(services, guildId, interaction.user.id);
       if (await isBanned(services, guildId, hash)) {
-        await interaction.reply(
+        return interaction.reply(
           ephemeralCard(
             makeErrorCard("Blocked", "You can no longer participate in confessions here."),
           ),
         );
-        return;
       }
-      const modal =
+      const rawModal =
         action === "reply" || !Number.isInteger(parentK)
           ? buildReplyModal(number, config.allowAttachments)
           : buildReplyToReplyModal(number, parentK!, config.allowAttachments);
-      await interaction.showModal(modal);
-      return;
+      return interaction.showModal(rawModal as never);
     }
 
     if (action === "report" || action === "reportreply") {
       if (!config.reportChannelId) {
-        await interaction.reply(
+        return interaction.reply(
           ephemeralCard(
             makeWarningCard("Not Configured", "Reporting is not configured in this server."),
           ),
         );
-        return;
       }
 
       if (action === "report") {
         const meta = await getConfession(services, guildId, number);
         if (!meta) {
-          await interaction.reply(
+          return interaction.reply(
             ephemeralCard(makeErrorCard("Gone", "That confession no longer exists.")),
           );
-          return;
         }
         await interaction.deferReply({ ephemeral: true });
         const body = [
@@ -147,79 +133,51 @@ export const confessButtons = defineInteraction<ButtonInteraction>({
           `**Confession:** #${number}`,
           `**Content:** ${meta.text}`,
         ].join("\n");
-        const modRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setCustomId(`confessions:btn:approve:${number}`)
-            .setLabel("Approve (Keep)")
-            .setStyle(ButtonStyle.Success),
-          new ButtonBuilder()
-            .setCustomId(`confessions:btn:reject:${number}`)
-            .setLabel("Reject (Delete)")
-            .setStyle(ButtonStyle.Danger),
-        );
         const ping = config.reportPingRoleId ? `<@&${config.reportPingRoleId}>\n` : "";
         const reportChannel = await services.client.channels.fetch(config.reportChannelId).catch(() => null);
         if (reportChannel && reportChannel.isSendable()) {
-          const card = makeWarningCard(`🚨 Confession Report #${number}`, body, {
-            actionRows: [modRow],
-          });
+          const card = makeWarningCard(`🚨 Confession Report #${number}`, body);
           await reportChannel.send({
             content: ping || undefined,
             components: [...card.components],
             allowedMentions: { parse: [] },
-          } as any).catch(() => null);
+          } as never).catch(() => null);
         }
-        await interaction.editReply(
+        return interaction.editReply(
           ephemeralCard(
-            makeSuccessCard("Report Submitted", "Thank you, the moderators have been notified."),
+            makeSuccessCard("Report Submitted", "Thank you. Moderators have been notified."),
           ),
         );
-        return;
       }
 
-      if (!Number.isInteger(parentK)) return;
-      const parent = await getReply(services, guildId, number, parentK!);
-      if (!parent) {
-        await interaction.reply(
-          ephemeralCard(makeErrorCard("Gone", "That reply no longer exists.")),
-        );
+      if (action === "reportreply" && Number.isInteger(parentK)) {
+        const reply = await getReply(services, guildId, number, parentK!);
+        if (!reply) {
+          return interaction.reply(
+            ephemeralCard(makeErrorCard("Gone", "That reply no longer exists.")),
+          );
+        }
+        await interaction.deferReply({ ephemeral: true });
+        const body = [
+          `**Reporter:** <@${interaction.user.id}> (${interaction.user.id})`,
+          `**Author Hash:** \`${reply.authorHash}\``,
+          `**Confession:** #${number}`,
+          `**Reply:** #${number}.${parentK}`,
+          `**Content:** ${reply.text}`,
+        ].join("\n");
+        const ping = config.reportPingRoleId ? `<@&${config.reportPingRoleId}>\n` : "";
+        const reportChannel = await services.client.channels.fetch(config.reportChannelId).catch(() => null);
+        if (reportChannel && reportChannel.isSendable()) {
+          const card = makeWarningCard(`🚨 Reply Report #${number}.${parentK}`, body);
+          await reportChannel.send({
+            content: ping || undefined,
+            components: [...card.components],
+            allowedMentions: { parse: [] },
+          } as never).catch(() => null);
+        }
         return;
       }
-      await interaction.deferReply({ ephemeral: true });
-      const body = [
-        `**Reporter:** <@${interaction.user.id}> (${interaction.user.id})`,
-        `**Author Hash:** \`${parent.authorHash}\``,
-        `**Reply:** #${number}.${parentK}`,
-        `**Content:** ${parent.text}`,
-      ].join("\n");
-      const modRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`confessions:btn:approve:${number}`)
-          .setLabel("Approve (Keep)")
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId(`confessions:btn:reject:${number}:${parentK}`)
-          .setLabel("Reject (Delete)")
-          .setStyle(ButtonStyle.Danger),
-      );
-      const ping = config.reportPingRoleId ? `<@&${config.reportPingRoleId}>\n` : "";
-      const reportChannel = await services.client.channels.fetch(config.reportChannelId).catch(() => null);
-      if (reportChannel && reportChannel.isSendable()) {
-        const card = makeWarningCard(`🚨 Reply Report - #${number}.${parentK}`, body, {
-          actionRows: [modRow],
-        });
-        await reportChannel.send({
-          content: ping || undefined,
-          components: [...card.components],
-          allowedMentions: { parse: [] },
-        } as any).catch(() => null);
-      }
-      await interaction.editReply(
-        ephemeralCard(
-          makeSuccessCard("Report Submitted", "Thank you, the moderators have been notified."),
-        ),
-      );
-      return;
     }
+    return;
   },
 });

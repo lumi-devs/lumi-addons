@@ -1,5 +1,5 @@
-import { randomBytes } from "node:crypto";
 import type { Container } from "@lumi-devs/lumi/lib/Services.js";
+import { randomBytes } from "node:crypto";
 import {
   BAN_KEY,
   CONFIG_SCOPE,
@@ -44,14 +44,10 @@ export async function authorHashFor(
   guildId: string,
   userId: string,
 ): Promise<string> {
-  const salt = await getSalt(services, guildId);
-  return hashAuthor(salt, userId);
+  return hashAuthor(await getSalt(services, guildId), userId);
 }
 
-export async function nextConfessionNumber(
-  services: Container,
-  guildId: string,
-): Promise<number> {
+export async function nextConfessionNumber(services: Container, guildId: string): Promise<number> {
   return services.db.guildKV.incrModuleData(
     guildId,
     MODULE_NAME,
@@ -106,18 +102,8 @@ export async function deleteConfession(
   number: number,
 ): Promise<void> {
   const target = confessionTarget(number);
-  await services.db.guildKV.deleteModuleData(
-    guildId,
-    MODULE_NAME,
-    target,
-    CONFESSION_META_KEY,
-  );
-  await services.db.guildKV.deleteModuleData(
-    guildId,
-    MODULE_NAME,
-    target,
-    REPLY_COUNTER_KEY,
-  );
+  await services.db.guildKV.deleteModuleData(guildId, MODULE_NAME, target, CONFESSION_META_KEY);
+  await services.db.guildKV.deleteModuleData(guildId, MODULE_NAME, target, REPLY_COUNTER_KEY);
 }
 
 export async function saveReply(
@@ -237,13 +223,13 @@ export async function hasReplyDmOptOut(
   guildId: string,
   userId: string,
 ): Promise<boolean> {
-  const row = await services.db.guildKV.getModuleData(
+  const r = await services.db.guildKV.getModuleData(
     guildId,
     MODULE_NAME,
     userId,
     DM_OPT_OUT_KEY,
   );
-  return row !== null;
+  return r !== null;
 }
 
 export async function banHash(
@@ -279,13 +265,13 @@ export async function isBanned(
   guildId: string,
   hash: string,
 ): Promise<boolean> {
-  const row = await services.db.guildKV.getModuleData<BanRecord>(
+  const b = await services.db.guildKV.getModuleData<BanRecord>(
     guildId,
     MODULE_NAME,
     hash,
     BAN_KEY,
   );
-  return row !== null;
+  return b !== null;
 }
 
 export async function listBans(

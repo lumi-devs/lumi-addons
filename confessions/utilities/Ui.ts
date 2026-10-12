@@ -2,15 +2,12 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  type ModalActionRowComponentBuilder,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import {
-  makeCard,
-  noPingCard,
-  type CardReply,
-} from "@lumi-devs/lumi/lib/ui/Cards.js";
+import { makeCard, noPingCard, type CardReply } from "@lumi-devs/lumi/ui";
 
 export function confessionPayload(
   number: number,
@@ -63,17 +60,6 @@ export function replyPayload(
   }
   body.push(text);
 
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`confessions:btn:replyto:${confessionNumber}:${k}`)
-      .setLabel("Reply")
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`confessions:btn:reportreply:${confessionNumber}:${k}`)
-      .setLabel("Report")
-      .setStyle(ButtonStyle.Danger),
-  );
-
   return noPingCard(
     makeCard(
       isOp ? 0xeab308 : 0xab766f,
@@ -83,28 +69,53 @@ export function replyPayload(
         footer: isOp ? "👑 OP" : undefined,
         headerImages: imageUrl ? [imageUrl] : undefined,
         separatorAboveActionRows: !isOp,
-        actionRows: [row],
+        actionRows: [
+          new ActionRowBuilder<ButtonBuilder>().addComponents(
+            new ButtonBuilder()
+              .setCustomId(`confessions:btn:replyto:${confessionNumber}:${k}`)
+              .setLabel("Reply")
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId(`confessions:btn:reportreply:${confessionNumber}:${k}`)
+              .setLabel("Report")
+              .setStyle(ButtonStyle.Danger),
+          ),
+        ],
       },
     ),
   );
 }
 
-export function buildConfessionModal(allowAttachments: boolean): ModalBuilder {
+function makeUploadComponent(customId: string, label: string) {
+  return {
+    type: 18,
+    label: label.slice(0, 45),
+    component: {
+      type: 19,
+      custom_id: customId,
+      required: false,
+      min_values: 0,
+      max_values: 1,
+    },
+  };
+}
+
+export function buildConfessionModal(allowAttachments: boolean) {
   const modal = new ModalBuilder()
     .setCustomId("confessions:modal:new")
     .setTitle("Anonymous Confession");
 
-  const titleRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
+  const titleRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
     new TextInputBuilder()
       .setCustomId("title")
       .setLabel("Title (optional)")
       .setStyle(TextInputStyle.Short)
       .setRequired(false)
       .setMaxLength(100)
-      .setPlaceholder("Give your confession a title..."),
+      .setPlaceholder("Give your confession a title…"),
   );
 
-  const confessionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
+  const confessionRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
     new TextInputBuilder()
       .setCustomId("confession")
       .setLabel("Your confession")
@@ -117,15 +128,9 @@ export function buildConfessionModal(allowAttachments: boolean): ModalBuilder {
   modal.addComponents(titleRow, confessionRow);
 
   if (allowAttachments) {
-    const imageRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      new TextInputBuilder()
-        .setCustomId("image")
-        .setLabel("Attach image URL (optional)")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false)
-        .setPlaceholder("https://example.com/image.png"),
-    );
-    modal.addComponents(imageRow);
+    const raw = modal.toJSON();
+    (raw.components as unknown[]).push(makeUploadComponent("image", "Attach an image (optional)"));
+    return raw;
   }
 
   return modal;
@@ -134,12 +139,12 @@ export function buildConfessionModal(allowAttachments: boolean): ModalBuilder {
 export function buildReplyModal(
   confessionNumber: number,
   allowAttachments: boolean,
-): ModalBuilder {
+) {
   const modal = new ModalBuilder()
     .setCustomId(`confessions:modal:reply:${confessionNumber}`)
     .setTitle(`Reply to Confession #${confessionNumber}`.slice(0, 45));
 
-  const replyRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
+  const replyRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
     new TextInputBuilder()
       .setCustomId("reply")
       .setLabel("Your reply")
@@ -152,15 +157,9 @@ export function buildReplyModal(
   modal.addComponents(replyRow);
 
   if (allowAttachments) {
-    const imageRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      new TextInputBuilder()
-        .setCustomId("image")
-        .setLabel("Attach image URL (optional)")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false)
-        .setPlaceholder("https://example.com/image.png"),
-    );
-    modal.addComponents(imageRow);
+    const raw = modal.toJSON();
+    (raw.components as unknown[]).push(makeUploadComponent("image", "Attach an image (optional)"));
+    return raw;
   }
 
   return modal;
@@ -170,12 +169,12 @@ export function buildReplyToReplyModal(
   confessionNumber: number,
   parentK: number,
   allowAttachments: boolean,
-): ModalBuilder {
+) {
   const modal = new ModalBuilder()
     .setCustomId(`confessions:modal:replyto:${confessionNumber}:${parentK}`)
     .setTitle(`Reply to #${confessionNumber}.${parentK}`.slice(0, 45));
 
-  const replyRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
+  const replyRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
     new TextInputBuilder()
       .setCustomId("reply")
       .setLabel("Your reply")
@@ -188,15 +187,9 @@ export function buildReplyToReplyModal(
   modal.addComponents(replyRow);
 
   if (allowAttachments) {
-    const imageRow = new ActionRowBuilder<TextInputBuilder>().addComponents(
-      new TextInputBuilder()
-        .setCustomId("image")
-        .setLabel("Attach image URL (optional)")
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false)
-        .setPlaceholder("https://example.com/image.png"),
-    );
-    modal.addComponents(imageRow);
+    const raw = modal.toJSON();
+    (raw.components as unknown[]).push(makeUploadComponent("image", "Attach an image (optional)"));
+    return raw;
   }
 
   return modal;
