@@ -6,7 +6,8 @@ import {
   SWEEP_ONESHOT,
   getMappings,
 } from "../utilities/Store.js";
-import { convergeMember } from "../utilities/Converge.js";
+import { converge } from "../utilities/Engine.js";
+import type { PresenceActivity } from "../utilities/Matcher.js";
 
 const INITIAL_DELAY_MS = 90_000;
 const SWEEP_INTERVAL_MS = 3_600_000;
@@ -31,17 +32,16 @@ export async function sweepGuild(
   for (const member of members.values()) {
     if (member.user.bot) continue;
     checked++;
-    const outcome = await convergeMember(services, guildId, member.id, {
-      activities:
-        member.presence?.activities.map((a) => ({
-          name: a.name,
-          type: a.type,
-          state: a.state,
-          details: a.details,
-        })) ?? null,
-      roles: Array.from(member.roles.cache.keys()),
-    }).catch(() => null);
-    if (outcome && (outcome.diff.add.length > 0 || outcome.diff.remove.length > 0)) changed++;
+    const presence = member.presence;
+    if (!presence) continue;
+    const activities: PresenceActivity[] = presence.activities.map((a) => ({
+      name: a.name,
+      type: a.type,
+      state: a.state,
+      details: a.details,
+    }));
+    const outcome = await converge(services, { guild, member, activities }).catch(() => null);
+    if (outcome && outcome.result !== "holding" && outcome.result !== "not-holding") changed++;
   }
   return { checked, changed };
 }

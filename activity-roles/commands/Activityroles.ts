@@ -14,7 +14,7 @@ import {
   mappingId,
   removeMapping,
 } from "../utilities/Store.js";
-import { convergeMember } from "../utilities/Converge.js";
+import { converge } from "../utilities/Engine.js";
 import { sweepGuild } from "../tasks/Sweep.js";
 
 const TYPE_CHOICES = VALID_ACTIVITY_TYPES.map((t) => ({ name: t, value: t }));
@@ -43,6 +43,16 @@ async function add(ctx: CommandContext): Promise<void> {
     return;
   }
   await addMapping(ctx.services, ctx.guildId!, type, matchString, role.id);
+  const me = ctx.guild!.members.me;
+  const target = ctx.guild!.roles.cache.get(role.id);
+  if (me && target && (target.position >= me.roles.highest.position || target.id === ctx.guildId)) {
+    await removeMapping(ctx.services, ctx.guildId!, mappingId(type, matchString));
+    await ctx.replyError(
+      "Role Not Editable",
+      "I cannot manage that role (hierarchy or @everyone). Move my role above it first.",
+    );
+    return;
+  }
   await ctx.reply(
     makeSuccessCard(
       "Activity Role Added",
@@ -131,9 +141,10 @@ async function check(ctx: CommandContext): Promise<void> {
   })) ?? null;
   let outcome;
   try {
-    outcome = await convergeMember(ctx.services, guild.id, member.id, {
+    outcome = await converge(ctx.services, {
+      guild,
+      member,
       activities: presenceActivities,
-      roles: Array.from(member.roles.cache.keys()),
     });
   } catch (err) {
     await ctx.replyError(
@@ -146,7 +157,7 @@ async function check(ctx: CommandContext): Promise<void> {
     `Presence: ${presenceActivities === null ? "**not visible** (is the Presence intent enabled?)" : presenceActivities.length === 0 ? "online, no activities" : presenceActivities.map((a) => `\`${a.name}\``).join(", ")}`,
     `Presences cached guild-wide: **${cachedPresences}**`,
   ];
-  if (!outcome) {
+  if (!outcome || outcome.result === "unconfigured") {
     lines.push("Nothing to converge (no mappings apply and no record).");
   } else {
     lines.push(`Should have: ${mentionList(outcome.diff.granted)}`);

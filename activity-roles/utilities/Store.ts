@@ -9,7 +9,6 @@ const MAPPING_KEY = "mapping";
 const MEMBER_KEY = "member";
 
 export interface MemberState {
-  activities: { name: string; type: number; state: string | null; details: string | null }[];
   granted: string[];
 }
 
@@ -73,6 +72,23 @@ export async function getMemberState(
     userId,
     MEMBER_KEY,
   );
+}
+
+export async function getMemberStates(
+  services: Container,
+  guildId: string,
+  userIds: string[],
+): Promise<Map<string, MemberState>> {
+  const rows = await services.db.guildKV.getModuleDataMany<MemberState>(
+    guildId,
+    MODULE_NAME,
+    userIds.map((userId) => ({ targetId: userId, key: MEMBER_KEY })),
+  );
+  const out = new Map<string, MemberState>();
+  for (const [compound, value] of rows) {
+    out.set(compound.slice(0, compound.lastIndexOf(":")), value);
+  }
+  return out;
 }
 
 export async function setMemberState(

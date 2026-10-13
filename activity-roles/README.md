@@ -21,7 +21,7 @@ The **Activity Roles** addon automatically assigns roles to server members based
 - **Full Presence Support**: Detects `Playing`, `Streaming`, `Listening`, `Watching`, `Custom`, and `Competing` activity types.
 - **Substring & Text Matching**: Flexible string matching rules per activity rule.
 - **Additive-only Revocation**: Only roles this addon granted are ever removed; manually assigned roles are never stripped.
-- **Single Source of Truth**: One kv record per member (`activities` snapshot + `granted` role IDs); every event converges it.
+- **Single Source of Truth**: One kv record per member (`granted` role IDs); every event converges it.
 
 ---
 

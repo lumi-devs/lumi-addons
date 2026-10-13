@@ -3,11 +3,7 @@ import type { Presence } from "discord.js";
 import { defineListener } from "@lumi-devs/lumi/listeners";
 import type { Container } from "@lumi-devs/lumi/services";
 import { MODULE_NAME } from "../utilities/Store.js";
-import {
-  activitiesFromPresence,
-  convergeMember,
-  rolesFromMember,
-} from "../utilities/Converge.js";
+import { activitiesFromPresence, converge } from "../utilities/Engine.js";
 
 export const presenceUpdateListener = defineListener({
   name: "activityRolesPresenceUpdate",
@@ -20,17 +16,18 @@ export const presenceUpdateListener = defineListener({
     _old: Presence | null,
     newPresence: Presence,
   ): Promise<void> {
-    const guildId = newPresence.guild?.id;
-    if (!guildId) return;
-    const userId = newPresence.userId;
-    const activities = activitiesFromPresence(newPresence);
-    const member = await newPresence.guild?.members
-      .fetch({ user: userId, withPresences: true })
-      .catch(() => newPresence.member ?? null);
-    const roles = member ? rolesFromMember(member) : [];
-    await convergeMember(services, guildId, userId, { activities, roles }).catch((err: unknown) =>
+    const guild = newPresence.guild;
+    if (!guild) return;
+    if (newPresence.user?.bot) return;
+    const member = newPresence.member ?? (await guild.members.fetch(newPresence.userId).catch(() => null));
+    if (!member) return;
+    await converge(services, {
+      guild,
+      member,
+      activities: activitiesFromPresence(newPresence),
+    }).catch((err: unknown) =>
       services.logger.error(
-        `[ActivityRoles] Failed to update roles for ${userId}: ${err instanceof Error ? err.message : String(err)}`,
+        `[ActivityRoles] Failed to update roles for ${newPresence.userId}: ${err instanceof Error ? err.message : String(err)}`,
       ),
     );
   },
