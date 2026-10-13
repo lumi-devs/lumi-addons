@@ -112,7 +112,7 @@ function logGrant(
   source: string,
 ): Promise<void> {
   const lines = [`<@${userId}> is promoting our server!!`];
-  if (config.grantMessage.length > 0) lines.push(`"${cutText(config.grantMessage, 200)}"`);
+  if (config.grantMessage.length > 0) lines.push(cutText(config.grantMessage, 200));
   lines.push(`> ${cutText(source, 100)}`);
   return sendLogCard(services, config.logChannelId, "# 🍥 THANK YOU!!!!", lines.join("\n"), avatarUrl);
 }
