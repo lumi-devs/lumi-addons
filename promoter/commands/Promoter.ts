@@ -18,32 +18,27 @@ export const promoterDef: CommandDef = {
       ) as SlashCommandBuilder;
   },
   handlers: {
-
-        const card = makeInfoCard(
-          "Promote the Server, Get the Role",
-          `Put our invite or tag in your **custom status** and receive <@&${config.roleId}> automatically. Remove it and the role goes away.\n\nAlready did it? Hit the button to be checked right now.`,
-          { actionRows: [row] },
-        );
-
-        const channel = ctx.source.channel;
-        if (!channel?.isSendable()) {
-          return ctx.reply(
-            ephemeralCard(makeErrorCard("Error", "Cannot send messages in this channel.")),
-          );
-        }
-        await channel.send(card);
-        return ctx.reply(
-          ephemeralCard(makeErrorCard("Panel Posted", "The promoter panel is live.")),
-        );
-      },
-    },
     stats: {
       requiredPermit: "admin.promoter",
       run: async (ctx: CommandContext) => {
-        const stats = await getStats(ctx.services, ctx.guildId!);
-        return ctx.replyInfo(
-          "Promoter Stats",
-          `**${stats.granted}** roles granted · **${stats.revoked}** roles revoked (all-time).`,
+        const guildId = ctx.guildId!;
+        const config = await getPromoterConfig(ctx.services, guildId);
+        if (!config.roleId || config.matchTerms.length === 0) {
+          return ctx.reply(
+            ephemeralCard(
+              makeErrorCard(
+                "Not Configured",
+                "Set `promoter_role_id` and `match_terms` in `/config` first.",
+              ),
+            ),
+          );
+        }
+        const { granted, revoked } = await getStats(ctx.services, guildId);
+        return ctx.reply(
+          makeInfoCard(
+            "Promoter Stats",
+            `Total Granted: **${granted}**\nTotal Revoked: **${revoked}**`,
+          ),
         );
       },
     },
