@@ -97,6 +97,7 @@ function mentionList(ids: string[]): string {
 
 async function check(ctx: CommandContext): Promise<void> {
   await ctx.checkPermit("mod.*");
+  await ctx.defer();
   const guild = ctx.guild;
   if (!guild) {
     await ctx.replyError("Guild Only", "This command only works inside a server.");
