@@ -1,5 +1,4 @@
-import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder } from "@discordjs/builders";
-import { ButtonStyle } from "discord.js";
+import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandDef } from "@lumi-devs/lumi/commands";
 import type { CommandContext } from "@lumi-devs/lumi/context";
 import { makeInfoCard, ephemeralCard, makeErrorCard } from "@lumi-devs/lumi/ui";
@@ -15,35 +14,10 @@ export const promoterDef: CommandDef = {
       .setName("promoter")
       .setDescription("Promoter-role tools.")
       .addSubcommand((sub) =>
-        sub.setName("panel").setDescription("Post the persistent promoter info panel here"),
-      )
-      .addSubcommand((sub) =>
         sub.setName("stats").setDescription("Show grant/revoke totals"),
       ) as SlashCommandBuilder;
   },
   handlers: {
-    panel: {
-      requiredPermit: "admin.promoter",
-      run: async (ctx: CommandContext) => {
-        const guildId = ctx.guildId!;
-        const config = await getPromoterConfig(ctx.services, guildId);
-        if (!config.roleId || config.matchTerms.length === 0) {
-          return ctx.reply(
-            ephemeralCard(
-              makeErrorCard(
-                "Not Configured",
-                "Set `promoter_role_id` and `match_terms` in `/config` first.",
-              ),
-            ),
-          );
-        }
-
-        const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-          new ButtonBuilder()
-            .setCustomId("promoter:check")
-            .setLabel("Check my status")
-            .setStyle(ButtonStyle.Primary),
-        );
 
         const card = makeInfoCard(
           "Promote the Server, Get the Role",
