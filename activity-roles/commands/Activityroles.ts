@@ -106,19 +106,23 @@ async function check(ctx: CommandContext): Promise<void> {
   const target = await ctx.getUser("user");
   if (!target) {
     const { checked, changed } = await sweepGuild(ctx.services, guild.id);
+    const cached = guild.members.cache.filter((m) => m.presence).size;
     await ctx.reply(
       makeInfoCard(
         "Activity Roles Check",
-        `Converged **${checked}** members, changed roles on **${changed}**.`,
+        `Converged **${checked}** members, changed roles on **${changed}**.\nPresences cached guild-wide: **${cached}**.`,
       ),
     );
     return;
   }
-  const member = await guild.members.fetch(target.id).catch(() => null);
+  const member = await guild.members
+    .fetch({ user: target.id, withPresences: true })
+    .catch(() => null);
   if (!member) {
     await ctx.replyError("Not Found", "That user is not a member of this server.");
     return;
   }
+  const cachedPresences = guild.members.cache.filter((m) => m.presence).size;
   const presenceActivities = member.presence?.activities.map((a) => ({
     name: a.name,
     type: a.type,
@@ -140,6 +144,7 @@ async function check(ctx: CommandContext): Promise<void> {
   }
   const lines = [
     `Presence: ${presenceActivities === null ? "**not visible** (is the Presence intent enabled?)" : presenceActivities.length === 0 ? "online, no activities" : presenceActivities.map((a) => `\`${a.name}\``).join(", ")}`,
+    `Presences cached guild-wide: **${cachedPresences}**`,
   ];
   if (!outcome) {
     lines.push("Nothing to converge (no mappings apply and no record).");

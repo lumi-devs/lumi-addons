@@ -24,7 +24,7 @@ export async function sweepGuild(
     return empty;
   const mappings = await getMappings(services, guildId);
   if (mappings.length === 0) return empty;
-  const members = await guild.members.fetch().catch(() => null);
+  const members = await guild.members.fetch({ withPresences: true }).catch(() => null);
   if (!members) return empty;
   let checked = 0;
   let changed = 0;
