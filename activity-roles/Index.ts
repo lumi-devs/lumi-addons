@@ -1,7 +1,12 @@
 import { defineModule } from "@lumi-devs/lumi/module";
 import type { Container } from "@lumi-devs/lumi/services";
-import { deleteAllUserData, getMappings } from "./utilities/Store.js";
-import { convergeMember } from "./utilities/Converge.js";
+import { deleteAllUserData } from "./utilities/Store.js";
+import { SWEEP_ONESHOT } from "./utilities/Store.js";
+import {
+  ensureScheduled,
+  handleSweepFire,
+  sweepGuild,
+} from "./tasks/Sweep.js";
 
 export const activityRolesModule = defineModule({
   name: "activity-roles",
@@ -15,15 +20,17 @@ export const activityRolesModule = defineModule({
   category: "Automation",
 
   onLoad(services: Container) {
-    void services.client.guilds.cache.forEach((guild) => {
-      void reconcileGuild(services, guild.id).catch(() => undefined);
-    });
+    for (const guild of services.client.guilds.cache.values()) {
+      void sweepGuild(services, guild.id).catch(() => undefined);
+      void ensureScheduled(services, guild.id).catch(() => undefined);
+    }
   },
 
   async reconcileScheduledJobs(services: Container) {
     for (const guild of services.client.guilds.cache.values()) {
       if (!(await services.db.modules.isModuleEnabled(guild.id, "activity-roles"))) continue;
-      await reconcileGuild(services, guild.id).catch(() => undefined);
+      await sweepGuild(services, guild.id).catch(() => undefined);
+      void ensureScheduled(services, guild.id).catch(() => undefined);
     }
   },
 
@@ -43,22 +50,6 @@ export const activityRolesModule = defineModule({
   },
 });
 
-async function reconcileGuild(services: Container, guildId: string) {
-  const guild = services.client.guilds.cache.get(guildId);
-  if (!guild) return;
-  if (!(await services.db.modules.isModuleEnabled(guildId, "activity-roles"))) return;
-
-  const mappings = await getMappings(services, guildId);
-  if (mappings.length === 0) return;
-
-  const members = await guild.members.fetch().catch(() => null);
-  if (!members) return;
-
-  for (const member of members.values()) {
-    if (member.user.bot) continue;
-    await convergeMember(services, guildId, member.id, {
-      activities: member.presence?.activities.map((a) => ({ name: a.name, type: a.type, state: a.state })) ?? null,
-      roles: Array.from(member.roles.cache.keys()),
-    });
-  }
-}
+export const oneshots = {
+  [SWEEP_ONESHOT]: handleSweepFire,
+};

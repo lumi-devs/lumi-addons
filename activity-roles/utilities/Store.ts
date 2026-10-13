@@ -3,6 +3,8 @@ import type { ActivityRoleMapping } from "./Matcher.js";
 
 export const MODULE_NAME = "activity-roles";
 
+export const SWEEP_ONESHOT = "sweep";
+
 const MAPPING_KEY = "mapping";
 const MEMBER_KEY = "member";
 
