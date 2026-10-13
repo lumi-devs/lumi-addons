@@ -11,12 +11,8 @@ import {
   makeWarningCard,
   type CardReply,
 } from "@lumi-devs/lumi/ui";
+import { channelMention, time, userMention } from "@discordjs/formatters";
 import type { DragRequestRecord } from "./Keys.js";
-
-export const userMention = (id: string): string => `<@${id}>`;
-export const channelMention = (id: string): string => `<#${id}>`;
-export const relativeTime = (ms: number): string =>
-  `<t:${Math.floor(ms / 1000)}:R>`;
 
 function buttonRow(
   requestId: string,
@@ -56,7 +52,7 @@ function withButtons(
 export function requestCardText(req: DragRequestRecord): string {
   return (
     `${userMention(req.requesterId)} wants to be dragged into ${channelMention(req.channelId)}.\n\n` +
-    `Anyone **inside that channel** can accept or decline. Expires ${relativeTime(req.expiresAt)}.`
+    `Anyone **inside that channel** can accept or decline. Expires ${time(new Date(req.expiresAt), "R")}.`
   );
 }
 

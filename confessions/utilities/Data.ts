@@ -10,15 +10,18 @@ import {
   MODULE_NAME,
   REPLY_COUNTER_KEY,
   SALT_KEY,
+  authorKeyForIdxKey,
+  confessionAuthorIdxKey,
   confessionAuthorKey,
   confessionTarget,
+  replyAuthorIdxKey,
   replyAuthorKey,
   replyKey,
   type BanRecord,
   type ConfessionMeta,
   type ReplyRecord,
 } from "./Keys.js";
-import { hashAuthor } from "./Anon.js";
+import { hashAuthor, hmacUserId, openSealedId, sealUserId } from "./Anon.js";
 
 export async function getSalt(services: Container, guildId: string): Promise<string> {
   const existing = await services.db.guildKV.getModuleData<string>(
@@ -145,8 +148,15 @@ export async function recordConfessionAuthor(
   await services.db.guildKV.setModuleData(
     guildId,
     MODULE_NAME,
-    userId,
+    sealUserId(userId),
     confessionAuthorKey(number),
+    { at: Date.now() },
+  );
+  await services.db.guildKV.setModuleData(
+    guildId,
+    MODULE_NAME,
+    hmacUserId(userId),
+    confessionAuthorIdxKey(number),
     { at: Date.now() },
   );
 }
@@ -161,8 +171,15 @@ export async function recordReplyAuthor(
   await services.db.guildKV.setModuleData(
     guildId,
     MODULE_NAME,
-    userId,
+    sealUserId(userId),
     replyAuthorKey(number, k),
+    { at: Date.now() },
+  );
+  await services.db.guildKV.setModuleData(
+    guildId,
+    MODULE_NAME,
+    hmacUserId(userId),
+    replyAuthorIdxKey(number, k),
     { at: Date.now() },
   );
 }
@@ -177,7 +194,7 @@ export async function findConfessionAuthor(
     key: confessionAuthorKey(number),
     guildId,
   });
-  return rows[0]?.targetId ?? null;
+  return openSealedId(rows[0]?.targetId ?? "");
 }
 
 export async function findReplyAuthor(
@@ -191,7 +208,51 @@ export async function findReplyAuthor(
     key: replyAuthorKey(number, k),
     guildId,
   });
-  return rows[0]?.targetId ?? null;
+  return openSealedId(rows[0]?.targetId ?? "");
+}
+
+export async function deleteAuthorRowsForUser(
+  services: Container,
+  userId: string,
+): Promise<void> {
+  await services.db.guildKV.deleteModuleDataForTarget(MODULE_NAME, userId);
+  const h = hmacUserId(userId);
+  const idxRows = await services.db.guildKV.listModuleDataForTarget(MODULE_NAME, h);
+  for (const row of idxRows) {
+    const authorKey = authorKeyForIdxKey(row.key);
+    if (!authorKey) continue;
+    const sealed = await services.db.guildKV.listModuleData({
+      module: MODULE_NAME,
+      key: authorKey,
+      guildId: row.guildId,
+    });
+    for (const s of sealed) {
+      await services.db.guildKV.deleteModuleData(row.guildId, MODULE_NAME, s.targetId, authorKey);
+    }
+  }
+  await services.db.guildKV.deleteModuleDataForTarget(MODULE_NAME, h);
+}
+
+export async function exportAuthorRowsForUser(
+  services: Container,
+  userId: string,
+): Promise<{ guildId: string; key: string; value: unknown }[]> {
+  const h = hmacUserId(userId);
+  const idxRows = await services.db.guildKV.listModuleDataForTarget(MODULE_NAME, h);
+  const out: { guildId: string; key: string; value: unknown }[] = [];
+  for (const row of idxRows) {
+    const authorKey = authorKeyForIdxKey(row.key);
+    if (!authorKey) continue;
+    const sealed = await services.db.guildKV.listModuleData<{ at: number }>({
+      module: MODULE_NAME,
+      key: authorKey,
+      guildId: row.guildId,
+    });
+    for (const s of sealed) {
+      out.push({ guildId: row.guildId, key: authorKey, value: s.value });
+    }
+  }
+  return out;
 }
 
 export async function setReplyDmOptOut(
@@ -204,7 +265,7 @@ export async function setReplyDmOptOut(
     await services.db.guildKV.setModuleData(
       guildId,
       MODULE_NAME,
-      userId,
+      hmacUserId(userId),
       DM_OPT_OUT_KEY,
       { at: Date.now() },
     );
@@ -212,7 +273,7 @@ export async function setReplyDmOptOut(
     await services.db.guildKV.deleteModuleData(
       guildId,
       MODULE_NAME,
-      userId,
+      hmacUserId(userId),
       DM_OPT_OUT_KEY,
     );
   }
@@ -226,7 +287,7 @@ export async function hasReplyDmOptOut(
   const r = await services.db.guildKV.getModuleData(
     guildId,
     MODULE_NAME,
-    userId,
+    hmacUserId(userId),
     DM_OPT_OUT_KEY,
   );
   return r !== null;

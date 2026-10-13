@@ -30,7 +30,6 @@
       "@lumi-devs/lumi/interactions": ["./.lumi/src/lib/interactions/InteractionDef.ts"],
       "@lumi-devs/lumi/ui": ["./.lumi/src/lib/ui/Cards.ts"],
       "@lumi-devs/lumi/config": ["./.lumi/src/lib/module-system/ConfigSchema.ts"],
-      "@lumi-devs/lumi/api": ["./.lumi/src/lib/ModuleApi.ts"],
       "@lumi-devs/lumi/services": ["./.lumi/src/lib/Services.ts"],
       "@lumi-devs/lumi/scheduler": ["./.lumi/src/lib/scheduler/Oneshot.ts"],
       "@lumi-devs/lumi/bank": ["./.lumi/src/lib/api/economy/Bank.ts"],

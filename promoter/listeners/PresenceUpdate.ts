@@ -3,7 +3,7 @@ import { ActivityType, Events } from "discord.js";
 import { defineListener } from "@lumi-devs/lumi/listeners";
 import type { Container } from "@lumi-devs/lumi/services";
 import { MODULE_NAME } from "../utilities/Keys.js";
-import { converge } from "../Index.js";
+import { converge } from "../utilities/Engine.js";
 import { wearsServerTag } from "../utilities/Matching.js";
 
 export const presenceUpdateListener = defineListener<[Presence | null, Presence]>({

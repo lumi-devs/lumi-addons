@@ -48,7 +48,7 @@ export const dragmeModule = defineModule({
   ): Promise<Record<string, unknown> | null> {
     const rows = await services.db.guildKV.listModuleDataForTarget(MODULE_NAME, userId);
     if (rows.length === 0) return null;
-    return { dragRequests: rows.map((r) => r.value) };
+    return { dragRequests: rows.map((row) => row.value) };
   },
 });
 

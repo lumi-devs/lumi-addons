@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from "@discordjs/builders";
 import type { CommandDef } from "@lumi-devs/lumi/commands";
 import type { CommandContext } from "@lumi-devs/lumi/context";
 import { makeInfoCard, ephemeralCard, makeErrorCard } from "@lumi-devs/lumi/ui";
-import { getPromoterConfig, getStats } from "../Index.js";
+import { getPromoterConfig, getStats } from "../utilities/Engine.js";
 
 export const promoterDef: CommandDef = {
   name: "promoter",

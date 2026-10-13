@@ -130,3 +130,12 @@ export async function clearPending(
 ): Promise<void> {
   await services.db.guildKV.deleteModuleData(guildId, MODULE_NAME, userId, stateKey(key));
 }
+
+export async function takePending<T>(
+  services: Container,
+  guildId: string,
+  userId: string,
+  key: string,
+): Promise<T | null> {
+  return services.db.guildKV.takeModuleData<T>(guildId, MODULE_NAME, userId, stateKey(key));
+}

@@ -78,13 +78,13 @@ export const boosterRolesModule = defineModule({
   ): Promise<Record<string, unknown> | null> {
     const rows = await services.db.guildKV.listModuleDataForTarget(MODULE_NAME, userId);
     if (rows.length === 0) return null;
-    const roleRows = rows.filter((r) => r.key === BoosterKeys.ROLE);
-    const blacklistRows = rows.filter((r) => r.key === BoosterKeys.BLACKLIST);
-    const graceRows = rows.filter((r) => r.key === BoosterKeys.GRACE);
+    const roleRows = rows.filter((row) => row.key === BoosterKeys.ROLE);
+    const blacklistRows = rows.filter((row) => row.key === BoosterKeys.BLACKLIST);
+    const graceRows = rows.filter((row) => row.key === BoosterKeys.GRACE);
     return {
-      roles: roleRows.map((r) => r.value),
-      blacklists: blacklistRows.map((r) => r.value),
-      gracePeriods: graceRows.map((r) => r.value),
+      roles: roleRows.map((row) => row.value),
+      blacklists: blacklistRows.map((row) => row.value),
+      gracePeriods: graceRows.map((row) => row.value),
     };
   },
 });

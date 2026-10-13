@@ -32,11 +32,13 @@ export async function convergeMember(
   try {
     const guild = services.client.guilds.cache.get(guildId);
     if (!guild) return;
+    const member = await guild.members.fetch(userId).catch(() => null);
+    if (!member) return;
     for (const roleId of diff.remove) {
-      await guild.members.removeRole({ user: userId, role: roleId });
+      await member.roles.remove(roleId);
     }
     for (const roleId of diff.add) {
-      await guild.members.addRole({ user: userId, role: roleId });
+      await member.roles.add(roleId);
     }
   } catch (err) {
     services.logger.error(

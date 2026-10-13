@@ -31,6 +31,10 @@ export async function convergeGuild(
   guildId: string,
   now: number = Date.now(),
 ): Promise<StatusEntry | null> {
+  const lock = await services.valkey
+    .set(`lumi:status:presence-lock:${guildId}`, "1", "PX", 65_000, "NX")
+    .catch(() => null);
+  if (lock !== "OK") return null;
   const [entries, state] = await Promise.all([
     getEntries(services, guildId),
     getState(services, guildId, now),

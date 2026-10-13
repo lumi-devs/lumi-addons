@@ -43,7 +43,7 @@ export const statusModule = defineModule({
     });
     for (const row of rows) {
       const entries = row.value ?? [];
-      const remaining = entries.filter((e) => e.addedBy !== userId);
+      const remaining = entries.filter((entry) => entry.addedBy !== userId);
       if (remaining.length !== entries.length) {
         await saveEntries(services, row.guildId, remaining);
       }
@@ -59,10 +59,10 @@ export const statusModule = defineModule({
       module: MODULE_NAME,
       key: StatusStore.entries,
     });
-    const userEntries = rows.flatMap((r) =>
-      (r.value ?? [])
-        .filter((e) => e.addedBy === userId)
-        .map((e) => ({ guildId: r.guildId, ...e })),
+    const userEntries = rows.flatMap((row) =>
+      (row.value ?? [])
+        .filter((entry) => entry.addedBy === userId)
+        .map((entry) => ({ guildId: row.guildId, ...entry })),
     );
     if (userEntries.length === 0) return null;
     return { entries: userEntries };

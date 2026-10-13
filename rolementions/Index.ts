@@ -45,7 +45,7 @@ export const rolementionsModule = defineModule({
       userId,
     );
     if (rows.length === 0) return null;
-    return { mentions: rows.map((r) => r.value) };
+    return { mentions: rows.map((row) => row.value) };
   },
 });
 

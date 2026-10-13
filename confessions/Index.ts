@@ -3,6 +3,7 @@ import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
 import type { Container } from "@lumi-devs/lumi/services";
 import { MODULE_NAME } from "./utilities/Keys.js";
+import { deleteAuthorRowsForUser, exportAuthorRowsForUser } from "./utilities/Data.js";
 
 export const confessionsModule = defineModule({
   name: MODULE_NAME,
@@ -13,7 +14,7 @@ export const confessionsModule = defineModule({
     "Anonymous confessions posted through /confess, with optional anonymous replies, per-author cooldowns, and moderator bans - identities are never stored in the clear.",
   short: "Anonymous confessions + replies.",
   endUserDataStatement:
-    "Stores cryptographic one-way hashes of author IDs per guild for moderation, plus your user ID linked to confessions/replies you author so reply notifications can reach you, and your notification opt-out choice. ID-linked rows are keyed to you and removed by GDPR deletion.",
+    "Stores cryptographic one-way hashes of author IDs per guild for moderation, plus sealed author links so reply notifications can reach you, and your notification opt-out choice. All of it is removed by GDPR deletion.",
   category: "Community",
   author: ["Antigravity"],
   min_bot_version: "0.6.0",
@@ -62,7 +63,7 @@ export const confessionsModule = defineModule({
   }),
 
   async deleteUserData(services: Container, userId: string): Promise<void> {
-    await services.db.guildKV.deleteModuleDataForTarget(MODULE_NAME, userId);
+    await deleteAuthorRowsForUser(services, userId);
   },
 
   async exportUserData(
@@ -70,7 +71,9 @@ export const confessionsModule = defineModule({
     userId: string,
   ): Promise<Record<string, unknown> | null> {
     const rows = await services.db.guildKV.listModuleDataForTarget(MODULE_NAME, userId);
-    if (rows.length === 0) return null;
-    return { records: rows.map((r) => ({ guildId: r.guildId, key: r.key, value: r.value })) };
+    const records = rows.map((row) => ({ guildId: row.guildId, key: row.key, value: row.value }));
+    for (const r of await exportAuthorRowsForUser(services, userId)) records.push(r);
+    if (records.length === 0) return null;
+    return { records };
   },
 });

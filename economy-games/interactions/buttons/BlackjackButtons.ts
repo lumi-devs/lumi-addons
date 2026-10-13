@@ -7,8 +7,8 @@ import { BLACKJACK_KEY, MODULE_NAME } from "../../utilities/Keys.js";
 import { getGamesConfig } from "../../utilities/Config.js";
 import {
   clearPending,
-  loadPending,
   savePending,
+  takePending,
 } from "../../utilities/Store.js";
 import {
   handValue,
@@ -57,7 +57,7 @@ export const blackjackButtons = defineInteraction<ButtonInteraction>({
       );
       return;
     }
-    const state = await loadPending<BlackjackState>(services, guildId, userId, BLACKJACK_KEY);
+    const state = await takePending<BlackjackState>(services, guildId, userId, BLACKJACK_KEY);
     if (!state) {
       await interaction.reply(
         ephemeralCard(makeErrorCard(

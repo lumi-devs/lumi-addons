@@ -67,7 +67,7 @@ export const multiLoungeModule = defineModule({
       userId,
     );
     if (rows.length === 0) return null;
-    return { data: rows.map((r) => r.value) };
+    return { data: rows.map((row) => row.value) };
   },
 });
 

@@ -1,6 +1,7 @@
 import type { Container } from "@lumi-devs/lumi/services";
 import type { OneshotContext } from "@lumi-devs/lumi/scheduler";
-import { channelMention, disabledPayload, userMention } from "../utilities/Cards.js";
+import { channelMention, userMention } from "@discordjs/formatters";
+import { disabledPayload } from "../utilities/Cards.js";
 import { getRequest, setRequest } from "../utilities/Requests.js";
 import type { ExpireOneshotData } from "../utilities/Keys.js";
 

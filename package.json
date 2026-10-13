@@ -8,8 +8,8 @@
   "scripts": {
     "setup": "sh scripts/setup.sh",
     "typecheck": "bunx tsc --noEmit -p tsconfig.json",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "test": "bun test",
     "validate": "bun scripts/validate.ts"
   },

@@ -121,6 +121,6 @@ export const economyGamesModule = defineModule({
   ): Promise<Record<string, unknown> | null> {
     const rows = await services.db.guildKV.listModuleDataForTarget("economy-games", userId);
     if (rows.length === 0) return null;
-    return { records: rows.map((r) => ({ guildId: r.guildId, key: r.key, value: r.value })) };
+    return { records: rows.map((row) => ({ guildId: row.guildId, key: row.key, value: row.value })) };
   },
 });

@@ -9,9 +9,13 @@ wrote it.
 ## Anonymity
 
 Authors are never stored in the clear. Each guild gets a random 32-byte salt; an
-author is only ever recorded as `SHA-256(salt : userId)`. Bans and cooldowns key
-off that hash, so moderation works without de-anonymising anyone, and the salt
-never leaves the database. Confession and reply messages suppress all mentions.
+author is only ever recorded as `SHA-256(salt : userId)` for bans and cooldowns.
+Reply-DM delivery needs the real user ID, so author links are stored sealed with
+`AES-256-GCM` and opt-outs as `HMAC(key, userId)` - a database leak reveals no
+usable user IDs. The module mints its own 32-byte key on first use and keeps it
+in `data/confessions/seal.key` (mode 0600, outside the database, never
+committed); override the directory with `CONFESSIONS_DATA_DIR`. Back it up with
+the volume - lose it and sealed rows stop resolving.
 
 ## How it works
 
@@ -46,7 +50,8 @@ Configure via `/lumi` -> **Modules** -> **Confessions**:
 ## Privacy & data
 
 - Stores per guild: the salt, a confession counter, per-confession metadata
-  (number, message/thread IDs, **author hash**), per-reply author hashes, and
-  ban records - all keyed by hash, never by user ID.
+  (number, message/thread IDs, **author hash**), per-reply author hashes, ban
+  records, sealed author links (AES-256-GCM) plus their HMAC index rows for
+  reply-DM delivery, and HMAC'd DM opt-outs.
 - Implements GDPR erasure: deleting a user drops their ban, cooldown, authored
   confessions, and reply rows across every guild.

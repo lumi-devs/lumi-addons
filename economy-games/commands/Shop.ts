@@ -28,6 +28,7 @@ import {
 import {
   addInventory,
   addSold,
+  claimCooldown,
   getInventory,
   getSold,
 } from "../utilities/Store.js";
@@ -106,11 +107,6 @@ async function runBuy(ctx: CommandContext): Promise<void> {
     await itemError(ctx, items, name);
     return;
   }
-  const sold = await getSold(ctx.services, guildId, item.name);
-  if (item.stock !== null && sold >= item.stock) {
-    await shopError(ctx, `${item.name} is sold out.`);
-    return;
-  }
   let wallet: number;
   try {
     wallet = await debitBet(ctx.services, guildId, ctx.user.id, item.price);
@@ -124,7 +120,13 @@ async function runBuy(ctx: CommandContext): Promise<void> {
     }
     throw err;
   }
-  await addSold(ctx.services, guildId, item.name, 1);
+  const sold = item.stock === null ? 0 : await addSold(ctx.services, guildId, item.name, 1);
+  if (item.stock !== null && sold > item.stock) {
+    await addSold(ctx.services, guildId, item.name, -1);
+    await creditWinnings(ctx.services, guildId, ctx.user.id, item.price);
+    await shopError(ctx, `${item.name} is sold out.`);
+    return;
+  }
   const inventory = await addInventory(ctx.services, guildId, ctx.user.id, item.name, 1);
   let roleNote = "";
   if (item.roleId && ctx.guild) {
@@ -217,6 +219,11 @@ async function runUse(ctx: CommandContext): Promise<void> {
   const inventory = await getInventory(ctx.services, guildId, ctx.user.id);
   if ((inventory[item.name.toLowerCase()] ?? 0) <= 0) {
     await shopError(ctx, `You don't own ${item.name}.`);
+    return;
+  }
+  const useLock = await claimCooldown(ctx.services, guildId, ctx.user.id, "use", 8_000);
+  if (!useLock) {
+    await shopError(ctx, "Your last use is still processing, try again in a moment.");
     return;
   }
   await addInventory(ctx.services, guildId, ctx.user.id, item.name, -1);

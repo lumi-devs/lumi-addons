@@ -37,14 +37,13 @@ export const confessionButtons = defineInteraction<ButtonInteraction>({
     if (action === "mutedms" || action === "unmutedms") {
       const targetGuild = parts[3];
       if (!targetGuild) return;
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply();
       await setReplyDmOptOut(services, targetGuild, interaction.user.id, action === "mutedms");
       if (action === "mutedms") {
         return interaction.editReply(
-          ephemeralCard(
-            makeWarningCard(
-              "Reply DMs Off",
-              "You won't be DM'd about replies in that server anymore.",
+          makeWarningCard(
+            "Reply DMs Off",
+            "You won't be DM'd about replies in that server anymore.",
               {
                 actionRows: [
                   new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -56,13 +55,10 @@ export const confessionButtons = defineInteraction<ButtonInteraction>({
                 ],
               },
             ),
-          ),
         );
       }
       return interaction.editReply(
-        ephemeralCard(
-          makeSuccessCard("Reply DMs On", "You'll be DM'd when someone replies to you again."),
-        ),
+        makeSuccessCard("Reply DMs On", "You'll be DM'd when someone replies to you again."),
       );
     }
 

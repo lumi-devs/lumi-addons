@@ -14,13 +14,42 @@ import {
 } from "../utilities/Emoji.js";
 
 const MAX_STEALS = 5;
-const MAX_IMAGE_BYTES = 256 * 1024;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+function isBlockedHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/\.$/, "").replace(/^\[|\]$/g, "");
+  if (h === "localhost" || h.endsWith(".localhost")) return true;
+  if (h.includes(":")) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (!m) return false;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  if (a === 10) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 127 || a === 0) return true;
+  return false;
+}
+
+function isSafeImageUrl(input: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  if (url.username || url.password) return false;
+  return !isBlockedHost(url.hostname);
+}
 
 async function downloadImage(url: string): Promise<{ data: Buffer } | { error: string }> {
+  if (!isSafeImageUrl(url)) return { error: "That URL is not allowed." };
   let res: Response;
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10_000);
+    const timer = setTimeout(() => controller.abort(), 5_000);
     res = await fetch(url, { signal: controller.signal });
     clearTimeout(timer);
   } catch {
@@ -29,9 +58,29 @@ async function downloadImage(url: string): Promise<{ data: Buffer } | { error: s
   if (!res.ok) return { error: `Could not download the source image (status ${res.status}).` };
   const contentType = res.headers.get("content-type") ?? "";
   if (!contentType.startsWith("image/")) return { error: "The URL does not point to an image." };
-  const ab = await res.arrayBuffer();
-  if (ab.byteLength > MAX_IMAGE_BYTES) return { error: "Image exceeds the 256 KB size limit." };
-  return { data: Buffer.from(ab) };
+  const declared = Number(res.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
+    return { error: "Image exceeds the 5 MB size limit." };
+  }
+  const reader = res.body?.getReader();
+  if (!reader) {
+    const ab = await res.arrayBuffer();
+    if (ab.byteLength > MAX_IMAGE_BYTES) return { error: "Image exceeds the 5 MB size limit." };
+    return { data: Buffer.from(ab) };
+  }
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_IMAGE_BYTES) {
+      await reader.cancel().catch(() => undefined);
+      return { error: "Image exceeds the 5 MB size limit." };
+    }
+    chunks.push(value);
+  }
+  return { data: Buffer.concat(chunks) };
 }
 
 async function uploadEmoji(
