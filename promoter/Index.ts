@@ -2,6 +2,7 @@ import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
 import type { Container } from "@lumi-devs/lumi/services";
 import { toStringArray } from "@lumi-devs/lumi/config";
+import { makeSuccessCard, makeWarningCard } from "@lumi-devs/lumi/ui";
 import { MODULE_NAME, PromoterData, type MemberState, type PromoterStats } from "./utilities/Keys.js";
 import { statusMatches, wearsServerTag } from "./utilities/Matching.js";
 
@@ -85,10 +86,12 @@ async function logGrant(
   try {
     const ch = await services.client.channels.fetch(logChannelId);
     if (!ch || !ch.isSendable()) return;
-    await ch.send({
-      content: `<@${userId}> is advertising the server.\n> ${cutText(status, 100)}`,
-      allowedMentions: { parse: [] },
-    });
+    await ch.send(
+      makeSuccessCard("Promoter role granted", [
+        `<@${userId}> is advertising the server.`,
+        `> ${cutText(status, 100)}`,
+      ]),
+    );
   } catch {
     return;
   }
@@ -103,10 +106,12 @@ async function logRevoke(
   try {
     const ch = await services.client.channels.fetch(logChannelId);
     if (!ch || !ch.isSendable()) return;
-    await ch.send({
-      content: `<@${userId}> stopped advertising the server.`,
-      allowedMentions: { parse: [] },
-    });
+    await ch.send(
+      makeWarningCard(
+        "Promoter role removed",
+        `<@${userId}> stopped advertising the server.`,
+      ),
+    );
   } catch {
     return;
   }
