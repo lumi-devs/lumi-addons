@@ -24,7 +24,7 @@ export const presenceUpdateListener = defineListener({
     if (!guildId) return;
     const userId = newPresence.userId;
     const activities = activitiesFromPresence(newPresence);
-    const member = newPresence.member ?? await newPresence.guild?.members.fetch(userId).catch(() => null);
+    const member = await newPresence.guild?.members.fetch(userId).catch(() => newPresence.member ?? null);
     const roles = member ? rolesFromMember(member) : [];
     await convergeMember(services, guildId, userId, { activities, roles });
   },
