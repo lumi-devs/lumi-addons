@@ -37,6 +37,7 @@ export async function sweepGuild(
           name: a.name,
           type: a.type,
           state: a.state,
+          details: a.details,
         })) ?? null,
       roles: Array.from(member.roles.cache.keys()),
     }).catch(() => null);

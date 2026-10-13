@@ -25,12 +25,10 @@ export async function convergeMember(
   snapshot: { activities: PresenceActivity[] | null; roles: string[] },
 ): Promise<ConvergeOutcome | null> {
   const state = await getMemberState(services, guildId, userId);
-  const activities = snapshot.activities ?? state?.activities ?? [];
-  if (snapshot.activities === null && !state) return null;
+  if (snapshot.activities === null) return null;
+  const activities = snapshot.activities;
 
   const mappings = await getMappings(services, guildId);
-  if (mappings.length === 0 && !state) return null;
-
   const desired = matchActivities(activities, mappings);
   const managedRoles = mappings.map((m) => m.roleId);
   const diff = planRoleDiff(desired, snapshot.roles, state?.granted ?? [], managedRoles);
@@ -48,14 +46,14 @@ export async function convergeMember(
 
   if (diff.granted.length === 0 && desired.length === 0) {
     if (state) await clearMemberState(services, guildId, userId);
-    return { diff, sawPresence: snapshot.activities !== null };
+    return { diff, sawPresence: true };
   }
 
   await setMemberState(services, guildId, userId, {
     activities,
     granted: diff.granted,
   });
-  return { diff, sawPresence: snapshot.activities !== null };
+  return { diff, sawPresence: true };
 }
 
 export function activitiesFromPresence(
@@ -65,6 +63,7 @@ export function activitiesFromPresence(
     name: a.name,
     type: a.type,
     state: a.state,
+    details: a.details,
   }));
 }
 

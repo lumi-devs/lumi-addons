@@ -123,6 +123,7 @@ async function check(ctx: CommandContext): Promise<void> {
     name: a.name,
     type: a.type,
     state: a.state,
+    details: a.details,
   })) ?? null;
   let outcome;
   try {

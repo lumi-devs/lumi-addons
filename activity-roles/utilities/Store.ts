@@ -9,7 +9,7 @@ const MAPPING_KEY = "mapping";
 const MEMBER_KEY = "member";
 
 export interface MemberState {
-  activities: { name: string; type: number; state: string | null }[];
+  activities: { name: string; type: number; state: string | null; details: string | null }[];
   granted: string[];
 }
 
