@@ -7,7 +7,7 @@ import { MODULE_NAME, SWEEP_ONESHOT, type MemberState } from "./utilities/Keys.j
 import { sweep } from "./utilities/Engine.js";
 
 const INITIAL_DELAY_MS = 60_000;
-const SWEEP_INTERVAL_MS = 300_000; // 5 minutes, matches discord-data fallback_check
+const SWEEP_INTERVAL_MS = 300_000;
 
 const scheduled = new Set<string>();
 
