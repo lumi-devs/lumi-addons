@@ -1,6 +1,6 @@
 import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
-import type { Container } from "@lumi-devs/lumi/services";
+import { moduleGdpr } from "@lumi-devs/lumi/gdpr";
 
 export const economyGamesModule = defineModule({
   name: "economy-games",
@@ -111,16 +111,5 @@ export const economyGamesModule = defineModule({
     }),
   }),
 
-  async deleteUserData(services: Container, userId: string): Promise<void> {
-    await services.db.guildKV.deleteModuleDataForTarget("economy-games", userId);
-  },
-
-  async exportUserData(
-    services: Container,
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const rows = await services.db.guildKV.listModuleDataForTarget("economy-games", userId);
-    if (rows.length === 0) return null;
-    return { records: rows.map((row) => ({ guildId: row.guildId, key: row.key, value: row.value })) };
-  },
+  ...moduleGdpr("economy-games", "records", (row) => ({ guildId: row.guildId, key: row.key, value: row.value })),
 });

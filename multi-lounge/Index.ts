@@ -1,7 +1,7 @@
 import { ChannelType } from "discord.js";
 import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
-import type { Container } from "@lumi-devs/lumi/services";
+import { moduleGdpr } from "@lumi-devs/lumi/gdpr";
 import { MODULE_NAME } from "./utilities/Keys.js";
 import { oneshots as reconcileOneshots } from "./tasks/ReconcileFire.js";
 
@@ -54,21 +54,7 @@ export const multiLoungeModule = defineModule({
     }),
   }),
 
-  async deleteUserData(services: Container, userId: string): Promise<void> {
-    await services.db.guildKV.deleteModuleDataForTarget(MODULE_NAME, userId);
-  },
-
-  async exportUserData(
-    services: Container,
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const rows = await services.db.guildKV.listModuleDataForTarget(
-      MODULE_NAME,
-      userId,
-    );
-    if (rows.length === 0) return null;
-    return { data: rows.map((row) => row.value) };
-  },
+  ...moduleGdpr(MODULE_NAME, "data"),
 });
 
 export const oneshots = reconcileOneshots;

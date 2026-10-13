@@ -1,6 +1,5 @@
 import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
-import type { Container } from "@lumi-devs/lumi/services";
 import { oneshots } from "./tasks/CleanupFire.js";
 
 export const threadCleanerModule = defineModule({
@@ -36,13 +35,6 @@ export const threadCleanerModule = defineModule({
       default: "archive",
     }),
   }),
-
-  async deleteUserData(_services: Container, _userId: string): Promise<void> {
-  },
-
-  async exportUserData(_services: Container, _userId: string): Promise<Record<string, unknown> | null> {
-    return null;
-  },
 });
 
 export { oneshots };

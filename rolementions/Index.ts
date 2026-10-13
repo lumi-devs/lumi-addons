@@ -1,6 +1,6 @@
 import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
-import type { Container } from "@lumi-devs/lumi/services";
+import { moduleGdpr } from "@lumi-devs/lumi/gdpr";
 import { handleExpire } from "./tasks/ExpireFire.js";
 import { MODULE_NAME } from "./utilities/Keys.js";
 
@@ -32,21 +32,7 @@ export const rolementionsModule = defineModule({
     }),
   }),
 
-  async deleteUserData(services: Container, userId: string): Promise<void> {
-    await services.db.guildKV.deleteModuleDataForTarget(MODULE_NAME, userId);
-  },
-
-  async exportUserData(
-    services: Container,
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const rows = await services.db.guildKV.listModuleDataForTarget(
-      MODULE_NAME,
-      userId,
-    );
-    if (rows.length === 0) return null;
-    return { mentions: rows.map((row) => row.value) };
-  },
+  ...moduleGdpr(MODULE_NAME, "mentions"),
 });
 
 export const oneshots = {

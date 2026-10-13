@@ -1,5 +1,6 @@
 import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
+import { moduleGdpr } from "@lumi-devs/lumi/gdpr";
 import type { Container } from "@lumi-devs/lumi/services";
 import { MODULE_NAME, type MemberState } from "./utilities/Keys.js";
 import { sweep } from "./utilities/Engine.js";
@@ -70,16 +71,5 @@ export const promoterModule = defineModule({
     }
   },
 
-  async deleteUserData(services: Container, userId: string): Promise<void> {
-    await services.db.guildKV.deleteModuleDataForTarget(MODULE_NAME, userId);
-  },
-
-  async exportUserData(
-    services: Container,
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const rows = await services.db.guildKV.listModuleDataForTarget<MemberState>(MODULE_NAME, userId);
-    if (rows.length === 0) return null;
-    return { states: rows.map((row) => ({ guildId: row.guildId, ...row.value })) };
-  },
+  ...moduleGdpr(MODULE_NAME, "states", (row) => ({ guildId: row.guildId, ...(row.value as MemberState) })),
 });

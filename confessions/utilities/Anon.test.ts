@@ -6,7 +6,7 @@ import { hashAuthor, hmacUserId, openSealedId, sealUserId } from "./Anon.js";
 import { authorKeyForIdxKey, confessionAuthorIdxKey, confessionTarget, replyKey } from "./Keys.js";
 
 beforeAll(() => {
-  process.env.CONFESSIONS_DATA_DIR = mkdtempSync(join(tmpdir(), "confessions-test-"));
+  process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "confessions-test-"));
 });
 
 describe("anon", () => {

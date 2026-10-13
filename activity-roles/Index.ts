@@ -1,6 +1,6 @@
 import { defineModule } from "@lumi-devs/lumi/module";
 import type { Container } from "@lumi-devs/lumi/services";
-import { deleteAllUserData } from "./utilities/Store.js";
+import { moduleGdpr } from "@lumi-devs/lumi/gdpr";
 import { SWEEP_ONESHOT } from "./utilities/Store.js";
 import {
   ensureScheduled,
@@ -34,20 +34,7 @@ export const activityRolesModule = defineModule({
     }
   },
 
-  async deleteUserData(services: Container, userId: string): Promise<void> {
-    await deleteAllUserData(services, userId);
-  },
-
-  async exportUserData(
-    services: Container,
-    userId: string,
-  ): Promise<Record<string, unknown> | null> {
-    const rows = await services.db.guildKV.listModuleDataForTarget(
-      "activity-roles",
-      userId,
-    );
-    return rows.length > 0 ? { memberStates: rows } : null;
-  },
+  ...moduleGdpr("activity-roles", "memberStates"),
 });
 
 export const oneshots = {

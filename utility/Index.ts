@@ -9,6 +9,4 @@ export const utilityAddonModule = defineModule({
   short: "General utility tools.",
   endUserDataStatement:
     "Processes transient translation and emoji extraction requests in real-time. Does not collect, persist, or retain any personal user data or message content.",
-  deleteUserData: async () => undefined,
-  exportUserData: async () => null,
 });

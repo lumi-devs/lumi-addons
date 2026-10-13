@@ -14,7 +14,7 @@ Reply-DM delivery needs the real user ID, so author links are stored sealed with
 `AES-256-GCM` and opt-outs as `HMAC(key, userId)` - a database leak reveals no
 usable user IDs. The module mints its own 32-byte key on first use and keeps it
 in `data/confessions/seal.key` (mode 0600, outside the database, never
-committed); override the directory with `CONFESSIONS_DATA_DIR`. Back it up with
+committed); override the directory with `DATA_DIR`. Back it up with
 the volume - lose it and sealed rows stop resolving.
 
 ## How it works
