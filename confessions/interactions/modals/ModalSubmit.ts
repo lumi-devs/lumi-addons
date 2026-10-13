@@ -382,6 +382,7 @@ async function notifyTarget(
 export const confessionModalHandler = defineInteraction<ModalSubmitInteraction>({
   module: "confessions",
   kinds: ["modal"],
+  prefix: "confessions:modal",
   match: (customId) => customId.startsWith("confessions:modal:"),
   async run(services: Container, interaction: ModalSubmitInteraction) {
     if (!interaction.guildId) return;
