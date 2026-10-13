@@ -2,8 +2,44 @@ import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
 import { moduleGdpr } from "@lumi-devs/lumi/gdpr";
 import type { Container } from "@lumi-devs/lumi/services";
-import { MODULE_NAME, type MemberState } from "./utilities/Keys.js";
+import { scheduleOneshot, type OneshotContext } from "@lumi-devs/lumi/scheduler";
+import { MODULE_NAME, SWEEP_ONESHOT, type MemberState } from "./utilities/Keys.js";
 import { sweep } from "./utilities/Engine.js";
+
+const INITIAL_DELAY_MS = 60_000;
+const SWEEP_INTERVAL_MS = 300_000; // 5 minutes, matches discord-data fallback_check
+
+const scheduled = new Set<string>();
+
+async function ensureScheduled(services: Container, guildId: string): Promise<void> {
+  if (scheduled.has(guildId)) return;
+  scheduled.add(guildId);
+  await scheduleOneshot(services, MODULE_NAME, SWEEP_ONESHOT, guildId, INITIAL_DELAY_MS, {
+    guildId,
+  }).catch(() => undefined);
+}
+
+export async function handleSweepFire(
+  services: Container,
+  ctx: OneshotContext,
+): Promise<void> {
+  const payload = ctx.data as { guildId?: string } | null;
+  const guildId = ctx.guildId || payload?.guildId;
+  if (!guildId) return;
+  await sweep(services, guildId).catch((error: unknown) =>
+    services.logger.error(
+      `[Promoter] sweep failed: ${error instanceof Error ? error.message : String(error)}`,
+    ),
+  );
+  await scheduleOneshot(
+    services,
+    MODULE_NAME,
+    SWEEP_ONESHOT,
+    guildId,
+    SWEEP_INTERVAL_MS,
+    { guildId },
+  ).catch(() => undefined);
+}
 
 export {
   getPromoterConfig,
@@ -61,6 +97,7 @@ export const promoterModule = defineModule({
   onLoad(services: Container) {
     for (const guild of services.client.guilds.cache.values()) {
       void sweep(services, guild.id).catch(() => undefined);
+      void ensureScheduled(services, guild.id).catch(() => undefined);
     }
   },
 
@@ -68,8 +105,13 @@ export const promoterModule = defineModule({
     for (const guild of services.client.guilds.cache.values()) {
       if (!(await services.db.modules.isModuleEnabled(guild.id, MODULE_NAME))) continue;
       await sweep(services, guild.id).catch(() => undefined);
+      void ensureScheduled(services, guild.id).catch(() => undefined);
     }
   },
 
   ...moduleGdpr(MODULE_NAME, "states", (row) => ({ guildId: row.guildId, ...(row.value as MemberState) })),
 });
+
+export const oneshots = {
+  [SWEEP_ONESHOT]: handleSweepFire,
+};

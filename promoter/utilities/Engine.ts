@@ -138,28 +138,29 @@ export async function converge(
 export async function sweep(services: Container, guildId: string): Promise<number> {
   const config = await getPromoterConfig(services, guildId);
   if (!config.roleId) return 0;
-  const rows = await services.db.guildKV.listModuleData<MemberState>({
-    module: MODULE_NAME,
-    key: PromoterData.STATE,
-    guildId,
-  });
-  const holding = rows.filter((r) => r.value?.has);
-  if (holding.length === 0) return 0;
-
   const guild = services.client.guilds.cache.get(guildId);
   if (!guild) return 0;
 
-  let revoked = 0;
-  for (const row of holding) {
-    const member = await guild.members.fetch(row.targetId).catch(() => null);
-    if (!member) continue;
-    const result = await converge(services, {
-      guildId,
-      userId: row.targetId,
-      worn: wearsServerTag(member.user.primaryGuild, guildId),
-      roles: [...member.roles.cache.keys()],
-    });
-    if (result === "revoked") revoked++;
+  const role = guild.roles.cache.get(config.roleId);
+  if (!role) return 0;
+
+  const members = await guild.members.fetch().catch(() => null);
+  if (!members) return 0;
+
+  let changed = 0;
+  for (const member of members.values()) {
+    if (member.user.bot) continue;
+    const hasRole = member.roles.cache.has(config.roleId);
+    const hasTag = wearsServerTag(member.user.primaryGuild, guildId);
+    if (hasRole !== hasTag) {
+      const result = await converge(services, {
+        guildId,
+        userId: member.id,
+        worn: hasTag,
+        roles: [...member.roles.cache.keys()],
+      });
+      if (result === "granted" || result === "revoked") changed++;
+    }
   }
-  return revoked;
+  return changed;
 }

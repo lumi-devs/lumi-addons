@@ -1,5 +1,7 @@
 export const MODULE_NAME = "promoter";
 
+export const SWEEP_ONESHOT = "sweep";
+
 export const PromoterData = {
   META: "meta",
   GRANTED: "stats-granted",
