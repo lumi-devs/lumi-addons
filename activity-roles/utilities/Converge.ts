@@ -12,17 +12,6 @@ import {
   type PresenceActivity,
 } from "./Matcher.js";
 
-function sameActivities(
-  a: PresenceActivity[],
-  b: PresenceActivity[],
-): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function sameIds(a: string[], b: string[]): boolean {
-  return a.length === b.length && b.every((x) => a.includes(x));
-}
-
 export async function convergeMember(
   services: Container,
   guildId: string,
@@ -37,7 +26,8 @@ export async function convergeMember(
   if (mappings.length === 0 && !state) return;
 
   const desired = matchActivities(activities, mappings);
-  const diff = planRoleDiff(desired, snapshot.roles, state?.granted ?? []);
+  const managedRoles = mappings.map((m) => m.roleId);
+  const diff = planRoleDiff(desired, snapshot.roles, state?.granted ?? [], managedRoles);
 
   try {
     const guild = services.client.guilds.cache.get(guildId);
@@ -58,16 +48,11 @@ export async function convergeMember(
     if (state) await clearMemberState(services, guildId, userId);
     return;
   }
-  if (
-    !state ||
-    !sameActivities(state.activities as PresenceActivity[], activities) ||
-    !sameIds(state.granted, diff.granted)
-  ) {
-    await setMemberState(services, guildId, userId, {
-      activities,
-      granted: diff.granted,
-    });
-  }
+
+  await setMemberState(services, guildId, userId, {
+    activities,
+    granted: diff.granted,
+  });
 }
 
 export function activitiesFromPresence(

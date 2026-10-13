@@ -64,13 +64,15 @@ export function planRoleDiff(
   desired: string[],
   current: string[],
   granted: string[],
+  managedRoles: string[],
 ): RoleDiff {
   const want = new Set(desired);
   const has = new Set(current);
   const owned = new Set(granted);
+  const managed = new Set(managedRoles);
   const add = [...want].filter((r) => !has.has(r));
   const added = new Set(add);
-  const remove = [...owned].filter((r) => !want.has(r) && has.has(r));
+  const remove = [...has].filter((r) => managed.has(r) && !want.has(r));
   const next = [
     ...new Set(
       [...owned]
