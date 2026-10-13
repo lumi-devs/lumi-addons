@@ -16,12 +16,13 @@ export const presenceUpdateListener = defineListener<[Presence | null, Presence]
     if (!guildId) return;
     if (newPresence.user?.bot) return;
 
+    const member = await newPresence.guild?.members.fetch(newPresence.userId).catch(() => newPresence.member ?? null);
     const customStatus = newPresence.activities.find(
       (a) => a.type === ActivityType.Custom,
     );
     const statusText = customStatus?.state ?? "";
-    const worn = wearsServerTag(newPresence.member?.user.primaryGuild ?? null, guildId);
-    const roles = newPresence.member?.roles.cache.map((r) => r.id) ?? [];
+    const worn = wearsServerTag(member?.user.primaryGuild ?? null, guildId);
+    const roles = member ? [...member.roles.cache.keys()] : [];
 
     await converge(services, {
       guildId,

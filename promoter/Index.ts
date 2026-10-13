@@ -1,7 +1,6 @@
 import { defineModule } from "@lumi-devs/lumi/module";
-import { cfg } from "@lumi-devs/lumi/config";
+import { cfg, toStringArray } from "@lumi-devs/lumi/config";
 import type { Container } from "@lumi-devs/lumi/services";
-import { toStringArray } from "@lumi-devs/lumi/config";
 import {
   ContainerBuilder,
   MessageFlags,
@@ -57,14 +56,6 @@ export async function getStats(
   };
 }
 
-async function bumpStats(
-  services: Container,
-  guildId: string,
-  field: typeof PromoterData.GRANTED | typeof PromoterData.REVOKED,
-): Promise<void> {
-  await services.db.guildKV.incrModuleData(guildId, MODULE_NAME, PromoterData.META, field);
-}
-
 export async function getMemberState(
   services: Container,
   guildId: string,
@@ -73,47 +64,35 @@ export async function getMemberState(
   return services.db.guildKV.getModuleData<MemberState>(guildId, MODULE_NAME, userId, PromoterData.STATE);
 }
 
-async function setMemberState(
-  services: Container,
-  guildId: string,
-  userId: string,
-  state: MemberState,
-): Promise<void> {
-  await services.db.guildKV.setModuleData(guildId, MODULE_NAME, userId, PromoterData.STATE, state);
-}
-
 function cutText(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}\u2026` : text;
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
-async function logGrant(
+function describeSource(status: string, statusMatched: boolean, worn: boolean): string {
+  const reasons: string[] = [];
+  if (statusMatched) reasons.push(status || "custom status");
+  if (worn) reasons.push("adopted the server tag");
+  return reasons.join(" + ") || "promotion";
+}
+
+async function sendLogCard(
   services: Container,
   logChannelId: string | null,
-  userId: string,
+  heading: string,
+  body: string,
   avatarUrl: string,
-  customMessage: string,
-  source: string,
 ): Promise<void> {
   if (!logChannelId) return;
   try {
     const ch = await services.client.channels.fetch(logChannelId);
     if (!ch || !ch.isSendable()) return;
-    const lines = [`<@${userId}> is promoting our server!!`];
-    if (customMessage.length > 0) lines.push(`"${cutText(customMessage, 200)}"`);
-    lines.push(`> ${cutText(source, 100)}`);
     const card = new ContainerBuilder()
-      .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent("# 🍥 THANK YOU!!!!"),
-      )
+      .addTextDisplayComponents(new TextDisplayBuilder().setContent(heading))
       .addSeparatorComponents(new SeparatorBuilder())
       .addSectionComponents(
         new SectionBuilder()
-          .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(lines.join("\n")),
-          )
-          .setThumbnailAccessory(
-            new ThumbnailBuilder({ media: { url: avatarUrl } }),
-          ),
+          .addTextDisplayComponents(new TextDisplayBuilder().setContent(body))
+          .setThumbnailAccessory(new ThumbnailBuilder({ media: { url: avatarUrl } })),
       );
     await ch.send({
       flags: MessageFlags.IsComponentsV2,
@@ -125,41 +104,33 @@ async function logGrant(
   }
 }
 
-async function logRevoke(
+function logGrant(
+  services: Container,
+  config: PromoterConfig,
+  userId: string,
+  avatarUrl: string,
+  source: string,
+): Promise<void> {
+  const lines = [`<@${userId}> is promoting our server!!`];
+  if (config.grantMessage.length > 0) lines.push(`"${cutText(config.grantMessage, 200)}"`);
+  lines.push(`> ${cutText(source, 100)}`);
+  return sendLogCard(services, config.logChannelId, "# 🍥 THANK YOU!!!!", lines.join("\n"), avatarUrl);
+}
+
+function logRevoke(
   services: Container,
   logChannelId: string | null,
   userId: string,
   avatarUrl: string,
   prevSource: string,
 ): Promise<void> {
-  if (!logChannelId) return;
-  try {
-    const ch = await services.client.channels.fetch(logChannelId);
-    if (!ch || !ch.isSendable()) return;
-    const card = new ContainerBuilder()
-      .addTextDisplayComponents(
-        new TextDisplayBuilder().setContent("# 🍥 GOODBYE :("),
-      )
-      .addSeparatorComponents(new SeparatorBuilder())
-      .addSectionComponents(
-        new SectionBuilder()
-          .addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(
-              `<@${userId}> stopped promoting us\n\n> ${cutText(prevSource, 100)}`,
-            ),
-          )
-          .setThumbnailAccessory(
-            new ThumbnailBuilder({ media: { url: avatarUrl } }),
-          ),
-      );
-    await ch.send({
-      flags: MessageFlags.IsComponentsV2,
-      components: [card],
-      allowedMentions: { parse: ["users"] },
-    });
-  } catch {
-    return;
-  }
+  return sendLogCard(
+    services,
+    logChannelId,
+    "# 🍥 GOODBYE :(",
+    `<@${userId}> stopped promoting us\n\n> ${cutText(prevSource || "promotion", 100)}`,
+    avatarUrl,
+  );
 }
 
 export type EvaluateResult =
@@ -197,41 +168,36 @@ export async function converge(
   };
   if (input.roles !== undefined) facts.has = input.roles.includes(config.roleId);
 
-  const want =
-    statusMatches(facts.status, config.matchTerms) ||
-    (config.detectServerTag && facts.worn);
+  const matched = statusMatches(facts.status, config.matchTerms);
+  const want = matched || (config.detectServerTag && facts.worn);
+
   if (want === facts.has) {
-    if (
-      facts.status !== stored.status ||
-      facts.worn !== stored.worn ||
-      facts.has !== stored.has
-    ) {
-      await setMemberState(services, guildId, userId, facts);
+    if (facts.status !== stored.status || facts.worn !== stored.worn || facts.has !== stored.has) {
+      await services.db.guildKV.setModuleData(guildId, MODULE_NAME, userId, PromoterData.STATE, facts);
     }
     return facts.has ? "holding" : "not-holding";
   }
 
-  const matched = statusMatches(facts.status, config.matchTerms);
-  const reasons: string[] = [];
-  if (matched) reasons.push(facts.status || "custom status");
-  if (config.detectServerTag && facts.worn) reasons.push("adopted the server tag");
-  const source = reasons.join(" + ") || "promotion";
-
   const guild = services.client.guilds.cache.get(guildId);
   if (!guild) return "unconfigured";
-  let avatarUrl: string;
-  try {
-    const member = await guild.members.fetch(userId);
-    if (want) await member.roles.add(config.roleId);
-    else await member.roles.remove(config.roleId);
-    avatarUrl = member.displayAvatarURL({ size: 256 });
-  } catch {
-    return "unconfigured";
+  const member = await guild.members.fetch(userId).catch(() => null);
+  if (!member) return "unconfigured";
+
+  if (member.roles.cache.has(config.roleId) === want) {
+    const corrected: MemberState = { ...facts, has: want, source: want ? describeSource(facts.status, matched, facts.worn && config.detectServerTag) : facts.source };
+    await services.db.guildKV.setModuleData(guildId, MODULE_NAME, userId, PromoterData.STATE, corrected);
+    return want ? "holding" : "not-holding";
   }
-  await bumpStats(services, guildId, want ? PromoterData.GRANTED : PromoterData.REVOKED);
-  if (want) await logGrant(services, config.logChannelId, userId, avatarUrl, config.grantMessage, source);
-  else await logRevoke(services, config.logChannelId, userId, avatarUrl, facts.source || "promotion");
-  await setMemberState(services, guildId, userId, { ...facts, has: want, source: want ? source : "" });
+
+  if (want) await member.roles.add(config.roleId);
+  else await member.roles.remove(config.roleId);
+
+  const source = describeSource(facts.status, matched, facts.worn && config.detectServerTag);
+  await services.db.guildKV.incrModuleData(guildId, MODULE_NAME, PromoterData.META, want ? PromoterData.GRANTED : PromoterData.REVOKED);
+  const avatarUrl = member.displayAvatarURL({ size: 256 });
+  if (want) await logGrant(services, config, userId, avatarUrl, source);
+  else await logRevoke(services, config.logChannelId, userId, avatarUrl, facts.source);
+  await services.db.guildKV.setModuleData(guildId, MODULE_NAME, userId, PromoterData.STATE, { ...facts, has: want, source: want ? source : "" });
   return want ? "granted" : "revoked";
 }
 
@@ -249,17 +215,15 @@ export async function sweep(services: Container, guildId: string): Promise<numbe
   const guild = services.client.guilds.cache.get(guildId);
   if (!guild) return 0;
 
-  const rolesCache = await guild.roles.fetch();
   let revoked = 0;
   for (const row of holding) {
     const member = await guild.members.fetch(row.targetId).catch(() => null);
     if (!member) continue;
-    const roles = [...rolesCache.values()].filter((r) => member.roles.cache.has(r.id)).map((r) => r.id);
     const result = await converge(services, {
       guildId,
       userId: row.targetId,
       worn: wearsServerTag(member.user.primaryGuild, guildId),
-      roles,
+      roles: [...member.roles.cache.keys()],
     });
     if (result === "revoked") revoked++;
   }
@@ -269,13 +233,13 @@ export async function sweep(services: Container, guildId: string): Promise<numbe
 export const promoterModule = defineModule({
   name: MODULE_NAME,
   displayName: "Promoter",
-  emoji: "\u{1F4E3}",
+  emoji: "📣",
   description:
-    "Rewards members who advertise the server in their custom status (invite link or server tag) with a configurable role, removed automatically when the status changes. Includes log cards and a persistent check-me panel.",
+    "Rewards members who advertise the server in their custom status or server tag with a configurable role, removed automatically when the promotion stops. Includes thank-you and goodbye log cards.",
   short: "Auto-role for members advertising the server.",
   version: "1.0.0",
   endUserDataStatement:
-    "Processes Discord user presence text in real-time to check for server promotions. Stores per-member cached state (status text, tag flag, role flag) per guild; does not store personal profile data outside the bot instance.",
+    "Processes Discord user presence text in real-time to check for server promotions. Stores per-member cached state (status text, tag flag, role flag, promotion source) per guild; does not store personal profile data outside the bot instance.",
   category: "Community",
   configSchema: cfg.object({
     promoter_role_id: cfg.role({
@@ -285,7 +249,7 @@ export const promoterModule = defineModule({
     }),
     log_channel_id: cfg.channel({
       label: "Log Channel",
-      description: "Channel for grant/revoke log cards. Leave blank to disable.",
+      description: "Channel for thank-you and goodbye log cards. Leave blank to disable.",
       required: false,
     }),
     match_terms: cfg.stringList({
@@ -307,9 +271,9 @@ export const promoterModule = defineModule({
   }),
 
   onLoad(services: Container) {
-    void services.client.guilds.cache.forEach((guild) => {
+    for (const guild of services.client.guilds.cache.values()) {
       void sweep(services, guild.id).catch(() => undefined);
-    });
+    }
   },
 
   async reconcileScheduledJobs(services: Container) {
