@@ -16,18 +16,22 @@ const scheduled = new Set<string>();
 export async function sweepGuild(
   services: Container,
   guildId: string,
-): Promise<void> {
+): Promise<{ checked: number; changed: number }> {
+  const empty = { checked: 0, changed: 0 };
   const guild = services.client.guilds.cache.get(guildId);
-  if (!guild) return;
+  if (!guild) return empty;
   if (!(await services.db.modules.isModuleEnabled(guildId, MODULE_NAME)))
-    return;
+    return empty;
   const mappings = await getMappings(services, guildId);
-  if (mappings.length === 0) return;
+  if (mappings.length === 0) return empty;
   const members = await guild.members.fetch().catch(() => null);
-  if (!members) return;
+  if (!members) return empty;
+  let checked = 0;
+  let changed = 0;
   for (const member of members.values()) {
     if (member.user.bot) continue;
-    await convergeMember(services, guildId, member.id, {
+    checked++;
+    const outcome = await convergeMember(services, guildId, member.id, {
       activities:
         member.presence?.activities.map((a) => ({
           name: a.name,
@@ -35,8 +39,10 @@ export async function sweepGuild(
           state: a.state,
         })) ?? null,
       roles: Array.from(member.roles.cache.keys()),
-    }).catch(() => undefined);
+    }).catch(() => null);
+    if (outcome && (outcome.diff.add.length > 0 || outcome.diff.remove.length > 0)) changed++;
   }
+  return { checked, changed };
 }
 
 export async function ensureScheduled(

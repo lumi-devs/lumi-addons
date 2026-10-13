@@ -60,6 +60,15 @@ All commands require **Manage Roles** permission:
 | `/activityroles` | `add` | `type: ActivityType`, `match: string`, `role: Role` | Create a new presence-to-role rule mapping. |
 | `/activityroles` | `remove` | `type: ActivityType`, `match: string` | Remove an existing activity role mapping. |
 | `/activityroles` | `list` | *None* | Display all configured activity role rules for this server. |
+| `/activityroles` | `check` | `user?: User` | Converge now and report who has what (omit user for a full sweep). |
+
+> [!WARNING]
+> Two things must both be true or nothing happens: the code requests the
+> `GuildPresences` intent (already wired), **and** the privileged **Presence
+> Intent** toggle must be on for your application in the Discord Developer
+> Portal (Bot tab). Without it the bot sees no presences — `check` reports
+> "not visible" for everyone. The bot's role must also sit above any role it
+> assigns, or Discord rejects the add.
 
 ---
 

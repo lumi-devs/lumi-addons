@@ -14,6 +14,8 @@ import {
   mappingId,
   removeMapping,
 } from "../utilities/Store.js";
+import { convergeMember } from "../utilities/Converge.js";
+import { sweepGuild } from "../tasks/Sweep.js";
 
 const TYPE_CHOICES = VALID_ACTIVITY_TYPES.map((t) => ({ name: t, value: t }));
 const VALID_TYPES_LIST = VALID_ACTIVITY_TYPES.join("`, `");
@@ -89,6 +91,64 @@ async function list(ctx: CommandContext): Promise<void> {
   await ctx.reply(makeInfoCard("Activity Roles", lines.join("\n")));
 }
 
+function mentionList(ids: string[]): string {
+  return ids.length > 0 ? ids.map((id) => `<@&${id}>`).join(" ") : "none";
+}
+
+async function check(ctx: CommandContext): Promise<void> {
+  await ctx.checkPermit("mod.*");
+  const guild = ctx.guild;
+  if (!guild) {
+    await ctx.replyError("Guild Only", "This command only works inside a server.");
+    return;
+  }
+  const target = await ctx.getUser("user");
+  if (!target) {
+    const { checked, changed } = await sweepGuild(ctx.services, guild.id);
+    await ctx.reply(
+      makeInfoCard(
+        "Activity Roles Check",
+        `Converged **${checked}** members, changed roles on **${changed}**.`,
+      ),
+    );
+    return;
+  }
+  const member = await guild.members.fetch(target.id).catch(() => null);
+  if (!member) {
+    await ctx.replyError("Not Found", "That user is not a member of this server.");
+    return;
+  }
+  const presenceActivities = member.presence?.activities.map((a) => ({
+    name: a.name,
+    type: a.type,
+    state: a.state,
+  })) ?? null;
+  let outcome;
+  try {
+    outcome = await convergeMember(ctx.services, guild.id, member.id, {
+      activities: presenceActivities,
+      roles: Array.from(member.roles.cache.keys()),
+    });
+  } catch (err) {
+    await ctx.replyError(
+      "Converge Failed",
+      err instanceof Error ? err.message : String(err),
+    );
+    return;
+  }
+  const lines = [
+    `Presence: ${presenceActivities === null ? "**not visible** (is the Presence intent enabled?)" : presenceActivities.length === 0 ? "online, no activities" : presenceActivities.map((a) => `\`${a.name}\``).join(", ")}`,
+  ];
+  if (!outcome) {
+    lines.push("Nothing to converge (no mappings apply and no record).");
+  } else {
+    lines.push(`Should have: ${mentionList(outcome.diff.granted)}`);
+    lines.push(`Added: ${mentionList(outcome.diff.add)}`);
+    lines.push(`Removed: ${mentionList(outcome.diff.remove)}`);
+  }
+  await ctx.reply(makeInfoCard(`Activity Check — ${member.user.tag}`, lines.join("\n")));
+}
+
 export const activityrolesDef: CommandDef = {
   name: "activityroles",
   module: "activity-roles",
@@ -140,7 +200,15 @@ export const activityrolesDef: CommandDef = {
       )
       .addSubcommand((sub) =>
         sub.setName("list").setDescription("List all activity role mappings"),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("check")
+          .setDescription("Converge roles now and report who has what")
+          .addUserOption((opt) =>
+            opt.setName("user").setDescription("Check one member (omit for a full sweep)").setRequired(false),
+          ),
       ),
-  handlers: { add, remove, list },
+  handlers: { add, remove, list, check },
   defaultSub: "list",
 };

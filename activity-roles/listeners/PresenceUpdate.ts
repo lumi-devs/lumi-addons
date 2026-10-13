@@ -26,6 +26,10 @@ export const presenceUpdateListener = defineListener({
     const activities = activitiesFromPresence(newPresence);
     const member = await newPresence.guild?.members.fetch(userId).catch(() => newPresence.member ?? null);
     const roles = member ? rolesFromMember(member) : [];
-    await convergeMember(services, guildId, userId, { activities, roles });
+    await convergeMember(services, guildId, userId, { activities, roles }).catch((err: unknown) =>
+      services.logger.error(
+        `[ActivityRoles] Failed to update roles for ${userId}: ${err instanceof Error ? err.message : String(err)}`,
+      ),
+    );
   },
 });
