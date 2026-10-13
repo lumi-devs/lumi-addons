@@ -26,7 +26,7 @@ async function validateAddon(dir: string): Promise<string[]> {
     errors.push("missing manifest.json");
   } else {
     try {
-      const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+      const manifest = await Bun.file(manifestPath).json();
       for (const field of MANIFEST_REQUIRED) {
         if (!manifest[field]) errors.push(`manifest.json missing '${field}'`);
       }
