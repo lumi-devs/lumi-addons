@@ -2,7 +2,14 @@ import { defineModule } from "@lumi-devs/lumi/module";
 import { cfg } from "@lumi-devs/lumi/config";
 import type { Container } from "@lumi-devs/lumi/services";
 import { toStringArray } from "@lumi-devs/lumi/config";
-import { makeSuccessCard, makeWarningCard } from "@lumi-devs/lumi/ui";
+import {
+  ContainerBuilder,
+  MessageFlags,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  ThumbnailBuilder,
+} from "discord.js";
 import { MODULE_NAME, PromoterData, type MemberState, type PromoterStats } from "./utilities/Keys.js";
 import { statusMatches, wearsServerTag } from "./utilities/Matching.js";
 
@@ -11,6 +18,7 @@ export interface PromoterConfig {
   logChannelId: string | null;
   matchTerms: string[];
   detectServerTag: boolean;
+  grantMessage: string;
 }
 
 export async function getPromoterConfig(
@@ -19,17 +27,19 @@ export async function getPromoterConfig(
 ): Promise<PromoterConfig> {
   const get = (key: string) =>
     services.db.config.getModuleConfig(guildId, MODULE_NAME, key);
-  const [role, log, matchTerms, tag] = await Promise.all([
+  const [role, log, matchTerms, tag, message] = await Promise.all([
     get("promoter_role_id"),
     get("log_channel_id"),
     get("match_terms"),
     get("detect_server_tag"),
+    get("grant_message"),
   ]);
   return {
     roleId: typeof role === "string" && role.length > 0 ? role : null,
     logChannelId: typeof log === "string" && log.length > 0 ? log : null,
     matchTerms: toStringArray(matchTerms),
     detectServerTag: typeof tag === "boolean" ? tag : true,
+    grantMessage: typeof message === "string" ? message : "",
   };
 }
 
@@ -80,18 +90,36 @@ async function logGrant(
   services: Container,
   logChannelId: string | null,
   userId: string,
-  status: string,
+  avatarUrl: string,
+  customMessage: string,
+  source: string,
 ): Promise<void> {
   if (!logChannelId) return;
   try {
     const ch = await services.client.channels.fetch(logChannelId);
     if (!ch || !ch.isSendable()) return;
-    await ch.send(
-      makeSuccessCard("Promoter role granted", [
-        `<@${userId}> is advertising the server.`,
-        `> ${cutText(status, 100)}`,
-      ]),
-    );
+    const lines = [`<@${userId}> is promoting our server!!`];
+    if (customMessage.length > 0) lines.push(`"${cutText(customMessage, 200)}"`);
+    lines.push(`> ${cutText(source, 100)}`);
+    const card = new ContainerBuilder()
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent("# 🍥 THANK YOU!!!!"),
+      )
+      .addSeparatorComponents(new SeparatorBuilder())
+      .addSectionComponents(
+        new SectionBuilder()
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(lines.join("\n")),
+          )
+          .setThumbnailAccessory(
+            new ThumbnailBuilder({ media: { url: avatarUrl } }),
+          ),
+      );
+    await ch.send({
+      flags: MessageFlags.IsComponentsV2,
+      components: [card],
+      allowedMentions: { parse: ["users"] },
+    });
   } catch {
     return;
   }
@@ -101,17 +129,34 @@ async function logRevoke(
   services: Container,
   logChannelId: string | null,
   userId: string,
+  avatarUrl: string,
+  prevSource: string,
 ): Promise<void> {
   if (!logChannelId) return;
   try {
     const ch = await services.client.channels.fetch(logChannelId);
     if (!ch || !ch.isSendable()) return;
-    await ch.send(
-      makeWarningCard(
-        "Promoter role removed",
-        `<@${userId}> stopped advertising the server.`,
-      ),
-    );
+    const card = new ContainerBuilder()
+      .addTextDisplayComponents(
+        new TextDisplayBuilder().setContent("# 🍥 GOODBYE :("),
+      )
+      .addSeparatorComponents(new SeparatorBuilder())
+      .addSectionComponents(
+        new SectionBuilder()
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              `<@${userId}> stopped promoting us\n\n> ${cutText(prevSource, 100)}`,
+            ),
+          )
+          .setThumbnailAccessory(
+            new ThumbnailBuilder({ media: { url: avatarUrl } }),
+          ),
+      );
+    await ch.send({
+      flags: MessageFlags.IsComponentsV2,
+      components: [card],
+      allowedMentions: { parse: ["users"] },
+    });
   } catch {
     return;
   }
@@ -138,15 +183,17 @@ export async function converge(
   if (!config.roleId || config.matchTerms.length === 0) return "unconfigured";
   const { guildId, userId } = input;
 
-  const stored = (await getMemberState(services, guildId, userId)) ?? {
+  const stored: MemberState = (await getMemberState(services, guildId, userId)) ?? {
     status: "",
     worn: false,
     has: false,
+    source: "",
   };
   const facts: MemberState = {
     status: input.status ?? stored.status,
     worn: input.worn ?? stored.worn,
     has: stored.has,
+    source: stored.source ?? "",
   };
   if (input.roles !== undefined) facts.has = input.roles.includes(config.roleId);
 
@@ -164,19 +211,27 @@ export async function converge(
     return facts.has ? "holding" : "not-holding";
   }
 
+  const matched = statusMatches(facts.status, config.matchTerms);
+  const reasons: string[] = [];
+  if (matched) reasons.push(facts.status || "custom status");
+  if (config.detectServerTag && facts.worn) reasons.push("adopted the server tag");
+  const source = reasons.join(" + ") || "promotion";
+
   const guild = services.client.guilds.cache.get(guildId);
   if (!guild) return "unconfigured";
+  let avatarUrl: string;
   try {
     const member = await guild.members.fetch(userId);
     if (want) await member.roles.add(config.roleId);
     else await member.roles.remove(config.roleId);
+    avatarUrl = member.displayAvatarURL({ size: 256 });
   } catch {
     return "unconfigured";
   }
   await bumpStats(services, guildId, want ? PromoterData.GRANTED : PromoterData.REVOKED);
-  if (want) await logGrant(services, config.logChannelId, userId, facts.status || "server tag");
-  else await logRevoke(services, config.logChannelId, userId);
-  await setMemberState(services, guildId, userId, { ...facts, has: want });
+  if (want) await logGrant(services, config.logChannelId, userId, avatarUrl, config.grantMessage, source);
+  else await logRevoke(services, config.logChannelId, userId, avatarUrl, facts.source || "promotion");
+  await setMemberState(services, guildId, userId, { ...facts, has: want, source: want ? source : "" });
   return want ? "granted" : "revoked";
 }
 
@@ -237,6 +292,12 @@ export const promoterModule = defineModule({
       label: "Match Terms",
       description: "Phrases to look for in custom status (e.g. the server invite slug).",
       required: true,
+    }),
+    grant_message: cfg.string({
+      label: "Grant Message",
+      description: "Custom message quoted in the thank-you log card. Leave blank to skip.",
+      required: false,
+      default: "",
     }),
     detect_server_tag: cfg.boolean({
       label: "Detect Server Tag",

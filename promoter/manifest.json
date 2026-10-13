@@ -36,6 +36,12 @@
       "type": "BOOLEAN",
       "label": "Detect Server Tag",
       "description": "Also grant the role to members wearing the native server tag."
+    },
+    {
+      "key": "grant_message",
+      "type": "STRING",
+      "label": "Grant Message",
+      "description": "Custom message quoted in the thank-you log card. Leave blank to skip."
     }
   ]
 }

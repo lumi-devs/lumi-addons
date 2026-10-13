@@ -16,4 +16,5 @@ export interface MemberState {
   status: string;
   worn: boolean;
   has: boolean;
+  source: string;
 }
