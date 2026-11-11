@@ -1,29 +1,16 @@
 {
+  "apiVersion": 2,
   "name": "utility",
   "displayName": "Utility",
   "emoji": "⚙️",
-  "description": "General utility addons including auto-translate and emoji-stealer.",
-  "short": "General utility tools.",
-  "version": "1.0.0",
-  "author": [
-    "Antigravity"
-  ],
-  "min_bot_version": "0.6.0",
-  "disableable": true,
-  "targetUtility": "worker",
-  "subStores": [
-    "commands"
-  ],
+  "category": "Utility",
+  "description": "Steal custom emojis into the server and translate text between languages.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "utility-config",
   "configFields": [],
-  "endUserDataStatement": "Processes transient translation and emoji extraction requests in real-time. Does not collect, persist, or retain any personal user data or message content.",
-  "capabilities": {
-    "discord": [
-      "reply",
-      "editMessage",
-      "manageEmoji"
-    ],
-    "kv": false,
-    "network": true
-  },
-  "end_user_data_statement": "Processes transient translation and emoji extraction requests in real-time. Does not collect, persist, or retain any personal user data or message content."
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "No user data is stored. Emoji images are processed transiently and translation text is sent to Google Translate in the moment; neither is retained."
 }

@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Currently, the `main` branch of Lumi Addons receives security updates.
+Currently, the `v2/addons` branch of Lumi Addons receives security updates.
 
 ## Reporting a Vulnerability
 

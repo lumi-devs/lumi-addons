@@ -1,16 +1,41 @@
 {
+  "apiVersion": 2,
   "name": "dragme",
   "displayName": "Drag Me",
   "emoji": "🫳",
-  "description": "Voice drag requests: ask to be pulled into a voice channel and let the people inside approve with one click. Accepting moves you straight in.",
-  "short": "Ask to be dragged into a voice channel.",
-  "version": "1.0.0",
-  "min_bot_version": "0.6.0",
-  "author": [
-    "Antigravity"
+  "category": "Voice",
+  "description": "Voice drag requests: ask the people in a voice channel to pull you in, with one-click accept and decline.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "dragme-config",
+  "configFields": [
+    {
+      "key": "requestChannelId",
+      "label": "Request Channel",
+      "type": "channel",
+      "description": "Text channel where drag request cards are posted",
+      "required": true,
+      "channelTypes": [0]
+    },
+    {
+      "key": "timeoutMinutes",
+      "label": "Request Timeout",
+      "type": "number",
+      "description": "Minutes before an unanswered drag request expires",
+      "default": 10,
+      "min": 1,
+      "max": 60
+    },
+    {
+      "key": "blacklistRoleIds",
+      "label": "Blacklisted Roles",
+      "type": "multi-role",
+      "description": "Members with any of these roles cannot send drag requests",
+      "default": []
+    }
   ],
-  "endUserDataStatement": "Temporarily stores voice drag request metadata (requesting user ID, target channel ID, timestamp) until the request is completed, rejected, or expires.",
-  "disableable": true,
-  "configFields": [],
-  "end_user_data_statement": "Temporarily stores voice drag request metadata (requesting user ID, target channel ID, timestamp) until the request is completed, rejected, or expires."
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "Stores temporary drag request metadata (requester ID, target user ID, voice channel ID, card location, and expiry) until the request is accepted, declined, cancelled, or expires. Removed when the requester's data is deleted."
 }

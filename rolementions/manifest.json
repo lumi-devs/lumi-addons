@@ -1,34 +1,48 @@
 {
+  "apiVersion": 2,
   "name": "rolementions",
   "displayName": "Role Mentions",
   "emoji": "🛡️",
-  "description": "Tracks role mentions with daily stats and auto-protects sensitive roles from mention spam via timed mention blocks.",
-  "short": "Role-mention tracking + auto-protection.",
-  "endUserDataStatement": "Tracks role mention counts and cooldown timestamps in guild storage. Does not store personal end-user data or message contents.",
-  "version": "1.0.0",
-  "disableable": true,
-  "dependencies": [],
-  "conflicts": [],
-  "configOverrides": true,
+  "category": "Moderation",
+  "description": "Role mention analytics with timed, automatic mention protection for sensitive roles.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "rolementions-config",
   "configFields": [
     {
-      "key": "log_channel_id",
-      "type": "CHANNEL",
+      "key": "logChannelId",
       "label": "Log Channel",
-      "description": "Channel where mention activity and protection events are logged."
+      "type": "channel",
+      "description": "Channel where mention blocks and restorations are logged.",
+      "required": false,
+      "default": null
     },
     {
-      "key": "auto_protect",
-      "type": "BOOLEAN",
-      "label": "Auto-Protect",
-      "description": "Automatically block mentions of protected roles when they are pinged.",
+      "key": "protectedRoleIds",
+      "label": "Protected Roles",
+      "type": "multi-role",
+      "description": "Roles temporarily made non-mentionable when they are mentioned.",
+      "default": []
+    },
+    {
+      "key": "autoBlockMinutes",
+      "label": "Auto Block Minutes",
+      "type": "number",
+      "description": "Minutes a protected role stays non-mentionable after a mention.",
+      "default": 60,
+      "min": 1,
+      "max": 43200
+    },
+    {
+      "key": "analyticsEnabled",
+      "label": "Analytics Enabled",
+      "type": "boolean",
+      "description": "Count role mentions per UTC day. Disable to skip analytics entirely.",
       "default": true
     }
   ],
-  "category": "Moderation",
-  "author": [
-    "Antigravity"
-  ],
-  "min_bot_version": "0.6.0",
-  "end_user_data_statement": "Tracks role mention counts and cooldown timestamps in guild storage. Does not store personal end-user data or message contents."
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "Stores aggregate per-role mention counts with a 48-hour TTL and temporary role block state. No message content, author IDs, or other user data is stored."
 }

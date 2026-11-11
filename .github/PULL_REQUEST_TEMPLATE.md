@@ -10,13 +10,13 @@ Closes #
 - [ ] `booster-roles`
 - [ ] `confessions`
 - [ ] `dragme`
+- [ ] `economy-games`
 - [ ] `multi-lounge`
 - [ ] `promoter`
 - [ ] `rolementions`
 - [ ] `status`
 - [ ] `thread-cleaner`
 - [ ] `utility`
-- [ ] `verify`
 - [ ] Core / Infrastructure / Documentation
 
 ## Type of Change
@@ -29,9 +29,11 @@ Closes #
 
 ## Quality Checklist
 
+- [ ] `bun run validate` passes.
 - [ ] `bun run typecheck` passes with zero errors.
 - [ ] `bun run lint` passes with zero errors.
-- [ ] Addon metadata (`addon.json` / index export) is valid and tested.
+- [ ] `bun run test` passes.
+- [ ] Addon metadata (`manifest.json` / index export) is valid and tested.
 - [ ] No cross-addon internal imports introduced.
 
 ## Testing Instructions

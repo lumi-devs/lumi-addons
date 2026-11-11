@@ -2,9 +2,9 @@ name: Addons CI
 
 on:
   push:
-    branches: [v2/addons, main, master]
+    branches: [v2/addons, main]
   pull_request:
-    branches: [v2/addons, main, master]
+    branches: [v2/addons, main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,8 +21,8 @@ jobs:
       - name: Checkout lumi
         uses: actions/checkout@v7
         with:
-          repository: lumi-devs/lumi
-          ref: develop/v2
+          repository: lumi-devs/Lumi
+          ref: v2/develop
           path: .lumi
 
       - uses: oven-sh/setup-bun@v2
@@ -36,11 +36,16 @@ jobs:
           bun run db:generate
 
       - name: Link node_modules
-        run: |
-          ln -sfn .lumi/node_modules node_modules
+        run: ln -sfn .lumi/node_modules node_modules
 
-      - name: Run Addons Validator
+      - name: Validate manifests
         run: bun scripts/validate.ts
 
-      - name: Run Tests
+      - name: Typecheck
+        run: bunx tsc --noEmit -p tsconfig.json
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Test
         run: bun run test

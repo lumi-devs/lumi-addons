@@ -1,26 +1,16 @@
 {
+  "apiVersion": 2,
   "name": "activity-roles",
   "displayName": "Activity Roles",
   "emoji": "🎮",
-  "description": "Auto-assign roles based on users' Discord presence (Playing, Streaming, Listening, Watching, Custom, Competing).",
-  "short": "Presence-based role automation.",
-  "endUserDataStatement": "Stores each member's recent activity snapshot and the role IDs this addon granted, keyed by user ID in guild storage, to assign and revoke activity roles. Removed when the member's data is purged.",
-  "version": "1.0.0",
-  "author": [
-    "Antigravity"
-  ],
-  "min_bot_version": "0.6.0",
-  "disableable": true,
-  "dependencies": [],
-  "conflicts": [],
-  "configOverrides": false,
+  "category": "Roles",
+  "description": "Auto-assign roles based on users' Discord presence: Playing, Streaming, Listening, Watching, Custom, and Competing.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "activity-roles-config",
   "configFields": [],
-  "category": "Automation",
-  "capabilities": {
-    "discord": [
-      "manageRoles"
-    ],
-    "kv": true
-  },
-  "end_user_data_statement": "Stores each member's recent activity snapshot and the role IDs this addon granted, keyed by user ID in guild storage, to assign and revoke activity roles. Removed when the member's data is purged."
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "Stores the role IDs this add-on granted to each member, keyed by user ID per server, so roles can be revoked safely. Removed when a member's data is deleted."
 }

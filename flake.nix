@@ -1,5 +1,5 @@
 {
-  description = "Lumi Addons — Official modules, plugins, and command extensions for Lumi";
+  description = "Lumi v2 addons dev shell";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -15,22 +15,14 @@
         default = pkgs.mkShell {
           packages = with pkgs; [
             bun
-            nodejs_22
+            nodejs
             git
-            gh
             jq
-            coreutils
           ];
 
           shellHook = ''
-            echo "========================================="
-            echo "  Lumi Addons Dev Shell (Flake)          "
-            echo "========================================="
-            echo "  Bun:        $(bun --version 2>/dev/null || echo 'N/A')"
-            echo "  Node:       $(node --version 2>/dev/null || echo 'N/A')"
-            echo "  Git:        $(git --version 2>/dev/null || echo 'N/A')"
-            echo "  GitHub CLI: $(gh --version 2>/dev/null | head -n1 || echo 'N/A')"
-            echo "========================================="
+            echo "lumi addons · bun $(bun --version) · node $(node --version)"
+            echo "Link a Lumi v2 checkout with: bun run setup"
           '';
         };
       });

@@ -1,123 +1,38 @@
-# 🎮 Activity Roles Addon
+# Activity Roles
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Lumi-Addon-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Lumi Addon" />
-  <img src="https://img.shields.io/badge/Module-activity--roles-blue?style=for-the-badge" alt="Module Name" />
-  <img src="https://img.shields.io/badge/Version-1.0.0-emerald?style=for-the-badge" alt="Version" />
-</p>
+Presence-based role automation for Lumi. Activity Roles grants a role while a member's Discord presence matches a rule and removes it when no rule matches anymore. Revocation is additive-only: the add-on only removes roles it granted itself, so manually assigned roles are never stripped.
 
-> **Presence-based dynamic role automation for the Lumi Discord platform.**
+## Features
 
----
+- Activity types: Playing, Streaming, Listening, Watching, Custom status, and Competing.
+- Each rule maps an activity type plus a case-insensitive substring to a role.
+- Matches activity name, details, state, and custom status text.
+- One role may be covered by several rules; it stays while any matching rule remains.
+- Live updates from presence changes, member updates, joins, and leaves.
+- A reconciliation sweep runs every ten minutes to repair missed events.
+- Rules are cached in memory for 30 seconds and invalidated immediately on changes.
 
-## 🌟 Overview
+## Commands
 
-The **Activity Roles** addon automatically assigns roles to server members based on their active Discord presence or custom status. Whether members are playing a specific game, streaming on Twitch, listening to Spotify, or wearing custom status text, Activity Roles handles automatic assignment and revocation when the activity stops.
+All subcommands require the `mod.*` permit.
 
----
+| Command | Description |
+|---|---|
+| `/activityroles add <type> <match> <role>` | Create or update a rule. Replaces the role if the same type and match already exist. |
+| `/activityroles remove <type> <match>` | Delete a rule. |
+| `/activityroles list` | Show all rules, paginated. |
+| `/activityroles check [member]` | Show the member's current activities, matched rules, roles matching now, and roles granted by this add-on. Defaults to yourself. |
 
-## ✨ Features
+## Permissions and intents
 
-- **Full Presence Support**: Detects `Playing`, `Streaming`, `Listening`, `Watching`, `Custom`, and `Competing` activity types.
-- **Substring & Text Matching**: Flexible string matching rules per activity rule.
-- **Additive-only Revocation**: Only roles this addon granted are ever removed; manually assigned roles are never stripped.
-- **Single Source of Truth**: One kv record per member (`granted` role IDs); every event converges it.
+- The bot needs **Manage Roles**.
+- Roles assigned by this add-on must sit **below the bot's highest role**. Roles above the bot, managed roles, and `@everyone` are rejected with an explanation.
+- The bot skips bots and members it cannot manage. A failed role edit never stops the remaining updates.
+- The privileged **Presence Intent** (Server Members Intent is recommended too) must be enabled for the application in the Discord Developer Portal. Without the Presence Intent the bot receives no activities, so rules cannot match and `check` reports that presence is not visible.
 
----
+## Privacy
 
-## 📥 Installation & Activation
-
-Install the module using Lumi's built-in dynamic downloader:
-
-```bash
-# Download and hot-load the module
-,download lumi-addons activity-roles
-```
-
-> [!NOTE]
-> Requiring the privileged **Presence Intent** in Discord Developer Portal is mandatory for presence update tracking.
-
----
-
-## ⚙️ Configuration Options
-
-Activity Roles mappings are stored dynamically per guild via `/activityroles` commands:
-
-| Mapping Attribute | Type | Description |
-| :--- | :--- | :--- |
-| `type` | `Enum` | Activity type (`Playing`, `Streaming`, `Listening`, `Watching`, `Custom`, `Competing`). |
-| `match` | `String` | Text or substring to match against activity name or custom status message. |
-| `role` | `Role` | Discord role to assign when the rule condition is satisfied. |
-
----
-
-## 💻 Commands & Usage
-
-All commands require **Manage Roles** permission:
-
-| Command | Subcommand | Arguments | Description |
-| :--- | :--- | :--- | :--- |
-| `/activityroles` | `add` | `type: ActivityType`, `match: string`, `role: Role` | Create a new presence-to-role rule mapping. |
-| `/activityroles` | `remove` | `type: ActivityType`, `match: string` | Remove an existing activity role mapping. |
-| `/activityroles` | `list` | *None* | Display all configured activity role rules for this server. |
-| `/activityroles` | `check` | `user?: User` | Converge now and report who has what (omit user for a full sweep). |
-
-> [!WARNING]
-> Two things must both be true or nothing happens: the code requests the
-> `GuildPresences` intent (already wired), **and** the privileged **Presence
-> Intent** toggle must be on for your application in the Discord Developer
-> Portal (Bot tab). Without it the bot sees no presences — `check` reports
-> "not visible" for everyone. The bot's role must also sit above any role it
-> assigns, or Discord rejects the add.
-
----
-
-## 📡 Events & Listeners
-
-- **`presenceUpdate`** (`lib/converge.ts`): Recomputes desired roles from the event's activities, diffs against the member's kv record, adds/removes, persists.
-- **`guildMemberUpdate`** (`lib/converge.ts`): Reconciles external role changes against the stored snapshot (prunes roles removed by moderators). Carries no activity data, so members with no record are skipped.
-- Other sandbox events (`voiceStateUpdate`, `messageCreate`, `threadCreate`, `userUpdate`) carry no activity or role data this addon can act on, so it does not subscribe to them.
-
-- **GDPR Standard**:
-  Per-member records are keyed by user ID in guild kv storage and are removed automatically on user-data purge requests.
-
----
-
-## 🎨 Code Examples
-
-### Event Flow Architecture
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Member Presence
-    participant Handler as convergeMember
-    participant Matcher as Activity Matcher
-    participant KV as lumi/kv member record
-    participant Guild as Discord Guild Member
-
-    User->>Handler: presenceUpdate / guildMemberUpdate
-    Handler->>KV: Load member record
-    KV-->>Handler: Snapshot + granted roles
-    Handler->>Matcher: Evaluate activities vs rules, diff owned roles
-    Matcher-->>Handler: Add / Remove / next granted set
-    Handler->>Guild: Add or remove owned activity roles
-    Handler->>KV: Persist converged record (or clear when empty)
-```
-
-### TypeScript Mapping Example
-
-```ts
-import { matchActivity } from "./lib/matcher.js";
-
-// Example activity matching check
-const isMatch = matchActivity({
-  ruleType: "Playing",
-  ruleMatch: "VALORANT",
-  userActivities: [
-    { type: 0, name: "VALORANT", state: "In Game" }
-  ]
-});
-
-console.log(`Activity match status: ${isMatch}`); // true
-```
+- Stores one record per member and server containing only the role IDs this add-on granted, keyed by user ID so they can be revoked safely.
+- Stores guild-scoped rules (activity type, match text, role ID).
+- Does not store message content or activity history.
+- GDPR deletion removes the member's granted record across servers along with any other record keyed to that user.

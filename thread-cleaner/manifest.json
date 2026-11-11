@@ -1,53 +1,41 @@
 {
+  "apiVersion": 2,
   "name": "thread-cleaner",
   "displayName": "Thread Cleaner",
   "emoji": "🧹",
+  "category": "Moderation",
   "description": "Automatically archives or locks threads after a configurable period of inactivity.",
-  "short": "Auto-archive/lock inactive threads.",
-  "endUserDataStatement": "Does not collect or store personal end-user data. Stores thread IDs and cleanup metadata.",
-  "version": "1.0.0",
-  "disableable": true,
-  "dependencies": [],
-  "conflicts": [],
-  "configOverrides": true,
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "thread-cleaner-config",
   "configFields": [
     {
-      "key": "enabled_channels",
-      "type": "MULTI_CHANNEL",
-      "label": "Enabled Channels",
-      "description": "Channels where new threads should be scheduled for cleanup.",
+      "key": "enabledChannelIds",
+      "label": "Enabled parent channels",
+      "type": "multi-channel",
+      "description": "Parent channels whose threads are tracked for inactivity cleanup.",
       "default": []
     },
     {
-      "key": "inactive_duration",
-      "type": "DURATION",
-      "label": "Inactivity Duration",
-      "description": "Duration of inactivity before cleanup runs (e.g. 24h, 3d).",
-      "default": "3d",
-      "quickPicks": [
-        "1h",
-        "6h",
-        "24h",
-        "3d",
-        "7d"
-      ]
+      "key": "inactiveDurationMinutes",
+      "label": "Inactivity duration (minutes)",
+      "type": "number",
+      "description": "Minutes of inactivity before a thread is archived or locked.",
+      "default": 4320,
+      "min": 1,
+      "max": 525600
     },
     {
       "key": "action",
-      "type": "STRING",
-      "label": "Cleanup Action",
-      "description": "Action to perform on inactive threads.",
+      "label": "Cleanup action",
+      "type": "select",
+      "description": "Archive the thread, or lock it before archiving.",
       "default": "archive",
-      "choices": [
-        "archive",
-        "lock"
-      ]
+      "choices": ["archive", "lock"]
     }
   ],
-  "category": "Utility",
-  "author": [
-    "Lumi Developers"
-  ],
-  "min_bot_version": "0.6.0",
-  "end_user_data_statement": "Does not collect or store personal end-user data. Stores thread IDs and cleanup metadata."
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "Stores thread IDs, parent channel IDs, inactivity deadlines, and the configured cleanup action. No personal end-user data is collected."
 }

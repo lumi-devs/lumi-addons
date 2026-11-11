@@ -1,20 +1,139 @@
 {
+  "apiVersion": 2,
   "name": "economy-games",
   "displayName": "Economy Games",
   "emoji": "🎰",
-  "description": "Blackjack, roulette, crime with jail, work/beg/fish/mine grinds, and a role-granting shop settled through the guild bank.",
-  "short": "Casino games, crime, grinds, and a shop backed by the bank.",
-  "endUserDataStatement": "Stores jail sentences, shop inventories, and active game tables keyed by user ID in this addon's own storage namespace. Wallet balances live in the guild bank. All addon rows are removed on GDPR erasure.",
-  "version": "1.0.0",
-  "author": [
-    "Lumi Developers"
+  "category": "Economy",
+  "description": "Blackjack, roulette, crime, work grinds, and a role-granting shop on the economy ledger.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "economy-games-config",
+  "configFields": [
+    {
+      "key": "blackjackMin",
+      "label": "Blackjack Minimum Bet",
+      "type": "number",
+      "description": "Smallest allowed blackjack bet.",
+      "default": 5,
+      "min": 1,
+      "category": "Blackjack"
+    },
+    {
+      "key": "blackjackMax",
+      "label": "Blackjack Maximum Bet",
+      "type": "number",
+      "description": "Largest allowed blackjack bet.",
+      "default": 500,
+      "min": 1,
+      "category": "Blackjack"
+    },
+    {
+      "key": "blackjackPayout",
+      "label": "Natural Blackjack Payout",
+      "type": "number",
+      "description": "Total multiplier returned on a natural blackjack, including the stake.",
+      "default": 2.5,
+      "min": 1,
+      "max": 5,
+      "category": "Blackjack"
+    },
+    {
+      "key": "rouletteMin",
+      "label": "Roulette Minimum Bet",
+      "type": "number",
+      "description": "Smallest allowed roulette bet.",
+      "default": 5,
+      "min": 1,
+      "category": "Roulette"
+    },
+    {
+      "key": "rouletteMax",
+      "label": "Roulette Maximum Bet",
+      "type": "number",
+      "description": "Largest allowed roulette bet.",
+      "default": 500,
+      "min": 1,
+      "category": "Roulette"
+    },
+    {
+      "key": "crimeCooldownMinutes",
+      "label": "Crime Cooldown (minutes)",
+      "type": "number",
+      "description": "Cooldown between crimes and jail length for a failed crime.",
+      "default": 10,
+      "min": 0,
+      "max": 10080,
+      "category": "Crime"
+    },
+    {
+      "key": "workCooldownMinutes",
+      "label": "Work Cooldown (minutes)",
+      "type": "number",
+      "description": "Cooldown between /work shifts.",
+      "default": 30,
+      "min": 0,
+      "max": 10080,
+      "category": "Grinds"
+    },
+    {
+      "key": "begCooldownMinutes",
+      "label": "Beg Cooldown (minutes)",
+      "type": "number",
+      "description": "Cooldown between /beg attempts.",
+      "default": 2,
+      "min": 0,
+      "max": 10080,
+      "category": "Grinds"
+    },
+    {
+      "key": "fishCooldownMinutes",
+      "label": "Fish Cooldown (minutes)",
+      "type": "number",
+      "description": "Cooldown between /fish trips.",
+      "default": 10,
+      "min": 0,
+      "max": 10080,
+      "category": "Grinds"
+    },
+    {
+      "key": "mineCooldownMinutes",
+      "label": "Mine Cooldown (minutes)",
+      "type": "number",
+      "description": "Cooldown between /mine shifts.",
+      "default": 10,
+      "min": 0,
+      "max": 10080,
+      "category": "Grinds"
+    },
+    {
+      "key": "consumableMin",
+      "label": "Consumable Minimum Reward",
+      "type": "number",
+      "description": "Smallest reward from /shop use.",
+      "default": 20,
+      "min": 0,
+      "category": "Shop"
+    },
+    {
+      "key": "consumableMax",
+      "label": "Consumable Maximum Reward",
+      "type": "number",
+      "description": "Largest reward from /shop use.",
+      "default": 120,
+      "min": 0,
+      "category": "Shop"
+    },
+    {
+      "key": "shopItems",
+      "label": "Shop Items",
+      "type": "string",
+      "description": "One item per line: name | price | description | roleId | consumable | stock. Empty stock is unlimited.",
+      "default": "",
+      "category": "Shop"
+    }
   ],
-  "min_bot_version": "0.6.0",
-  "disableable": true,
-  "dependencies": [
-    "economy"
-  ],
-  "configFields": [],
-  "category": "Community",
-  "end_user_data_statement": "Stores jail sentences, shop inventories, and active game tables keyed by user ID in this addon's own storage namespace. Wallet balances live in the guild bank. All addon rows are removed on GDPR erasure."
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "Stores active blackjack games, jail sentences, shop inventories, and per-item stock counters keyed by user ID. Currency balances and transactions live in the economy ledger and are removed on erasure."
 }

@@ -1,29 +1,16 @@
 {
   "name": "lumi-addons",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
-  "description": "First-party dynamic addons for the Lumi Discord bot. Not a package — each directory is installed individually by Lumi's downloader.",
+  "description": "First-party dynamic addons for the Lumi v2 Discord bot. Each top-level directory is an independent module installed by Lumi's downloader.",
   "scripts": {
     "setup": "sh scripts/setup.sh",
     "typecheck": "bunx tsc --noEmit -p tsconfig.json",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
     "test": "bun test",
     "validate": "bun scripts/validate.ts"
-  },
-  "dependencies": {
-    "@lumi-devs/lumi": "^0.6.4",
-    "discord.js": "^14.27.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10",
-    "@types/bun": "^1.4.3",
-    "@types/node": "^26.6.5",
-    "eslint": "^10",
-    "typescript": "^5",
-    "typescript-eslint": "^8",
-    "vitest": "^5.0.4"
   }
 }

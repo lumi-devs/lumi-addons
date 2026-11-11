@@ -1,96 +1,124 @@
 # AGENTS.md
 
-Operating spec for any AI coding agent working in the `lumi-addons` repository.
-
-Lumi Addons is the first-party addon repository for the Lumi Discord bot: Bun + TypeScript,
-discord.js v14 (native), Prisma/PostgreSQL. Each directory at the repo root is an independent
-addon loaded at runtime by the bot's `ModuleStore`.
+Operating spec for AI coding agents working in `lumi-addons` (Lumi v2).
 
 ## Repo shape
 
+Every top-level directory is one independent addon module. There is no grouping, no supermodule, no nested addon.
+
 ```
 <addon-name>/
-  Index.ts           # defineModule({...}) entrypoint — required
-  manifest.json      # static discovery contract — required
-  commands/          # CommandDef exports
-  listeners/         # defineListener + addListenerDef exports
-  interactions/      # defineInteraction exports (prefix/match + run)
-  tasks/             # fire handlers registered in onLoad
-  utilities/         # pure helpers
-  services/          # background services
-  data/              # db accessors
-scripts/
-  validate.ts        # static addon validator
-  setup.sh           # symlink helper
+  manifest.json      # thin discovery metadata (required)
+  index.ts           # default export: defineModule({...}) (required)
+  commands/          # optional command definitions
+  listeners/         # optional discord.js listeners (components, modals, events)
+  tasks/             # optional scheduled task definitions
+  ui.ts              # optional card/view builders
+  data.ts            # optional moduleData accessors
+  tests/             # optional unit tests
+  README.md          # required user docs
 ```
 
-Non-addon directories at root: `scripts/`, `data/`, `docs/`, `node_modules/`, dotfiles.
+Non-addon root directories: `scripts/`, `docs/`, `node_modules/`, `.lumi/`, dotfiles.
 
-## Import paths
+## Setup
 
-tsconfig paths (`tsconfig.json`) map `#src/*` and `#lib/*` to `.lumi/src/*` and
-`.lumi/src/lib/*` respectively. Always keep the `.js` suffix on relative specifiers
-and on `#src/` / `#lib/` specifiers.
+`bun` comes from the Nix devshell. Link this repo to a local Lumi v2 checkout:
 
-`.lumi` is a symlink to the local Lumi checkout. `node_modules` is a symlink to
-`.lumi/node_modules`. Run `bun run setup` (or `sh scripts/setup.sh`) once after cloning.
+```bash
+(cd ../lumi-v2 && nix develop --command bun install)
+nix develop --command bun run setup        # creates .lumi + node_modules symlinks
+```
 
-## Module system
+Environment: `LUMI_PATH` overrides the default `../lumi-v2`.
 
-Every addon exports a `defineModule({...})` object from its `Index.ts`
-(`#lib/module-system/Module.js`). The loader checks `__lumiModule === true` on the export.
+## Imports
 
-### manifest.json required fields
+Allowed bare imports: `@lumi/module-kit`, `@lumi/foundation`, `@lumi/ui`, `discord.js`, `zod`, `node:*`, `bun:*`.
 
-`name`, `displayName`, `emoji`, `description`, `short`, `endUserDataStatement`,
-`version`, `disableable`.
+- Relative imports MUST end in `.js`.
+- Relative imports MUST stay inside the addon directory.
+- NEVER import from a sibling addon, `#src/*`, `#lib/*`, `lumi`, `@lumi-devs/*`, `@lumi/db`, `@lumi/module-runtime`, or any other internal package.
+- Import UI only from `@lumi/ui`; never construct embeds.
 
-Optional: `dependencies`, `conflicts`, `configOverrides`, `configFields`, `category`,
-`author`, `min_bot_version`.
+## Manifest
 
-### CommandDef rules
+```json
+{
+  "apiVersion": 2,
+  "name": "example",
+  "displayName": "Example",
+  "emoji": "✨",
+  "category": "Utility",
+  "description": "One sentence, <= 200 chars.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "example-config",
+  "configFields": [],
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "What is stored and why."
+}
+```
 
-Files in `commands/` export named `*Def` objects. Each must have:
-- `name` string
-- `run` function or `handlers` object
+- `name` MUST equal the directory name.
+- `entry` MUST exist.
+- `configFields[].key` MUST match a field in the zod config schema.
+- Categories are short UI groups: `Utility`, `Community`, `Moderation`, `Security`, `Economy`, `Voice`, `Roles`.
 
-**Never** add `defaultMemberPermissions` — it is derived automatically from
-`requiredPermit` / `botOwner` / `guildOwner`.
+## Module definition
 
-### ListenerDef rules
+`index.ts` default-exports `defineModule({...})` from `@lumi/module-kit`. Required fields: `name`, `displayName`, `emoji`, `description`, `version`, `config`, `commands`, `listeners`, `tasks`, `onLoad`, `onUnload`.
 
-Files in `listeners/` call `defineListener` + `addListenerDef`.
+- `config` is a zod schema; parse defaults with `schema.parse({})`.
+- Read config with `services.moduleConfig.read(guildId, services.moduleName ?? ModuleName, ConfigKey)`.
+- Commands: `data: new SlashCommandBuilder()`, `execute(interaction, services)`.
+- Component and modal handlers: one `interactionCreate` listener per addon, filtered by a customId prefix of `${ModuleName}:`.
+- Periodic work: `TaskDefinition` with a 5-field cron and a per-guild state guard.
+- One-shot work: `services.scheduler`.
+- `requiredPermit` on mod/admin commands. Dispatch enforces it; still verify Discord permissions for bot actions.
+- NEVER set `defaultMemberPermissions` on builders.
 
-### InteractionDef rules
+## Data
 
-Files in `interactions/` call `defineInteraction` with `prefix`/`match` + `run`.
+All durable state goes through `services.helpers.moduleData` (Postgres + Redis cache):
 
-## Zero cross-addon import law
+```ts
+get / set / take / delete / deleteTarget / deleteModule / deleteForUser / list / incr / count
+```
 
-An addon must never import from a sibling addon directory. Shared code belongs in the
-addon's own `utilities/` or `lib/` subdirectory, or in the bot's `#lib/*`.
+- `targetId` is the entity (`userId`, channelId, messageId, or `"_"` for guild-wide).
+- `key` is the record kind.
+- Use `ttlMs` for expiring records instead of manual timestamps.
+- Use `list({ prefix })` for collections; never store unbounded arrays in one record.
+- Use `services.helpers.economy` for ledger-backed money.
+- No local files, no secrets, no `data/` directory.
 
-## GDPR hooks
+GDPR: implement `dataLifecycle.exportUserData` and `deleteUserData` whenever user data is stored. Use `moduleData.deleteForUser(ModuleName, userId)`.
 
-Every `defineModule` call must include implementations of:
-- `deleteUserData(userId: string): Promise<void>`
-- `exportUserData(userId: string): Promise<Record<string, unknown> | null>`
+## UX
 
-## Anti-patterns
+- Components V2 only. Use card builders from `@lumi/ui`.
+- Errors and denials are ephemeral.
+- Panels embed the invoking user id in customIds and reject other users.
+- Public role/user mentions use `noPingCard`.
+- Paginate long lists; use timestamps for dates.
 
-- **Database**: use `container.db`, never `container.prisma` directly.
-- **Embeds**: never construct `new EmbedBuilder()`. Use card builders from
-  `#lib/ui/Cards.js` or `ctx.replySuccess` / `ctx.replyError`.
-- **No phantom imports**: never import from bare `lumi`, `lumi/commands`, `lumi/*`,
-  `#core/*`, `#utilities/*`, or `#database/*`. Use `#src/*` / `#lib/*` paths only.
-- **No comments** in new or edited code.
+## Verification
 
-## Running things
+```bash
+nix develop --command bun run validate
+nix develop --command bun run typecheck
+nix develop --command bun run lint
+nix develop --command bun run test
+```
 
-`bun`, `gh`, etc. come from the Nix devshell: `nix develop --command <cmd>`.
+`validate` checks manifests, entry files, import boundaries, and supermodule leakage. Tests are for non-obvious pure logic only.
 
-- `bun run typecheck` -- `bunx tsc --noEmit -p tsconfig.json`
-- `bun run lint` / `bun run lint:fix` -- eslint over addon sources
-- `bun run test` -- `bun test`
-- `bun run validate` -- static addon validator (`scripts/validate.ts`)
-- `bun run setup` -- create `.lumi` + `node_modules` symlinks
+## Style
+
+- No comments in new code.
+- No `any`; prefer `unknown` + zod.
+- No compatibility shims, no dead code, no v1 fallbacks.
+- No cross-addon imports. No phantom imports.

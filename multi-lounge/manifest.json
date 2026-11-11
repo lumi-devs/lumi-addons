@@ -1,61 +1,65 @@
 {
+  "apiVersion": 2,
   "name": "multi-lounge",
   "displayName": "Multi Lounge",
   "emoji": "🛋️",
-  "description": "Dynamic voice lounges: creates temporary child voice channels on demand and removes them when empty.",
-  "short": "Dynamic voice lounges that scale with demand.",
-  "endUserDataStatement": "Does not store any personal end-user data. Manages dynamic voice channels based on guild member occupancy without persisting user identities.",
-  "version": "1.0.0",
-  "disableable": true,
-  "dependencies": [],
-  "conflicts": [],
-  "configOverrides": true,
+  "category": "Voice",
+  "description": "Auto-scaling voice lounges: clones a base channel when its group is full and removes empty extras.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "multi-lounge-config",
   "configFields": [
     {
-      "key": "base_channel_ids",
-      "type": "MULTI_CHANNEL",
+      "key": "baseChannelIds",
       "label": "Base Lounges",
-      "description": "Parent voice channels that trigger temporary lounge creation."
+      "type": "multi-channel",
+      "description": "Voice channels that auto-scale when their group is full.",
+      "channelTypes": [
+        2
+      ],
+      "category": "Lounges"
     },
     {
-      "key": "busy_threshold",
-      "type": "NUMBER",
+      "key": "busyThreshold",
       "label": "Busy Threshold",
-      "description": "Users in a lounge before it counts as busy.",
+      "type": "number",
+      "description": "Users required before a lounge counts as busy.",
       "default": 2,
       "min": 1,
-      "max": 99
+      "max": 99,
+      "category": "Lounges"
     },
     {
-      "key": "max_extra_lounges",
-      "type": "NUMBER",
+      "key": "maxExtras",
       "label": "Max Extra Lounges",
-      "description": "Maximum temporary lounges per base.",
+      "type": "number",
+      "description": "Maximum managed extra lounges per base.",
       "default": 5,
       "min": 1,
-      "max": 25
+      "max": 25,
+      "category": "Lounges"
     },
     {
-      "key": "name_template",
-      "type": "STRING",
+      "key": "nameTemplate",
       "label": "Name Template",
+      "type": "string",
       "description": "Name for created lounges; {n} is the lounge number.",
-      "default": "Lounge {n}"
+      "default": "Lounge {n}",
+      "category": "Lounges"
     },
     {
-      "key": "cooldown_seconds",
-      "type": "NUMBER",
+      "key": "creationCooldownSeconds",
       "label": "Creation Cooldown (seconds)",
-      "description": "Minimum gap between creating lounges.",
+      "type": "number",
+      "description": "Minimum gap between creating lounges for one base.",
       "default": 10,
       "min": 0,
-      "max": 300
+      "max": 300,
+      "category": "Lounges"
     }
   ],
-  "category": "Voice",
-  "author": [
-    "Antigravity"
-  ],
-  "min_bot_version": "0.6.0",
-  "end_user_data_statement": "Does not store any personal end-user data. Manages dynamic voice channels based on guild member occupancy without persisting user identities."
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "Stores only voice channel identifiers and aggregate lounge counters. No personal user data is stored."
 }

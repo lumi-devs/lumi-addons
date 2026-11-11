@@ -1,112 +1,55 @@
-<div align="center">
-  <br />
-  <img src="https://github.com/lumi-devs/lumi/raw/main/assets/banner.png" alt="Lumi Addons" width="700">
-  <br /><br />
+# Lumi Addons
 
-  <p>
-    <a href="https://github.com/lumi-devs/lumi-addons/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/lumi-devs/lumi-addons/ci.yml?branch=main&style=flat-square&label=CI&logo=github" alt="CI"></a>
-    <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-1.3+-black?style=flat-square&logo=bun" alt="Bun"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-green?style=flat-square" alt="AGPL v3"></a>
-    <a href="https://github.com/lumi-devs/lumi"><img src="https://img.shields.io/badge/requires-lumi%20core-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Requires Lumi"></a>
-  </p>
-</div>
-
----
-
-First-party dynamic addons for the [Lumi Discord bot](https://github.com/lumi-devs/lumi).
-Each top-level directory is an independent addon loaded at runtime by the bot's module loader.
+First-party addons for [Lumi v2](https://github.com/lumi-devs/Lumi). Every top-level directory is an independent module installed and hot-loaded by Lumi's downloader at runtime.
 
 ## Addons
 
-| Directory | Description |
-|---|---|
-| `activity-roles` | Role grants based on voice/activity presence |
-| `booster-roles` | Custom roles for server boosters |
-| `confessions` | Anonymous confession channel system |
-| `dragme` | Move members between voice channels |
-| `economy-games` | Coin economy and minigames |
-| `multi-lounge` | Auto-expanding voice lounges |
-| `promoter` | Server partnership and promotion tools |
-| `rolementions` | Pingable role toggle system |
-| `status` | Bot status rotation |
-| `thread-cleaner` | Automatic thread archival and cleanup |
-| `utility` | General utility commands |
+| Addon | Category | What it does |
+| :--- | :--- | :--- |
+| `activity-roles` | Roles | Grants roles based on a member's activity or custom status. |
+| `booster-roles` | Roles | Gives server boosters a personal, customizable role with sharing. |
+| `confessions` | Community | Anonymous confessions with replies, cooldowns, and author bans. |
+| `dragme` | Voice | Request to be pulled into a voice channel, approved by someone inside. |
+| `economy-games` | Economy | Blackjack, roulette, crime, work/beg/fish/mine, and a shop. |
+| `multi-lounge` | Voice | Auto-scaling temporary voice lounges with contiguous numbering. |
+| `promoter` | Roles | Auto-role for members advertising the server in status or server tag. |
+| `rolementions` | Moderation | Role mention analytics and timed mention protection. |
+| `status` | Utility | Owner-managed rotating bot presence. |
+| `thread-cleaner` | Moderation | Archives or locks inactive threads automatically. |
+| `utility` | Utility | Emoji stealing and text translation. |
 
-## Addon structure
+## Install
 
-```
-my-addon/
-  Index.ts        # defineModule({...}) entrypoint
-  manifest.json   # static discovery contract
-  commands/       # CommandDef exports
-  listeners/      # defineListener + addListenerDef
-  interactions/   # defineInteraction (prefix/match + run)
-  tasks/          # task fire handlers
-  utilities/      # pure helpers
-  services/       # background services
-  data/           # db accessors
-```
+In a server with Lumi v2:
 
-### Index.ts
+1. Run `/lumi` → **Add-ons** → **Repositories** → **Add Repository** and enter
+   `https://github.com/lumi-devs/lumi-addons`.
+2. Browse the repository and install the addon by its module name.
 
-```ts
-import { defineModule } from "#lib/module-system/Module.js";
+Installed addons appear in the dashboard's **Add-ons** tab, where they can be enabled, configured, updated, and pinned.
 
-export const meta = defineModule({
-  name: "my-addon",
-  displayName: "My Addon",
-  emoji: "🚀",
-  version: "1.0.0",
-  description: "What it does.",
-  short: "Short description.",
-  endUserDataStatement: "Describe what user data is stored and why.",
-  async deleteUserData(userId) { /* ... */ },
-  async exportUserData(userId) { return null; },
-});
+## Development
+
+Requires Bun 1.4.2+ and a local Lumi v2 checkout on `v2/develop`.
+
+```bash
+# Lumi v2 dependencies, in ../lumi-v2
+(cd ../lumi-v2 && nix develop --command sh -c 'bun install && bun run db:generate')
+
+# in this repo
+nix develop --command bun run setup
+nix develop --command bun run validate
+nix develop --command bun run typecheck
+nix develop --command bun run lint
+nix develop --command bun run test
 ```
 
-### manifest.json
+`bun run setup` links `.lumi` and `node_modules` to the Lumi checkout. Set `LUMI_PATH` if the checkout is elsewhere.
 
-```json
-{
-  "name": "my-addon",
-  "displayName": "My Addon",
-  "emoji": "🚀",
-  "description": "What it does.",
-  "short": "Short description.",
-  "endUserDataStatement": "Describe what user data is stored and why.",
-  "version": "1.0.0",
-  "disableable": true
-}
-```
+## Adding an addon
 
-## Import paths
-
-Addons import shared bot internals via `#lib/*` and `#src/*` path aliases
-(mapped to `.lumi/src/lib/*` and `.lumi/src/*` by `tsconfig.json`).
-Always keep the `.js` suffix.
-
-```ts
-import { defineModule } from "#lib/module-system/Module.js";
-import { makeSuccessCard } from "#lib/ui/Cards.js";
-```
-
-Never import from `lumi`, `lumi/*`, `#core/*`, `#utilities/*`, or sibling addon directories.
-
-## Developing
-
-```sh
-git clone https://github.com/lumi-devs/lumi ../lumi
-bun install --cwd ../lumi
-git clone https://github.com/lumi-devs/lumi-addons
-cd lumi-addons
-bun run setup
-bun run typecheck
-bun run test
-```
-
-`bun run setup` creates two symlinks: `.lumi -> ../lumi` and `node_modules -> .lumi/node_modules`.
+Create a top-level directory named after the module, add `manifest.json` and `index.ts`, and follow [AGENTS.md](./AGENTS.md). The module name MUST match the directory name. Addons are flat: no nested modules, no cross-addon imports.
 
 ## License
 
-[AGPL v3](LICENSE) (c) Lumi Developers
+AGPL-3.0-only.

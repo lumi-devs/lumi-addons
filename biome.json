@@ -1,0 +1,63 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**/*.ts"]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/tests/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@prisma/client": "Use services.helpers for database access.",
+                  "@lumi/db": "Use services.helpers for database access.",
+                  "@lumi/cache": "Use services.helpers.cache for cache access.",
+                  "@lumi/redis": "Use services.helpers.cache for cache access.",
+                  "@lumi/module-runtime": "Use @lumi/module-kit for module contracts.",
+                  "@lumi/scheduler": "Use services.scheduler.",
+                  "@lumi/permits": "Use services.permits.",
+                  "@lumi/observability": "Use services.observability.",
+                  "ioredis": "Use services.helpers.cache for cache access."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

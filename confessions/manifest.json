@@ -1,17 +1,55 @@
 {
+  "apiVersion": 2,
   "name": "confessions",
   "displayName": "Confessions",
   "emoji": "🕊️",
-  "description": "Anonymous confessions with numbered Components-v2 cards, optional threads, anonymous replies, and hash-based moderation that never exposes author identity.",
-  "short": "Anonymous confessions + replies.",
-  "endUserDataStatement": "Stores cryptographic one-way hashes of author IDs per guild for moderation, plus your user ID linked to confessions/replies you author so reply notifications can reach you, and your notification opt-out choice. ID-linked rows are keyed to you and removed by GDPR deletion.",
-  "version": "1.0.0",
-  "author": [
-    "Antigravity"
-  ],
-  "min_bot_version": "0.6.0",
-  "disableable": true,
   "category": "Community",
-  "configFields": [],
-  "end_user_data_statement": "Stores cryptographic one-way hashes of author IDs per guild for moderation, plus your user ID linked to confessions/replies you author so reply notifications can reach you, and your notification opt-out choice. ID-linked rows are keyed to you and removed by GDPR deletion."
+  "description": "Anonymous confessions with numbered cards, optional threads, anonymous replies, cooldowns, and hash-based moderator bans.",
+  "version": "2.0.0",
+  "entry": "index.ts",
+  "configKey": "confessions-config",
+  "configFields": [
+    {
+      "key": "confessionChannelId",
+      "label": "Confession Channel",
+      "type": "channel",
+      "description": "Channel where anonymous confessions are posted.",
+      "required": true,
+      "channelTypes": [0]
+    },
+    {
+      "key": "logChannelId",
+      "label": "Moderation Log",
+      "type": "channel",
+      "description": "Optional channel that records confession moderation actions without author identities.",
+      "channelTypes": [0]
+    },
+    {
+      "key": "autoThread",
+      "label": "Auto-Thread",
+      "type": "boolean",
+      "description": "Create a discussion thread under each confession for anonymous replies.",
+      "default": true
+    },
+    {
+      "key": "allowImages",
+      "label": "Allow Image URLs",
+      "type": "boolean",
+      "description": "Allow an optional image URL on confessions and replies.",
+      "default": true
+    },
+    {
+      "key": "cooldownMinutes",
+      "label": "Cooldown (minutes)",
+      "type": "number",
+      "description": "Minimum gap between confessions from the same author.",
+      "default": 5,
+      "min": 0,
+      "max": 1440
+    }
+  ],
+  "requirements": [],
+  "conflicts": [],
+  "capabilities": [],
+  "endUserDataStatement": "Stores a per-guild random salt, irreversible SHA-256 author hashes used only for bans and cooldowns, confession text and optional image URLs, message and thread IDs, and counters. No raw user IDs or reversible identity keys are stored; authors cannot be identified or direct-messaged."
 }
