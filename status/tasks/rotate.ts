@@ -85,7 +85,11 @@ export const rotateTask: TaskDefinition = {
         targetId: TargetId,
         key: StateKey,
       });
-      const controller = pickController(rows);
+      const controller = pickController(
+        rows.filter((row) =>
+          services.modules.isEnabled(row.guildId, ModuleName),
+        ),
+      );
       if (!controller) return;
 
       const now = Date.now();

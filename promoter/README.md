@@ -65,5 +65,6 @@ the grant timestamp and the signal reason (`custom status`, `server tag`, or
 both). Guild-wide `grants` and `revokes` counters are also stored. Custom status
 text is read live from presence data for matching and is never persisted.
 
-Deleting a user's data removes that member's promoter grant record. Guild-wide
-counters contain no user identifiers.
+Deleting a user's data removes that member's promoter grant record and removes
+the promoter role from them when the bot can manage it. Guild-wide counters
+contain no user identifiers.

@@ -177,6 +177,11 @@ export async function claimCooldown(
   const key = `${ModuleName}:cooldown:${guildId}:${userId}:${kind}`;
   const cache = services.helpers.cache;
   if (!cache.distributed) {
+    if (LocalCooldowns.size > 1_000) {
+      for (const [entryKey, expiry] of LocalCooldowns) {
+        if (expiry <= now) LocalCooldowns.delete(entryKey);
+      }
+    }
     const existing = LocalCooldowns.get(key);
     if (existing !== undefined && existing > now) {
       return { ok: false, expiresAt: existing };

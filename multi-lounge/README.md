@@ -20,7 +20,9 @@ channels behind. Each base scales independently.
 - A per-base **Creation Cooldown** prevents rapid create/delete churn.
 - Extra channels are tracked in module storage. A reconcile task runs every five
   minutes to remove empty or missing channels, heal stale state, and clean up
-  groups whose base channel or configuration disappeared.
+  groups whose base channel or configuration disappeared. Removing a base from
+  configuration also deletes that group's managed extras, even if occupied, so
+  no orphaned lounges remain.
 - The bot only acts on channels in the configured groups; other voice channels
   are never touched.
 

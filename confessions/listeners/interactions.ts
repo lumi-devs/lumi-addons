@@ -19,15 +19,15 @@ import {
 import { ModuleName, readConfig } from "../config.js";
 import {
   authorHashFor,
+  claimCooldown,
+  clearCooldown,
   deleteConfessionRecords,
   getConfession,
   isBanned,
   listRecentConfessions,
   nextConfessionNumber,
   nextReplyNumber,
-  onCooldown,
   saveConfession,
-  setCooldown,
   type ConfessionRecord,
 } from "../data.js";
 import {
@@ -195,7 +195,14 @@ async function handleConfessSubmit(
     );
     return;
   }
-  if (await onCooldown(services, guildId, authorHash)) {
+  if (
+    !(await claimCooldown(
+      services,
+      guildId,
+      authorHash,
+      config.cooldownMinutes,
+    ))
+  ) {
     await replyEphemeral(
       interaction,
       makeWarningCard(
@@ -218,6 +225,7 @@ async function handleConfessSubmit(
       guildId,
       error,
     });
+    await clearCooldown(services, guildId, authorHash);
     await replyEphemeral(
       interaction,
       makeErrorCard(
@@ -277,6 +285,7 @@ async function handleConfessSubmit(
       }
     }
     await message.delete().catch(() => undefined);
+    await clearCooldown(services, guildId, authorHash);
     await replyEphemeral(
       interaction,
       makeErrorCard(
@@ -287,7 +296,6 @@ async function handleConfessSubmit(
     return;
   }
 
-  await setCooldown(services, guildId, authorHash, config.cooldownMinutes);
   await replyEphemeral(
     interaction,
     makeSuccessCard(

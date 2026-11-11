@@ -5,7 +5,7 @@ Give server boosters a personal role they control. Owners can rename it, recolou
 ## How it works
 
 - Eligibility is native server boosting **or** any configured qualifying role. Blacklisted members are denied.
-- A new role is created directly below the configured anchor role, assigned to the owner, and optionally announced in the showcase channel.
+- A new role is created directly below the configured anchor role, assigned to the owner, and optionally announced in the showcase channel. Concurrent create submissions for one owner are serialized with a local and Redis-backed lock, so double-clicks cannot create two roles.
 - Sharing assigns the same role to another member. Owners can unshare; shared members can renounce a role from their own panel.
 - When an owner stops boosting or loses every qualifying role, the role enters a grace period. A sweep runs every 15 minutes and deletes expired roles, stripping them from every holder.
 - Re-qualifying before expiry clears the grace period and restores the role to the owner and current share holders.

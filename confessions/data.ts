@@ -9,6 +9,51 @@ const ReplyCounterKey = "replies";
 const MetaKey = "meta";
 const IndexPrefix = "c:";
 const BanPrefix = "ban:";
+const LocalLocks = new Map<string, Promise<void>>();
+
+async function withLocalLock<T>(
+  key: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  const previous = LocalLocks.get(key) ?? Promise.resolve();
+  const { promise: current, resolve: release } =
+    Promise.withResolvers<void>();
+  const tail = previous.then(() => current);
+  LocalLocks.set(key, tail);
+  await previous;
+  try {
+    return await task();
+  } finally {
+    release();
+    if (LocalLocks.get(key) === tail) LocalLocks.delete(key);
+  }
+}
+
+async function withSaltLock<T>(
+  services: ModuleServices,
+  guildId: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  const lockKey = `${ModuleName}:salt-lock:${guildId}`;
+  return withLocalLock(lockKey, async () => {
+    if (!services.helpers.cache.distributed) return task();
+    const deadline = Date.now() + 5_000;
+    let release: (() => Promise<void>) | null = null;
+    while (!release && Date.now() < deadline) {
+      release = await services.helpers.cache
+        .takeLock(lockKey, 30_000)
+        .catch(() => null);
+      if (!release) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    }
+    try {
+      return await task();
+    } finally {
+      if (release) await release().catch(() => undefined);
+    }
+  });
+}
 
 export interface ConfessionMeta {
   number: number;
@@ -68,18 +113,20 @@ export async function getSalt(
   services: ModuleServices,
   guildId: string,
 ): Promise<string> {
-  const existing = await readSalt(services, guildId);
-  if (existing) return existing;
+  return withSaltLock(services, guildId, async () => {
+    const existing = await readSalt(services, guildId);
+    if (existing) return existing;
 
-  const salt = randomBytes(32).toString("hex");
-  await services.helpers.moduleData.set(
-    guildId,
-    ModuleName,
-    GuildTarget,
-    SaltKey,
-    salt,
-  );
-  return salt;
+    const salt = randomBytes(32).toString("hex");
+    await services.helpers.moduleData.set(
+      guildId,
+      ModuleName,
+      GuildTarget,
+      SaltKey,
+      salt,
+    );
+    return salt;
+  });
 }
 
 export async function authorHashFor(
@@ -261,19 +308,17 @@ export async function onCooldown(
   return value !== null;
 }
 
-export async function setCooldown(
+export async function claimCooldown(
   services: ModuleServices,
   guildId: string,
   authorHash: string,
   minutes: number,
-): Promise<void> {
+): Promise<boolean> {
   const ttlMs = minutes * 60_000;
-  if (ttlMs <= 0) return;
-  await services.helpers.cache.set(
-    cooldownKey(guildId, authorHash),
-    Date.now(),
-    ttlMs,
-  );
+  if (ttlMs <= 0) return true;
+  return services.helpers.cache
+    .setNx(cooldownKey(guildId, authorHash), String(Date.now()), ttlMs)
+    .catch(() => true);
 }
 
 export async function clearCooldown(

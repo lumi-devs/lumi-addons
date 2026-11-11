@@ -16,6 +16,7 @@ const moduleDefinition: ModuleDefinition = defineModule({
     "Role mention analytics with timed, automatic mention protection for sensitive roles.",
   version: "2.0.0",
   config: ConfigSchema,
+  permitNodes: ["mod.rolementions", "admin.rolementions"],
   commands: [rolementionsCommand],
   listeners: [messageCreateListener, statsPaginationListener],
   tasks: [sweepTask],

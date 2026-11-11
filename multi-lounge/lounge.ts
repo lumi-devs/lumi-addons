@@ -172,6 +172,22 @@ async function pruneExtras(
   return extras;
 }
 
+async function deleteAllExtras(
+  services: ModuleServices,
+  guild: Guild,
+  extras: readonly ExtraLounge[],
+): Promise<void> {
+  for (const extra of extras) {
+    const channel = await resolveVoiceChannel(guild, extra.channelId);
+    if (channel) {
+      await channel
+        .delete("Multi Lounge: base channel removed")
+        .catch(() => undefined);
+    }
+    await recordDeletion(services, guild.id);
+  }
+}
+
 async function findBaseForExtra(
   services: ModuleServices,
   guildId: string,
@@ -252,7 +268,7 @@ async function handleArrival(
   const base = await resolveVoiceChannel(guild, baseId);
   if (!base) {
     const group = await readGroup(services, guild.id, baseId);
-    await pruneExtras(services, guild, group, true);
+    await deleteAllExtras(services, guild, group.extras);
     await removeGroup(services, guild.id, baseId);
     return;
   }
@@ -343,6 +359,7 @@ export async function reconcileGuild(
     const groups = await listGroups(services, guildId);
     for (const group of groups) {
       if (!configured.has(group.baseId)) {
+        await deleteAllExtras(services, guild, group.extras);
         await removeGroup(services, guildId, group.baseId);
       }
     }
@@ -352,7 +369,7 @@ export async function reconcileGuild(
       const base = await resolveVoiceChannel(guild, baseId);
       if (!base) {
         const group = await readGroup(services, guildId, baseId);
-        await pruneExtras(services, guild, group, true);
+        await deleteAllExtras(services, guild, group.extras);
         await removeGroup(services, guildId, baseId);
         continue;
       }

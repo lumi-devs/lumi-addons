@@ -61,30 +61,48 @@ export const cleanupTask: TaskDefinition = {
   cron: "*/5 * * * *",
   timezone: "UTC",
   async handler(services) {
-    const entries = await services.helpers.moduleData.list<unknown>({
-      moduleName: ModuleName,
-      key: StateKey,
-      limit: ScanLimit,
-    });
+    const guilds = [...services.client.guilds.cache.values()].filter(
+      (guild) => services.modules.isEnabled(guild.id, ModuleName),
+    );
+    if (guilds.length === 0) return;
 
+    const perGuild = Math.max(1, Math.ceil(BatchLimit / guilds.length));
     const now = Date.now();
     let work = 0;
 
-    for (const entry of entries) {
+    for (const guild of guilds) {
       if (work >= BatchLimit) break;
 
-      const parsed = ThreadStateSchema.safeParse(entry.value);
-      if (!parsed.success) {
+      const entries = await services.helpers.moduleData.list<unknown>({
+        guildId: guild.id,
+        moduleName: ModuleName,
+        key: StateKey,
+        limit: ScanLimit,
+      });
+
+      let guildWork = 0;
+      for (const entry of entries) {
+        if (guildWork >= perGuild || work >= BatchLimit) break;
+
+        const parsed = ThreadStateSchema.safeParse(entry.value);
+        if (!parsed.success) {
+          work += 1;
+          guildWork += 1;
+          await deleteThreadState(services, entry.guildId, entry.targetId);
+          continue;
+        }
+
+        if (parsed.data.dueAt > now) continue;
+
         work += 1;
-        await deleteThreadState(services, entry.guildId, entry.targetId);
-        continue;
+        guildWork += 1;
+        await processThread(
+          services,
+          entry.guildId,
+          entry.targetId,
+          parsed.data,
+        );
       }
-
-      if (parsed.data.dueAt > now) continue;
-      if (!services.modules.isEnabled(entry.guildId, ModuleName)) continue;
-
-      work += 1;
-      await processThread(services, entry.guildId, entry.targetId, parsed.data);
     }
   },
 };

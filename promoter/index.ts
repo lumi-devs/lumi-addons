@@ -7,6 +7,7 @@ import {
 import { ephemeralCard, makeErrorCard, type CardReply } from "@lumi/ui";
 import {
   MessageFlags,
+  PermissionFlagsBits,
   type GuildMember,
   type Interaction,
   type PartialGuildMember,
@@ -204,13 +205,44 @@ const promoterModule = defineModule({
       });
     },
     async deleteUserData(services, guildId, userId) {
+      const notes: string[] = [];
+      const guild =
+        services.client.guilds.cache.get(guildId) ??
+        (await services.client.guilds.fetch(guildId).catch(() => null));
+      if (guild) {
+        const config = await getConfig(services, guildId);
+        if (config.promoterRoleId) {
+          const [member, role] = await Promise.all([
+            guild.members.fetch(userId).catch(() => null),
+            guild.roles
+              .fetch(config.promoterRoleId)
+              .catch(() => null),
+          ]);
+          const me = guild.members.me;
+          const canRemove =
+            member !== null &&
+            role !== null &&
+            me !== null &&
+            !role.managed &&
+            me.permissions.has(PermissionFlagsBits.ManageRoles) &&
+            me.roles.highest.position > role.position &&
+            member.roles.cache.has(role.id);
+          if (canRemove) {
+            const removed = await member.roles
+              .remove(role, "Promoter: user data deletion")
+              .then(() => true)
+              .catch(() => false);
+            if (removed) notes.push("Removed the promoter role.");
+          }
+        }
+      }
       const deleted = await services.helpers.moduleData.delete(
         guildId,
         ModuleName,
         userId,
         "granted",
       );
-      return { deleted };
+      return { deleted, notes };
     },
   },
   commands: [promoterCommand],

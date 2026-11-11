@@ -17,6 +17,8 @@ All replies are ephemeral and only visible to the person who ran the command.
 
 - A custom emoji mention such as `<:wave:123456789012345678>` or `<a:party:123456789012345678>`.
 - An image URL. The image must be a PNG, JPEG, or GIF and at most 256 KB.
+  Redirects are followed manually, up to 3 hops, and every hop must pass the
+  same public-host SSRF checks.
 - A Discord message link or message ID. The message content and the message it replies to are scanned for up to 5 custom emojis.
 
 When `name` is omitted, the name is inferred from the emoji or the URL filename. Names must match `[A-Za-z0-9_]{2,32}`. A custom name can only be used when stealing a single emoji.

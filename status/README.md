@@ -42,8 +42,9 @@ or previewing while enabled refreshes that server's activation time and makes it
 the controller. Other enabled servers keep their own cursor unchanged and do not
 touch the bot presence until they become the controller.
 
-A cron task runs once per minute and applies the next status for the controller
-only when its `nextAt` timestamp is due. Because the task runs every minute, a
+Only servers where the module is enabled are rotation candidates. A cron task
+runs once per minute and applies the next status for the controller only when
+its `nextAt` timestamp is due. Because the task runs every minute, a
 30-second interval still applies at most once per minute. The state record stores
 the cursor and next run time, so restarts do not create duplicate rotation
 chains.

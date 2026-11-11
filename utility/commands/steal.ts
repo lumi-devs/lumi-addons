@@ -15,6 +15,7 @@ const ModuleName = "utility";
 const MAX_STEALS = 5;
 const MAX_IMAGE_BYTES = 256 * 1024;
 const DOWNLOAD_TIMEOUT_MS = 10_000;
+const MAX_REDIRECTS = 3;
 const EMOJI_PATTERN = /<(a?):([A-Za-z0-9_]+):(\d+)>/g;
 const MESSAGE_ID_PATTERN = /^\d{15,25}$/;
 const NAME_PATTERN = /^[A-Za-z0-9_]{2,32}$/;
@@ -219,17 +220,43 @@ function detectImageType(data: Buffer): "png" | "jpeg" | "gif" | null {
   return null;
 }
 
-async function downloadImage(value: string): Promise<DownloadResult | DownloadError> {
-  if (!(await isSafeImageUrl(value))) return { error: "That URL is not allowed." };
-  let response: Response;
-  try {
-    response = await fetch(value, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
-    });
-  } catch {
-    return { error: "Could not download the image." };
+async function fetchImageResponse(
+  value: string,
+): Promise<Response | DownloadError> {
+  let current = value;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
+    if (!(await isSafeImageUrl(current))) {
+      return { error: "That URL is not allowed." };
+    }
+    let response: Response;
+    try {
+      response = await fetch(current, {
+        redirect: "manual",
+        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+      });
+    } catch {
+      return { error: "Could not download the image." };
+    }
+    if (response.status < 300 || response.status >= 400) {
+      return response;
+    }
+    const location = response.headers.get("location");
+    await response.body?.cancel().catch(() => undefined);
+    if (!location || hop === MAX_REDIRECTS) {
+      return { error: "Could not download the image." };
+    }
+    try {
+      current = new URL(location, current).toString();
+    } catch {
+      return { error: "That URL is not allowed." };
+    }
   }
+  return { error: "Could not download the image." };
+}
+
+async function downloadImage(value: string): Promise<DownloadResult | DownloadError> {
+  const response = await fetchImageResponse(value);
+  if ("error" in response) return response;
   if (!response.ok) {
     return { error: `Could not download the image (HTTP ${response.status}).` };
   }

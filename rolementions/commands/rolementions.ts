@@ -39,10 +39,11 @@ import {
   roleText,
 } from "../ui.js";
 
-async function hasAdminPermit(
+async function hasPermit(
   interaction: ChatInputCommandInteraction,
   services: ModuleServices,
   guild: Guild,
+  node: string,
 ): Promise<boolean> {
   const roles = interaction.member?.roles;
   const roleIds = !roles
@@ -61,11 +62,41 @@ async function hasAdminPermit(
         ? { channelId: interaction.channelId }
         : {}),
       guildOwnerId: guild.ownerId,
-      permitNode: "admin.rolementions",
+      permitNode: node,
     },
     services.client,
   );
   return result.allowed;
+}
+
+async function hasAdminPermit(
+  interaction: ChatInputCommandInteraction,
+  services: ModuleServices,
+  guild: Guild,
+): Promise<boolean> {
+  return hasPermit(interaction, services, guild, "admin.rolementions");
+}
+
+async function requireMod(
+  interaction: ChatInputCommandInteraction,
+  services: ModuleServices,
+  guild: Guild,
+): Promise<boolean> {
+  if (
+    (await hasAdminPermit(interaction, services, guild)) ||
+    (await hasPermit(interaction, services, guild, "mod.rolementions"))
+  ) {
+    return true;
+  }
+  await interaction.reply(
+    ephemeralCard(
+      makeErrorCard(
+        "Moderator Only",
+        "You need the `mod.rolementions` permit to view role mention analytics.",
+      ),
+    ),
+  );
+  return false;
 }
 
 async function requireAdmin(
@@ -553,7 +584,6 @@ export const rolementionsCommand: CommandDefinition = {
             .setRequired(true),
         ),
     ),
-  requiredPermit: "mod.rolementions",
   guildOnly: true,
   async execute(interaction, services) {
     const guild = interaction.guild;
@@ -582,6 +612,10 @@ export const rolementionsCommand: CommandDefinition = {
 
     const config = await readConfig(services, guild.id);
     const subcommand = interaction.options.getSubcommand(true);
+
+    if (subcommand === "stats" || subcommand === "top") {
+      if (!(await requireMod(interaction, services, guild))) return;
+    }
 
     if (subcommand === "stats") {
       await showStats(interaction, services, guild, config);

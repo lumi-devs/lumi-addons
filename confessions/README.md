@@ -32,7 +32,9 @@ Bans are stored as `ban:<hash>` records in durable data.
   card. Replies post there as **Confession #N.k**. If the thread is unavailable,
   replies fall back to the confession channel.
 - Each confession card has a **Reply anonymously** button.
-- The per-author cooldown throttles new confessions, not replies.
+- The per-author cooldown throttles new confessions, not replies. The cooldown
+  is claimed atomically before posting and released if posting or saving fails,
+  so concurrent submissions cannot both succeed.
 - A banned author cannot submit confessions or anonymous replies until a
   moderator unbans them by confession number.
 

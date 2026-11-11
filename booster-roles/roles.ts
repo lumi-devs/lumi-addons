@@ -27,6 +27,51 @@ import {
 } from "./data.js";
 
 const ReservedNames: Record<string, true> = { everyone: true, here: true };
+const LocalLocks = new Map<string, Promise<void>>();
+
+async function withLocalLock<T>(
+  key: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  const previous = LocalLocks.get(key) ?? Promise.resolve();
+  const { promise: current, resolve: release } =
+    Promise.withResolvers<void>();
+  const tail = previous.then(() => current);
+  LocalLocks.set(key, tail);
+  await previous;
+  try {
+    return await task();
+  } finally {
+    release();
+    if (LocalLocks.get(key) === tail) LocalLocks.delete(key);
+  }
+}
+
+async function withRoleLock<T>(
+  services: ModuleServices,
+  key: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  const lockKey = `booster-roles:lock:${key}`;
+  return withLocalLock(lockKey, async () => {
+    if (!services.helpers.cache.distributed) return task();
+    const deadline = Date.now() + 5_000;
+    let release: (() => Promise<void>) | null = null;
+    while (!release && Date.now() < deadline) {
+      release = await services.helpers.cache
+        .takeLock(lockKey, 30_000)
+        .catch(() => null);
+      if (!release) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    }
+    try {
+      return await task();
+    } finally {
+      if (release) await release().catch(() => undefined);
+    }
+  });
+}
 
 export type NameValidation =
   | { ok: true; value: string }
@@ -224,6 +269,20 @@ export async function loadSharedRoles(
 }
 
 export async function createBoosterRole(
+  services: ModuleServices,
+  guild: Guild,
+  member: GuildMember,
+  rawName: string,
+  config: Config,
+): Promise<CreateRoleResult> {
+  return withRoleLock(
+    services,
+    `create:${guild.id}:${member.id}`,
+    () => createBoosterRoleUnlocked(services, guild, member, rawName, config),
+  );
+}
+
+async function createBoosterRoleUnlocked(
   services: ModuleServices,
   guild: Guild,
   member: GuildMember,

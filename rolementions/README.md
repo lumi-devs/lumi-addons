@@ -28,9 +28,10 @@ Role mention analytics and timed mention protection for Lumi v2.
 
 ## Commands
 
-All commands require the `mod.rolementions` permit and only run inside a server.
-Configuration-changing subcommands additionally require the
-`admin.rolementions` permit.
+Analytics subcommands (`stats`, `top`) require the `mod.rolementions` permit;
+`admin.rolementions` also grants access. Configuration-changing subcommands
+(`list`, `reset`, `protect`, `unprotect`, `block`, `unblock`) require
+`admin.rolementions` only. All subcommands run inside a server.
 
 | Command | Description |
 | --- | --- |
@@ -49,8 +50,8 @@ Configuration-changing subcommands additionally require the
 - The bot needs **View Channel** and **Send Messages** in the configured log channel.
 - The `@everyone` role and integration-managed roles are skipped.
 - Reading role mentions requires the **Message Content** intent.
-- The addon does not set `defaultMemberPermissions`; analytics use the
-  `mod.rolementions` permit, while protection changes require
+- The addon does not set `defaultMemberPermissions`; analytics accept
+  `mod.rolementions` or `admin.rolementions`, while protection changes require
   `admin.rolementions`.
 - Log messages use `noPingCard`, and roles are listed by name and ID rather than as pings.
 
