@@ -288,7 +288,7 @@ export function buildBlacklistPageCard(
     return makeEmptyCard(
       "🚫 Blacklist",
       "Nobody is blacklisted.",
-      "Use `/boosterrole-admin blacklist add` to block a member.",
+      "Use `/boosterrole admin blacklist-add` to block a member.",
     );
   }
 

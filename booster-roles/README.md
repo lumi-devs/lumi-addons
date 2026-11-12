@@ -29,12 +29,15 @@ The bot needs **Manage Roles**, and its highest role must be above the anchor ro
 
 ## Commands
 
-- `/boosterrole` — open your personal panel. Owners can create, rename, recolour, share, manage shares, and delete. Shared members can renounce a role.
-- `/boosterrole-admin stats` — role, share, grace, and blacklist totals. Requires the `roles.boosterroles` permit.
-- `/boosterrole-admin blacklist add <user> [reason]` — block a member. Their owned role is deleted and they are removed from shares.
-- `/boosterrole-admin blacklist remove <user>` — unblock a member.
-- `/boosterrole-admin blacklist list` — list blocked members with pagination.
-- `/boosterrole-admin force-delete <role> [reason]` — delete a role immediately.
+- `/boosterrole panel` — open your personal panel. Owners can create, rename, recolour, share, manage shares, and delete. Shared members can renounce a role.
+- `/boosterrole admin stats` — role, share, grace, and blacklist totals. Requires the `roles.boosterroles` permit.
+- `/boosterrole admin list` — list all custom booster roles with their owners.
+- `/boosterrole admin info <user>` — inspect a member's custom role.
+- `/boosterrole admin delete <user> [reason]` — delete a member's custom role.
+- `/boosterrole admin delete-role <role> [reason]` — delete a role directly.
+- `/boosterrole admin blacklist-add <user> [reason]` — block a member. Their owned role is deleted and they are removed from shares.
+- `/boosterrole admin blacklist-remove <user>` — unblock a member.
+- `/boosterrole admin blacklist-list` — list blocked members with pagination.
 
 All error and denial responses are ephemeral. Panels embed the invoking user ID in their custom IDs, and only that user can operate them.
 

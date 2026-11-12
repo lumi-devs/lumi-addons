@@ -5,13 +5,13 @@ import {
   type ModuleServices,
 } from "@lumi/module-kit";
 import type { Interaction } from "discord.js";
-import boosterRoleAdminCommand from "./commands/boosterrole-admin.js";
 import boosterRoleCommand from "./commands/boosterrole.js";
 import {
   ConfigSchema,
   getConfig,
   ModuleName,
   moduleNameOf,
+  PermitNode,
 } from "./config.js";
 import { getRoleById, getUserRoleIndex, type RoleRecord } from "./data.js";
 import { IdPrefix } from "./ids.js";
@@ -96,7 +96,8 @@ const boosterRolesModule: ModuleDefinition = defineModule({
       };
     },
   },
-  commands: [boosterRoleCommand, boosterRoleAdminCommand],
+  permitNodes: [PermitNode],
+  commands: [boosterRoleCommand],
   listeners: [memberUpdateListener, interactionListener],
   tasks: [sweepTask],
   async onLoad() {
