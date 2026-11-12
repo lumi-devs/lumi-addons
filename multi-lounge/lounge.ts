@@ -351,7 +351,6 @@ export async function reconcileGuild(
 ): Promise<number> {
   return serialize(guildId, async () => {
     const config = await getConfig(services, guildId);
-    if (config.baseChannelIds.length === 0) return 0;
     const guild = await resolveGuild(services, guildId);
     if (!guild) return 0;
 
@@ -363,6 +362,8 @@ export async function reconcileGuild(
         await removeGroup(services, guildId, group.baseId);
       }
     }
+
+    if (configured.size === 0) return 0;
 
     let totalExtras = 0;
     for (const baseId of configured) {

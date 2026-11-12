@@ -213,7 +213,24 @@ async function handleConfessSubmit(
     return;
   }
 
-  const number = await nextConfessionNumber(services, guildId);
+  let number: number;
+  try {
+    number = await nextConfessionNumber(services, guildId);
+  } catch (error) {
+    services.observability?.logger?.warn?.("confession number allocation failed", {
+      guildId,
+      error,
+    });
+    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
+    await replyEphemeral(
+      interaction,
+      makeErrorCard(
+        "Could Not Post",
+        "I could not post the confession. Please try again later.",
+      ),
+    );
+    return;
+  }
 
   let message: Message;
   try {
@@ -225,7 +242,7 @@ async function handleConfessSubmit(
       guildId,
       error,
     });
-    await clearCooldown(services, guildId, authorHash);
+    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
     await replyEphemeral(
       interaction,
       makeErrorCard(
@@ -285,7 +302,7 @@ async function handleConfessSubmit(
       }
     }
     await message.delete().catch(() => undefined);
-    await clearCooldown(services, guildId, authorHash);
+    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
     await replyEphemeral(
       interaction,
       makeErrorCard(

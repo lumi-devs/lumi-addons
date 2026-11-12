@@ -61,47 +61,62 @@ export const cleanupTask: TaskDefinition = {
   cron: "*/5 * * * *",
   timezone: "UTC",
   async handler(services) {
-    const guilds = [...services.client.guilds.cache.values()].filter(
-      (guild) => services.modules.isEnabled(guild.id, ModuleName),
-    );
+    const guilds = [...services.client.guilds.cache.values()]
+      .filter((guild) => services.modules.isEnabled(guild.id, ModuleName))
+      .sort((a, b) => a.id.localeCompare(b.id));
     if (guilds.length === 0) return;
 
-    const perGuild = Math.max(1, Math.ceil(BatchLimit / guilds.length));
+    const offset = Math.floor(Date.now() / 300_000) % guilds.length;
+    const ordered = guilds.slice(offset).concat(guilds.slice(0, offset));
     const now = Date.now();
+    const queues = new Map<
+      string,
+      Array<{ guildId: string; targetId: string; value: unknown }>
+    >();
     let work = 0;
+    let progressed = true;
 
-    for (const guild of guilds) {
-      if (work >= BatchLimit) break;
+    while (work < BatchLimit && progressed) {
+      progressed = false;
 
-      const entries = await services.helpers.moduleData.list<unknown>({
-        guildId: guild.id,
-        moduleName: ModuleName,
-        key: StateKey,
-        limit: ScanLimit,
-      });
+      for (const guild of ordered) {
+        if (work >= BatchLimit) break;
 
-      let guildWork = 0;
-      for (const entry of entries) {
-        if (guildWork >= perGuild || work >= BatchLimit) break;
-
-        const parsed = ThreadStateSchema.safeParse(entry.value);
-        if (!parsed.success) {
-          work += 1;
-          guildWork += 1;
-          await deleteThreadState(services, entry.guildId, entry.targetId);
-          continue;
+        let queue = queues.get(guild.id);
+        if (!queue) {
+          queue = await services.helpers.moduleData.list<unknown>({
+            guildId: guild.id,
+            moduleName: ModuleName,
+            key: StateKey,
+            limit: ScanLimit,
+          });
+          queues.set(guild.id, queue);
         }
 
-        if (parsed.data.dueAt > now) continue;
+        while (queue.length > 0 && work < BatchLimit) {
+          const entry = queue.shift();
+          if (!entry) break;
 
-        work += 1;
-        guildWork += 1;
-        await processThread(
-          services,
-          entry.guildId,
-          entry.targetId,
-          parsed.data,
-        );
+          const parsed = ThreadStateSchema.safeParse(entry.value);
+          if (!parsed.success) {
+            work += 1;
+            progressed = true;
+            await deleteThreadState(services, entry.guildId, entry.targetId);
+            break;
+          }
+
+          if (parsed.data.dueAt > now) continue;
+
+          work += 1;
+          progressed = true;
+          await processThread(
+            services,
+            entry.guildId,
+            entry.targetId,
+            parsed.data,
+          );
+          break;
+        }
       }
     }
   },

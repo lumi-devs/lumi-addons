@@ -6,7 +6,11 @@ import type { ThreadState } from "../state.js";
 
 export const threadCreateListener: ListenerDefinition = {
   event: Events.ThreadCreate,
-  async handler(thread: ThreadChannel, services: ModuleServices) {
+  async handler(
+    thread: ThreadChannel,
+    _newlyCreated: boolean,
+    services: ModuleServices,
+  ) {
     const guildId = thread.guildId;
     if (!guildId) return;
     if (!services.modules.isEnabled(guildId, ModuleName)) return;
