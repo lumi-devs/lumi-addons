@@ -25,6 +25,20 @@
       "channelTypes": [0]
     },
     {
+      "key": "reportChannelId",
+      "label": "Report Log Channel",
+      "type": "channel",
+      "description": "Optional channel that receives reports submitted through the Report button. Reports are only sent here, never stored with author identities.",
+      "channelTypes": [0]
+    },
+    {
+      "key": "reportPingRoleId",
+      "label": "Report Ping Role",
+      "type": "role",
+      "description": "Optional role mentioned (without notification) in report messages sent to the report log channel.",
+      "required": false
+    },
+    {
       "key": "autoThread",
       "label": "Auto-Thread",
       "type": "boolean",
@@ -51,5 +65,5 @@
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
-  "endUserDataStatement": "Stores a per-guild random salt, irreversible SHA-256 author hashes used only for bans and cooldowns, confession text, rehosted upload URLs, message and thread IDs, and counters. No raw user IDs or reversible identity keys are stored; authors cannot be identified or direct-messaged."
+  "endUserDataStatement": "Stores a per-guild random salt, irreversible SHA-256 author hashes used only for bans and cooldowns, confession text, rehosted upload URLs, message and thread IDs, counters, and report markers holding only a timestamp. No raw user IDs or reversible identity keys are stored; authors cannot be identified or direct-messaged. Reporters are named only in the report message sent to the configured report channel, not in stored data."
 }

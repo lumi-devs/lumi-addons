@@ -248,6 +248,47 @@ export async function deleteConfessionRecords(
     GuildTarget,
     `${IndexPrefix}${number}`,
   );
+  await services.helpers.moduleData.delete(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    `${ReportedPrefix}${number}`,
+  );
+}
+
+const ReportedPrefix = "reported:";
+
+export interface ReportMarker {
+  at: number;
+}
+
+export async function isReported(
+  services: ModuleServices,
+  guildId: string,
+  number: number,
+): Promise<boolean> {
+  const marker = await services.helpers.moduleData.get<ReportMarker>(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    `${ReportedPrefix}${number}`,
+  );
+  return marker !== null;
+}
+
+export async function markReported(
+  services: ModuleServices,
+  guildId: string,
+  number: number,
+): Promise<void> {
+  const marker: ReportMarker = { at: Date.now() };
+  await services.helpers.moduleData.set(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    `${ReportedPrefix}${number}`,
+    marker,
+  );
 }
 
 export async function banAuthor(

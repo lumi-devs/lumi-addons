@@ -28,6 +28,7 @@ export const ConfessModalId = `${ModuleName}:confess`;
 export const ReplyButtonPrefix = `${ModuleName}:reply`;
 export const ReplyModalPrefix = `${ModuleName}:replysubmit`;
 export const ListButtonPrefix = `${ModuleName}:list`;
+export const ReportButtonPrefix = `${ModuleName}:report`;
 export const ConfessTextId = `${ModuleName}:confession-text`;
 export const ConfessImageId = `${ModuleName}:confession-image`;
 export const ReplyTextId = `${ModuleName}:reply-text`;
@@ -58,14 +59,25 @@ function replyButton(number: number) {
   });
 }
 
+function reportButton(number: number) {
+  return createActionButton({
+    customId: `${ReportButtonPrefix}:${number}`,
+    label: "Report",
+    style: ButtonStyle.Danger,
+    emoji: "🚩",
+  });
+}
+
 export function confessionCard(
   number: number,
   text: string,
   imageUrl: string | null,
+  reportable: boolean,
 ): CardReply {
+  const buttons = reportable ? [replyButton(number), reportButton(number)] : [replyButton(number)];
   const options: CardOptions = {
     footer: "Sent anonymously",
-    actionRows: [row(replyButton(number))],
+    actionRows: [row(...buttons)],
     ...(imageUrl ? { mediaGallery: imageGallery(imageUrl) } : {}),
   };
   return noPingCard(makeInfoCard(`🕊️ Confession #${number}`, text, options));
@@ -76,10 +88,12 @@ export function replyCard(
   replyNumber: number,
   text: string,
   imageUrl: string | null,
+  reportable: boolean,
 ): CardReply {
+  const buttons = reportable ? [replyButton(number), reportButton(number)] : [replyButton(number)];
   const options: CardOptions = {
     footer: `Anonymous reply to Confession #${number}`,
-    actionRows: [row(replyButton(number))],
+    actionRows: [row(...buttons)],
     ...(imageUrl ? { mediaGallery: imageGallery(imageUrl) } : {}),
   };
   return noPingCard(

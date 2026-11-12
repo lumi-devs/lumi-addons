@@ -31,7 +31,11 @@ Bans are stored as `ban:<hash>` records in durable data.
 - With **Auto-Thread** enabled, a thread named `Confession #N` opens under the
   card. Replies post there as **Confession #N.k**. If the thread is unavailable,
   replies fall back to the confession channel.
-- Each confession card has a **Reply anonymously** button.
+- Each confession card has a **Reply anonymously** button, and a **Report**
+  button when a Report Log Channel is configured. Reporting sends an anonymous
+  report to that channel with the reporter, the confession number, and a jump
+  link to the message. It never includes the author's identity, and each
+  confession can only be reported once.
 - The per-author cooldown throttles new confessions, not replies. The cooldown
   is claimed atomically before posting and released if posting or saving fails,
   so concurrent submissions cannot both succeed.
@@ -46,6 +50,8 @@ Configure the addon in `/lumi` -> **Modules** -> **Confessions**.
 |---|---|---|
 | Confession Channel | - | Where confessions are posted. **Required.** |
 | Moderation Log | - | Optional channel for moderation audit entries. |
+| Report Log Channel | - | Optional channel that receives user-submitted reports. The Report button only appears when this is set. |
+| Report Ping Role | - | Optional role shown (without pinging) in report messages. |
 | Auto-Thread | on | Open a reply thread under each confession. |
 | Allow Image Uploads | on | Allow an optional image upload on confessions and replies. |
 | Cooldown (minutes) | 5 | Minimum gap between confessions from one author. `0` disables it. |
@@ -53,7 +59,8 @@ Configure the addon in `/lumi` -> **Modules** -> **Confessions**.
 The bot needs **View Channel**, **Send Messages**, and **Attach Files** in the
 confession channel. Uploaded images are rehosted to the moderation log channel
 when one is configured, otherwise to the confession channel, so the bot also
-needs those permissions there. For auto-threads it also needs **Create Public
+needs those permissions there. Reports need the same permissions in the
+configured report log channel. For auto-threads it also needs **Create Public
 Threads** and **Send Messages in Threads**. Deleting confessions uses **Manage
 Messages**, and removing their threads uses **Manage Threads**. No privileged
 gateway intents are required.
@@ -81,7 +88,8 @@ Stored per server:
 - per confession: number, channel/message/thread IDs, and the irreversible
   author hash;
 - per confession reply counter;
-- ban records keyed by author hash.
+- ban records keyed by author hash;
+- per confession report markers holding only a timestamp.
 
 Deleting a confession removes its metadata, number index, reply counter, and
 its message and thread on a best-effort basis.

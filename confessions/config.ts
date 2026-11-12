@@ -7,6 +7,8 @@ export const ConfigKey = "confessions-config";
 export const ConfigSchema = z.object({
   confessionChannelId: z.string().min(1).nullable().default(null),
   logChannelId: z.string().min(1).nullable().default(null),
+  reportChannelId: z.string().min(1).nullable().default(null),
+  reportPingRoleId: z.string().min(1).nullable().default(null),
   autoThread: z.boolean().default(true),
   allowImages: z.boolean().default(true),
   cooldownMinutes: z.number().int().min(0).max(1440).default(5),

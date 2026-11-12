@@ -24,7 +24,9 @@ import {
   deleteConfessionRecords,
   getConfession,
   isBanned,
+  isReported,
   listRecentConfessions,
+  markReported,
   nextConfessionNumber,
   nextReplyNumber,
   saveConfession,
@@ -231,7 +233,9 @@ async function handleConfessSubmit(
   let message: Message;
   try {
     message = await channel.send(
-      cardCreateOptions(confessionCard(number, text, imageUrl)),
+      cardCreateOptions(
+        confessionCard(number, text, imageUrl, config.reportChannelId !== null),
+      ),
     );
   } catch (error) {
     services.observability?.logger?.warn?.("confession post failed", {
@@ -452,7 +456,13 @@ async function handleReplySubmit(
   try {
     await target.send(
       cardCreateOptions(
-        replyCard(record.meta.number, replyNumber, text, imageUrl),
+        replyCard(
+          record.meta.number,
+          replyNumber,
+          text,
+          imageUrl,
+          config.reportChannelId !== null,
+        ),
       ),
     );
   } catch (error) {
@@ -475,6 +485,108 @@ async function handleReplySubmit(
     makeSuccessCard(
       "Reply Posted",
       `Your anonymous reply is live as **Confession #${record.meta.number}.${replyNumber}**.`,
+    ),
+  );
+}
+
+async function handleReportButton(
+  interaction: ButtonInteraction,
+  services: ModuleServices,
+  number: number,
+): Promise<void> {
+  const guildId = await requireGuild(interaction, services);
+  if (!guildId) return;
+
+  const config = await readConfig(services, guildId);
+  if (!config.reportChannelId) {
+    await replyEphemeral(
+      interaction,
+      makeWarningCard(
+        "Not Configured",
+        "Reporting is not configured in this server.",
+      ),
+    );
+    return;
+  }
+
+  const record = await getConfession(services, guildId, number);
+  if (!record) {
+    await replyEphemeral(
+      interaction,
+      makeErrorCard(
+        "Not Found",
+        `Confession #${number} no longer exists in this server.`,
+      ),
+    );
+    return;
+  }
+
+  if (await isReported(services, guildId, number)) {
+    await replyEphemeral(
+      interaction,
+      makeWarningCard(
+        "Already Reported",
+        "Moderators have already been notified about this confession.",
+      ),
+    );
+    return;
+  }
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  const reportChannel = await services.client.channels
+    .fetch(config.reportChannelId)
+    .catch(() => null);
+  if (!reportChannel?.isSendable()) {
+    await replyEphemeral(
+      interaction,
+      makeErrorCard(
+        "Channel Unavailable",
+        "The report channel is missing or I cannot send messages there.",
+      ),
+    );
+    return;
+  }
+
+  const jumpUrl = `https://discord.com/channels/${guildId}/${record.index.channelId}/${record.index.messageId}`;
+  const lines = [
+    `**Reporter:** <@${interaction.user.id}> (${interaction.user.id})`,
+    `**Confession:** #${record.meta.number}`,
+    `**Channel:** <#${record.index.channelId}>`,
+    `[Jump to message](${jumpUrl})`,
+  ];
+  if (config.reportPingRoleId) {
+    lines.unshift(`<@&${config.reportPingRoleId}>`);
+  }
+
+  try {
+    await reportChannel.send(
+      cardCreateOptions(
+        makeWarningCard(`🚨 Confession Report #${record.meta.number}`, lines),
+      ),
+    );
+  } catch (error) {
+    services.observability?.logger?.warn?.("confession report send failed", {
+      guildId,
+      error,
+    });
+    await replyEphemeral(
+      interaction,
+      makeErrorCard(
+        "Could Not Report",
+        "The report could not be delivered. Please try again later.",
+      ),
+    );
+    return;
+  }
+
+  await markReported(services, guildId, number).catch(() => undefined);
+
+  await replyEphemeral(
+    interaction,
+    makeSuccessCard(
+      "Report Submitted",
+      "Thank you. Moderators have been notified.",
     ),
   );
 }
@@ -528,6 +640,12 @@ export const interactionListener: ListenerDefinition = {
         const number = Number(parts[2]);
         if (!Number.isInteger(number) || number < 1) return;
         await handleReplyButton(interaction, services, number);
+        return;
+      }
+      if (parts[1] === "report") {
+        const number = Number(parts[2]);
+        if (!Number.isInteger(number) || number < 1) return;
+        await handleReportButton(interaction, services, number);
         return;
       }
       if (parts[1] === "list") {
