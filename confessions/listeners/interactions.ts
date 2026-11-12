@@ -36,11 +36,11 @@ import {
   confessionCard,
   ConfessImageId,
   ConfessTextId,
-  MaxImageUrlLength,
   replyCard,
   ReplyImageId,
   ReplyTextId,
 } from "../ui.js";
+import { readUploadedImage, rehostUpload } from "../rehost.js";
 
 async function replyEphemeral(
   interaction: Interaction,
@@ -80,34 +80,8 @@ async function requireGuild(
   return guildId;
 }
 
-function parseImageUrl(raw: string): { url: string | null } | null {
-  const value = raw.trim();
-  if (!value) return { url: null };
-  if (value.length > MaxImageUrlLength) return null;
-  try {
-    const parsed = new URL(value);
-    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-      return null;
-    }
-    return { url: parsed.toString() };
-  } catch {
-    return null;
-  }
-}
-
-function readImage(
-  interaction: ModalSubmitInteraction,
-  customId: string,
-  allowed: boolean,
-): { url: string | null } | null {
-  if (!allowed) return { url: null };
-  let raw = "";
-  try {
-    raw = interaction.fields.getTextInputValue(customId);
-  } catch {
-    raw = "";
-  }
-  return parseImageUrl(raw);
+function isImageUpload(upload: { contentType: string | null } | null): boolean {
+  return upload === null || upload.contentType === null || upload.contentType.startsWith("image/");
 }
 
 async function resolveReplyChannel(
@@ -170,13 +144,15 @@ async function handleConfessSubmit(
     return;
   }
 
-  const image = readImage(interaction, ConfessImageId, config.allowImages);
-  if (!image) {
+  const upload = config.allowImages
+    ? readUploadedImage(interaction, ConfessImageId)
+    : null;
+  if (!isImageUpload(upload)) {
     await replyEphemeral(
       interaction,
       makeErrorCard(
         "Invalid Image",
-        "The image URL must be a valid http or https link.",
+        "The attached file must be an image.",
       ),
     );
     return;
@@ -213,6 +189,26 @@ async function handleConfessSubmit(
     return;
   }
 
+  let imageUrl: string | null = null;
+  if (upload) {
+    imageUrl = await rehostUpload(
+      services,
+      upload,
+      config.logChannelId ?? channel.id,
+    );
+    if (!imageUrl) {
+      await clearCooldown(services, guildId, authorHash).catch(() => undefined);
+      await replyEphemeral(
+        interaction,
+        makeErrorCard(
+          "Could Not Process Image",
+          "The uploaded image could not be saved. Please try again.",
+        ),
+      );
+      return;
+    }
+  }
+
   let number: number;
   try {
     number = await nextConfessionNumber(services, guildId);
@@ -235,7 +231,7 @@ async function handleConfessSubmit(
   let message: Message;
   try {
     message = await channel.send(
-      cardCreateOptions(confessionCard(number, text, image.url)),
+      cardCreateOptions(confessionCard(number, text, imageUrl)),
     );
   } catch (error) {
     services.observability?.logger?.warn?.("confession post failed", {
@@ -388,13 +384,15 @@ async function handleReplySubmit(
     return;
   }
 
-  const image = readImage(interaction, ReplyImageId, config.allowImages);
-  if (!image) {
+  const upload = config.allowImages
+    ? readUploadedImage(interaction, ReplyImageId)
+    : null;
+  if (!isImageUpload(upload)) {
     await replyEphemeral(
       interaction,
       makeErrorCard(
         "Invalid Image",
-        "The image URL must be a valid http or https link.",
+        "The attached file must be an image.",
       ),
     );
     return;
@@ -426,6 +424,25 @@ async function handleReplySubmit(
     return;
   }
 
+  let imageUrl: string | null = null;
+  if (upload) {
+    imageUrl = await rehostUpload(
+      services,
+      upload,
+      config.logChannelId ?? record.index.channelId,
+    );
+    if (!imageUrl) {
+      await replyEphemeral(
+        interaction,
+        makeErrorCard(
+          "Could Not Process Image",
+          "The uploaded image could not be saved. Please try again.",
+        ),
+      );
+      return;
+    }
+  }
+
   const replyNumber = await nextReplyNumber(
     services,
     guildId,
@@ -435,7 +452,7 @@ async function handleReplySubmit(
   try {
     await target.send(
       cardCreateOptions(
-        replyCard(record.meta.number, replyNumber, text, image.url),
+        replyCard(record.meta.number, replyNumber, text, imageUrl),
       ),
     );
   } catch (error) {

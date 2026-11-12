@@ -27,7 +27,7 @@ Bans are stored as `ban:<hash>` records in durable data.
 
 - `/confess` opens an anonymous confession modal.
 - The confession posts as **Confession #N** in the configured channel, with an
-  optional image URL when images are enabled.
+  optional image upload when images are enabled.
 - With **Auto-Thread** enabled, a thread named `Confession #N` opens under the
   card. Replies post there as **Confession #N.k**. If the thread is unavailable,
   replies fall back to the confession channel.
@@ -47,14 +47,16 @@ Configure the addon in `/lumi` -> **Modules** -> **Confessions**.
 | Confession Channel | - | Where confessions are posted. **Required.** |
 | Moderation Log | - | Optional channel for moderation audit entries. |
 | Auto-Thread | on | Open a reply thread under each confession. |
-| Allow Image URLs | on | Allow optional image URLs on confessions and replies. |
+| Allow Image Uploads | on | Allow an optional image upload on confessions and replies. |
 | Cooldown (minutes) | 5 | Minimum gap between confessions from one author. `0` disables it. |
 
-The bot needs **View Channel** and **Send Messages** in the confession channel.
-For auto-threads it also needs **Create Public Threads** and **Send Messages in
-Threads**. Deleting confessions uses **Manage Messages**, and removing their
-threads uses **Manage Threads**. External image URLs may require **Embed
-Links**. No privileged gateway intents are required.
+The bot needs **View Channel**, **Send Messages**, and **Attach Files** in the
+confession channel. Uploaded images are rehosted to the moderation log channel
+when one is configured, otherwise to the confession channel, so the bot also
+needs those permissions there. For auto-threads it also needs **Create Public
+Threads** and **Send Messages in Threads**. Deleting confessions uses **Manage
+Messages**, and removing their threads uses **Manage Threads**. No privileged
+gateway intents are required.
 
 ## Commands
 

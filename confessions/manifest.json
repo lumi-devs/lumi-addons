@@ -33,9 +33,9 @@
     },
     {
       "key": "allowImages",
-      "label": "Allow Image URLs",
+      "label": "Allow Image Uploads",
       "type": "boolean",
-      "description": "Allow an optional image URL on confessions and replies.",
+      "description": "Allow an optional image upload on confessions and replies.",
       "default": true
     },
     {
@@ -51,5 +51,5 @@
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
-  "endUserDataStatement": "Stores a per-guild random salt, irreversible SHA-256 author hashes used only for bans and cooldowns, confession text and optional image URLs, message and thread IDs, and counters. No raw user IDs or reversible identity keys are stored; authors cannot be identified or direct-messaged."
+  "endUserDataStatement": "Stores a per-guild random salt, irreversible SHA-256 author hashes used only for bans and cooldowns, confession text, rehosted upload URLs, message and thread IDs, and counters. No raw user IDs or reversible identity keys are stored; authors cannot be identified or direct-messaged."
 }

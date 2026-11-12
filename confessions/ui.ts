@@ -12,6 +12,8 @@ import {
 import {
   ActionRowBuilder,
   ButtonStyle,
+  FileUploadBuilder,
+  LabelBuilder,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
   ModalBuilder,
@@ -31,13 +33,20 @@ export const ConfessImageId = `${ModuleName}:confession-image`;
 export const ReplyTextId = `${ModuleName}:reply-text`;
 export const ReplyImageId = `${ModuleName}:reply-image`;
 export const MaxTextLength = 2000;
-export const MaxImageUrlLength = 1000;
 export const ListPageSize = 10;
 
 function imageGallery(imageUrl: string): MediaGalleryBuilder {
   return new MediaGalleryBuilder().addItems(
     new MediaGalleryItemBuilder().setURL(imageUrl),
   );
+}
+
+function imageUploadLabel(customId: string): LabelBuilder {
+  return new LabelBuilder()
+    .setLabel("Attach an image (optional)")
+    .setFileUploadComponent(
+      new FileUploadBuilder().setCustomId(customId).setRequired(false),
+    );
 }
 
 function replyButton(number: number) {
@@ -94,17 +103,7 @@ export function buildConfessModal(allowImages: boolean): ModalBuilder {
   );
 
   if (allowImages) {
-    const image = new TextInputBuilder()
-      .setCustomId(ConfessImageId)
-      .setLabel("Image URL (optional)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false)
-      .setMaxLength(MaxImageUrlLength);
-    modal.addComponents(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        image,
-      ),
-    );
+    modal.addComponents(imageUploadLabel(ConfessImageId));
   }
 
   return modal;
@@ -129,17 +128,7 @@ export function buildReplyModal(
   );
 
   if (allowImages) {
-    const image = new TextInputBuilder()
-      .setCustomId(ReplyImageId)
-      .setLabel("Image URL (optional)")
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false)
-      .setMaxLength(MaxImageUrlLength);
-    modal.addComponents(
-      new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-        image,
-      ),
-    );
+    modal.addComponents(imageUploadLabel(ReplyImageId));
   }
 
   return modal;
