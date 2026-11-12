@@ -3,7 +3,12 @@ import type {
   ModuleServices,
 } from "@lumi/module-kit";
 import { Events, type Message } from "discord.js";
-import { ModuleName, readConfig } from "../config.js";
+import {
+  effectiveAutoBlockMinutes,
+  findProtectedRole,
+  ModuleName,
+  readConfig,
+} from "../config.js";
 import { recordRoleMentions } from "../data.js";
 import { applyBlock } from "../protection.js";
 
@@ -46,9 +51,8 @@ export const messageCreateListener: ListenerDefinition = {
     }
 
     if (config.protectedRoleIds.length === 0) return;
-    const protectedRoleIds = new Set(config.protectedRoleIds);
     const protectedMentions = roleIds.filter((roleId) =>
-      protectedRoleIds.has(roleId),
+      findProtectedRole(config, roleId) !== undefined,
     );
 
     for (const roleId of protectedMentions) {
@@ -56,7 +60,7 @@ export const messageCreateListener: ListenerDefinition = {
         services,
         guild,
         roleId,
-        config.autoBlockMinutes,
+        effectiveAutoBlockMinutes(config, roleId),
         false,
         config.logChannelId,
       ).catch((error: unknown) => {

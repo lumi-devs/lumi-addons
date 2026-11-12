@@ -22,8 +22,8 @@ Role mention analytics and timed mention protection for Lumi v2.
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
 | `logChannelId` | Channel | None | Channel where mention blocks and restorations are logged. |
-| `protectedRoleIds` | Role list | Empty | Roles temporarily made non-mentionable when mentioned. |
-| `autoBlockMinutes` | Number | `60` | Minutes a protected role stays non-mentionable after a mention. |
+| `protectedRoleIds` | Role list | Empty | Roles temporarily made non-mentionable when mentioned. Each role may set its own `autoBlockMinutes` override. |
+| `autoBlockMinutes` | Number | `60` | Default minutes a protected role stays non-mentionable after a mention; per-role overrides win when set. |
 | `analyticsEnabled` | Boolean | `true` | Count role mentions per UTC day. Disable to skip analytics entirely. |
 
 ## Commands
@@ -39,7 +39,7 @@ Analytics subcommands (`stats`, `top`) require the `mod.rolementions` permit;
 | `/rolementions top [limit]` | Show the most mentioned roles today (1-25). |
 | `/rolementions list` | List protected roles and active blocks. |
 | `/rolementions reset` | Clear today's mention counters. |
-| `/rolementions protect <role>` | Add a role to the protected list. |
+| `/rolementions protect <role> [minutes]` | Add a role to the protected list; `minutes` sets a per-role auto-block duration override. |
 | `/rolementions unprotect <role>` | Remove a role from the protected list. |
 | `/rolementions block <role> <minutes>` | Temporarily make a role non-mentionable now. |
 | `/rolementions unblock <role>` | Restore a blocked role before its block expires. |

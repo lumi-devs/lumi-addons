@@ -4,14 +4,49 @@ import { z } from "zod";
 export const ModuleName = "rolementions";
 export const ConfigKey = "rolementions-config";
 
+export const MaxAutoBlockMinutes = 43200;
+
+const AutoBlockMinutesSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(MaxAutoBlockMinutes);
+
+export const ProtectedRoleSchema = z.preprocess(
+  (raw) => (typeof raw === "string" ? { roleId: raw } : raw),
+  z.object({
+    roleId: z.string(),
+    autoBlockMinutes: AutoBlockMinutesSchema.optional(),
+  }),
+);
+
+export type ProtectedRole = z.infer<typeof ProtectedRoleSchema>;
+
 export const ConfigSchema = z.object({
   logChannelId: z.string().nullable().default(null),
-  protectedRoleIds: z.array(z.string()).default([]),
-  autoBlockMinutes: z.number().int().min(1).max(43200).default(60),
+  protectedRoleIds: z.array(ProtectedRoleSchema).default([]),
+  autoBlockMinutes: AutoBlockMinutesSchema.default(60),
   analyticsEnabled: z.boolean().default(true),
 });
 
 export type RoleMentionsConfig = z.infer<typeof ConfigSchema>;
+
+export function findProtectedRole(
+  config: RoleMentionsConfig,
+  roleId: string,
+): ProtectedRole | undefined {
+  return config.protectedRoleIds.find((entry) => entry.roleId === roleId);
+}
+
+export function effectiveAutoBlockMinutes(
+  config: RoleMentionsConfig,
+  roleId: string,
+): number {
+  return (
+    findProtectedRole(config, roleId)?.autoBlockMinutes ??
+    config.autoBlockMinutes
+  );
+}
 
 export async function readConfig(
   services: ModuleServices,

@@ -16,6 +16,9 @@ import {
   type Guild,
 } from "discord.js";
 import {
+  effectiveAutoBlockMinutes,
+  findProtectedRole,
+  MaxAutoBlockMinutes,
   ModuleName,
   readConfig,
   saveConfig,
@@ -172,9 +175,13 @@ async function listProtection(
   const blocks = await listBlocks(services, guild.id);
   const protectedLines =
     config.protectedRoleIds.length > 0
-      ? config.protectedRoleIds.map((roleId) => {
-          const role = guild.roles.cache.get(roleId);
-          return `⚡ ${roleText(roleId, role?.name)} — ${formatDuration(config.autoBlockMinutes)}`;
+      ? config.protectedRoleIds.map((entry) => {
+          const role = guild.roles.cache.get(entry.roleId);
+          const override =
+            entry.autoBlockMinutes !== undefined
+              ? ` (override, default ${formatDuration(config.autoBlockMinutes)})`
+              : "";
+          return `⚡ ${roleText(entry.roleId, role?.name)} — ${formatDuration(effectiveAutoBlockMinutes(config, entry.roleId))}${override}`;
         })
       : ["*None configured.*"];
   const blockLines =
@@ -302,7 +309,8 @@ async function protectRole(
     );
     return;
   }
-  if (config.protectedRoleIds.includes(role.id)) {
+  const existing = findProtectedRole(config, role.id);
+  if (existing) {
     await interaction.reply(
       ephemeralCard(
         makeInfoCard(
@@ -322,9 +330,32 @@ async function protectRole(
     return;
   }
 
+  const overrideMinutes = interaction.options.getInteger("minutes");
+  if (
+    overrideMinutes !== null &&
+    (overrideMinutes < 1 || overrideMinutes > MaxAutoBlockMinutes)
+  ) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard(
+          "Invalid Duration",
+          `Block duration must be between 1 and ${MaxAutoBlockMinutes} minutes.`,
+        ),
+      ),
+    );
+    return;
+  }
   const next: RoleMentionsConfig = {
     ...config,
-    protectedRoleIds: [...config.protectedRoleIds, role.id],
+    protectedRoleIds: [
+      ...config.protectedRoleIds,
+      {
+        roleId: role.id,
+        ...(overrideMinutes !== null
+          ? { autoBlockMinutes: overrideMinutes }
+          : {}),
+      },
+    ],
   };
   if (!(await saveConfig(services, guild.id, next))) {
     await interaction.reply(
@@ -341,7 +372,7 @@ async function protectRole(
   await interaction.reply(
     ephemeralCard(
       makeSuccessCard("Role Protected", [
-        `${roleText(role.id, check.role.name)} will be made non-mentionable for **${formatDuration(config.autoBlockMinutes)}** when mentioned.`,
+        `${roleText(role.id, check.role.name)} will be made non-mentionable for **${formatDuration(effectiveAutoBlockMinutes(next, role.id))}** when mentioned.`,
         "Use `/rolementions unprotect` to stop automatic protection.",
       ]),
     ),
@@ -355,7 +386,7 @@ async function unprotectRole(
   config: RoleMentionsConfig,
 ): Promise<void> {
   const role = interaction.options.getRole("role", true);
-  if (!config.protectedRoleIds.includes(role.id)) {
+  if (!findProtectedRole(config, role.id)) {
     await interaction.reply(
       ephemeralCard(
         makeErrorCard(
@@ -370,7 +401,7 @@ async function unprotectRole(
   const next: RoleMentionsConfig = {
     ...config,
     protectedRoleIds: config.protectedRoleIds.filter(
-      (roleId) => roleId !== role.id,
+      (entry) => entry.roleId !== role.id,
     ),
   };
   if (!(await saveConfig(services, guild.id, next))) {
@@ -544,6 +575,16 @@ export const rolementionsCommand: CommandDefinition = {
             .setName("role")
             .setDescription("Role to protect")
             .setRequired(true),
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName("minutes")
+            .setDescription(
+              "Auto-block duration override in minutes (default: module config)",
+            )
+            .setMinValue(1)
+            .setMaxValue(MaxAutoBlockMinutes)
+            .setRequired(false),
         ),
     )
     .addSubcommand((subcommand) =>

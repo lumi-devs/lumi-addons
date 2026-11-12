@@ -21,14 +21,14 @@
       "key": "protectedRoleIds",
       "label": "Protected Roles",
       "type": "multi-role",
-      "description": "Roles temporarily made non-mentionable when they are mentioned.",
+      "description": "Roles temporarily made non-mentionable when they are mentioned. Each role may set its own autoBlockMinutes override.",
       "default": []
     },
     {
       "key": "autoBlockMinutes",
       "label": "Auto Block Minutes",
       "type": "number",
-      "description": "Minutes a protected role stays non-mentionable after a mention.",
+      "description": "Default minutes a protected role stays non-mentionable after a mention; per-role overrides win when set.",
       "default": 60,
       "min": 1,
       "max": 43200
