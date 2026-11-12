@@ -1,4 +1,6 @@
 import { lookup } from "node:dns/promises";
+import * as http from "node:http";
+import * as https from "node:https";
 import { isIP } from "node:net";
 import {
   DiscordAPIError,
@@ -39,6 +41,14 @@ interface DownloadResult {
 
 interface DownloadError {
   error: string;
+}
+
+interface PinnedResponse {
+  status: number;
+  ok: boolean;
+  headers: { get(name: string): string | null };
+  body: AsyncIterable<Uint8Array> | null;
+  cancel(): void;
 }
 
 function parseHttpUrl(value: string): URL | null {
@@ -136,12 +146,86 @@ function isPrivateIpv4(host: string): boolean {
   );
 }
 
+function ipv6Groups(value: string): number[] | null {
+  const [head, tail] = value.split("::");
+  const parse = (part: string): number[] | null => {
+    if (part.includes(".")) {
+      if (isIP(part) !== 4) return null;
+      const octets = part.split(".").map((octet) => Number(octet));
+      const [a = 0, b = 0, c = 0, d = 0] = octets;
+      return [(a << 8) | b, (c << 8) | d];
+    }
+    const group = Number.parseInt(part, 16);
+    if (
+      !Number.isInteger(group) ||
+      group < 0 ||
+      group > 0xffff ||
+      !/^[0-9a-f]{1,4}$/.test(part)
+    ) {
+      return null;
+    }
+    return [group];
+  };
+  const headGroups: number[] = [];
+  for (const part of head ? head.split(":") : []) {
+    const groups = parse(part);
+    if (!groups) return null;
+    headGroups.push(...groups);
+  }
+  const tailGroups: number[] = [];
+  for (const part of tail ? tail.split(":") : []) {
+    const groups = parse(part);
+    if (!groups) return null;
+    tailGroups.push(...groups);
+  }
+  const groups = value.includes("::")
+    ? [
+        ...headGroups,
+        ...Array(Math.max(0, 8 - headGroups.length - tailGroups.length)).fill(0),
+        ...tailGroups,
+      ]
+    : [...headGroups, ...tailGroups];
+  return groups.length === 8 ? groups : null;
+}
+
+function mappedIpv4(value: string): string | null {
+  const groups = ipv6Groups(value);
+  if (!groups) return null;
+  const isMapped =
+    groups.slice(0, 5).every((group) => group === 0) &&
+    (groups[5] === 0xffff || groups.slice(0, 6).every((group) => group === 0));
+  if (!isMapped) return null;
+  const high = groups[6] ?? 0;
+  const low = groups[7] ?? 0;
+  return `${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`;
+}
+
 function isPrivateIpv6(host: string): boolean {
   const value = host.replace(/^\[|\]$/g, "").toLowerCase();
-  if (value === "::" || value === "::1") return true;
-  if (value.startsWith("::ffff:")) return isPrivateIpv4(value.slice(7));
-  if (value.startsWith("fc") || value.startsWith("fd")) return true;
-  return /^fe[89ab]/.test(value);
+  const groups = ipv6Groups(value);
+  if (!groups) return true;
+  if (groups.every((group) => group === 0)) return true;
+  if (groups.slice(0, 7).every((group) => group === 0) && groups[7] === 1) {
+    return true;
+  }
+  const mapped = mappedIpv4(value);
+  if (mapped) return isPrivateIpv4(mapped);
+  if (
+    groups[0] === 0x64 &&
+    groups[1] === 0xff9b &&
+    groups.slice(2, 6).every((group) => group === 0)
+  ) {
+    const high = groups[6] ?? 0;
+    const low = groups[7] ?? 0;
+    if (isPrivateIpv4(`${high >> 8}.${high & 0xff}.${low >> 8}.${low & 0xff}`)) {
+      return true;
+    }
+  }
+  if (groups[0] === 0x2002) return true;
+  const first = groups[0] ?? 0;
+  if ((first & 0xfe00) === 0xfc00) return true;
+  if ((first & 0xffc0) === 0xfe80) return true;
+  return (first & 0xff00) === 0xff00;
 }
 
 function isBlockedHost(host: string): boolean {
@@ -161,41 +245,97 @@ function isBlockedHost(host: string): boolean {
   return false;
 }
 
-async function isSafeImageUrl(value: string): Promise<boolean> {
+async function resolveSafeImage(
+  value: string,
+): Promise<{ url: URL; address: string } | null> {
   const url = parseHttpUrl(value);
-  if (!url || url.username || url.password) return false;
-  if (isBlockedHost(url.hostname)) return false;
-  if (isIP(url.hostname.replace(/^\[|\]$/g, "")) !== 0) return true;
+  if (!url || url.username || url.password) return null;
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (isBlockedHost(host)) return null;
+  if (isIP(host) !== 0) return { url, address: host };
   try {
-    const records = await lookup(url.hostname, { all: true, verbatim: true });
-    if (records.length === 0) return false;
-    return records.every((record) => !isBlockedHost(record.address));
+    const records = await lookup(host, { all: true, verbatim: true });
+    if (
+      records.length === 0 ||
+      records.some((record) => isBlockedHost(record.address))
+    ) {
+      return null;
+    }
+    const record = records.find((entry) => entry.family === 4) ?? records[0];
+    return record ? { url, address: record.address } : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-async function readCapped(response: Response, limit: number): Promise<Buffer | null> {
+function requestPinned(url: URL, address: string): Promise<PinnedResponse> {
+  return new Promise((resolve, reject) => {
+    const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    const options = {
+      protocol: url.protocol,
+      hostname: address,
+      port: url.port || undefined,
+      path: `${url.pathname || "/"}${url.search}`,
+      method: "GET",
+      headers: { Host: url.host, "User-Agent": "Lumi/2" },
+      signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
+    };
+    const onResponse = (response: http.IncomingMessage) => {
+      const status = response.statusCode ?? 0;
+      resolve({
+        status,
+        ok: status >= 200 && status < 300,
+        headers: {
+          get: (name) => {
+            const header = response.headers[name.toLowerCase()];
+            return Array.isArray(header)
+              ? header.join(", ")
+              : (header ?? null);
+          },
+        },
+        body: response,
+        cancel: () => response.destroy(),
+      });
+    };
+    const request =
+      url.protocol === "https:"
+        ? https.request(
+            {
+              ...options,
+              ...(isIP(hostname) === 0 ? { servername: hostname } : {}),
+              rejectUnauthorized: true,
+            },
+            onResponse,
+          )
+        : http.request(options, onResponse);
+    request.on("error", reject);
+    request.end();
+  });
+}
+
+async function readCapped(
+  response: PinnedResponse,
+  limit: number,
+): Promise<Buffer | null> {
   const declared = Number(response.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > limit) return null;
   const body = response.body;
-  if (!body) {
-    const buffer = Buffer.from(await response.arrayBuffer());
-    return buffer.byteLength > limit ? null : buffer;
-  }
-  const reader = body.getReader();
+  if (!body) return null;
   const chunks: Uint8Array[] = [];
   let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    total += value.byteLength;
-    if (total > limit) {
-      await reader.cancel().catch(() => undefined);
-      return null;
+  try {
+    for await (const value of body) {
+      const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+      total += chunk.byteLength;
+      if (total > limit) {
+        response.cancel();
+        return null;
+      }
+      chunks.push(chunk);
     }
-    chunks.push(value);
+  } catch {
+    response.cancel();
+    return null;
   }
   return Buffer.concat(chunks);
 }
@@ -222,18 +362,16 @@ function detectImageType(data: Buffer): "png" | "jpeg" | "gif" | null {
 
 async function fetchImageResponse(
   value: string,
-): Promise<Response | DownloadError> {
+): Promise<PinnedResponse | DownloadError> {
   let current = value;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
-    if (!(await isSafeImageUrl(current))) {
+    const safe = await resolveSafeImage(current);
+    if (!safe) {
       return { error: "That URL is not allowed." };
     }
-    let response: Response;
+    let response: PinnedResponse;
     try {
-      response = await fetch(current, {
-        redirect: "manual",
-        signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
-      });
+      response = await requestPinned(safe.url, safe.address);
     } catch {
       return { error: "Could not download the image." };
     }
@@ -241,7 +379,7 @@ async function fetchImageResponse(
       return response;
     }
     const location = response.headers.get("location");
-    await response.body?.cancel().catch(() => undefined);
+    response.cancel();
     if (!location || hop === MAX_REDIRECTS) {
       return { error: "Could not download the image." };
     }

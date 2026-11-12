@@ -53,6 +53,8 @@ async function hasPermit(
       : Array.from(roles.cache.keys()).filter(
           (roleId) => roleId !== guild.id,
         );
+  const enforcePermits =
+    (await services.config.get(guild.id, "enforcePermits")) === true;
   const result = await services.permits.explainPermit(
     {
       guildId: guild.id,
@@ -63,6 +65,7 @@ async function hasPermit(
         : {}),
       guildOwnerId: guild.ownerId,
       permitNode: node,
+      ...(enforcePermits ? { managerBypass: false } : {}),
     },
     services.client,
   );
