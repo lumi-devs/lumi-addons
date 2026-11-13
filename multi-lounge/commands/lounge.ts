@@ -53,9 +53,21 @@ export const loungeCommand: CommandDefinition = {
       return;
     }
 
+    await interaction.deferReply();
     const config = await getConfig(services, guildId);
+    if (!config) {
+      await interaction.editReply(
+        ephemeralCard(
+          makeErrorCard(
+            "Config Unavailable",
+            "I couldn't read the lounge settings right now. Try again in a moment.",
+          ),
+        ),
+      );
+      return;
+    }
     if (config.baseChannelIds.length === 0) {
-      await interaction.reply(
+      await interaction.editReply(
         ephemeralCard(
           makeWarningCard(
             "Not Configured",
@@ -72,6 +84,6 @@ export const loungeCommand: CommandDefinition = {
       readStats(services, guildId),
     ]);
 
-    await interaction.reply(statsCard(config, occupancy, stats));
+    await interaction.editReply(statsCard(config, occupancy, stats));
   },
 };

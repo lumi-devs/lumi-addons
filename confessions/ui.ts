@@ -168,7 +168,7 @@ export function replyCard(
     actionRows: [row(...buttons)],
     ...(imageUrl ? { mediaGallery: imageGallery(imageUrl) } : {}),
   };
-  const nested = path.includes(".");
+  const nested = path.split(".").length > 2;
   const title = nested
     ? "Reply to Reply"
     : `Reply to Confession #${number}`;

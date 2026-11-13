@@ -235,6 +235,20 @@ async function runDeleteRole(
   }
 
   const config = await getConfig(services, guildId);
+  if (
+    config.qualifyingRoleIds.includes(role.id) ||
+    config.anchorRoleId === role.id
+  ) {
+    await interaction.reply(
+      ephemeralCard(
+        makeErrorCard(
+          "Can't Delete That Role",
+          "That role is used by the booster role configuration.",
+        ),
+      ),
+    );
+    return;
+  }
   const reason =
     interaction.options.getString("reason") ?? "no reason provided";
   const record = await getRoleById(services, guildId, role.id);

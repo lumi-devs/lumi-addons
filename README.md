@@ -10,7 +10,7 @@ First-party addons for [Lumi v2](https://github.com/lumi-devs/Lumi). Every top-l
 | `booster-roles` | Roles | Gives server boosters a personal, customizable role with sharing. |
 | `confessions` | Community | Anonymous confessions with replies, cooldowns, and author bans. |
 | `dragme` | Voice | Request to be pulled into a voice channel, approved by someone inside. |
-| `economy-games` | Economy | Blackjack, roulette, crime, work/beg/fish/mine, and a shop. |
+| `economy-games` | Economy | Blackjack, roulette, crime, work/beg/fish/mine, and an item shop (`/gameshop`). |
 | `multi-lounge` | Voice | Auto-scaling temporary voice lounges with contiguous numbering. |
 | `promoter` | Roles | Auto-role for members advertising the server in status or server tag. |
 | `rolementions` | Moderation | Role mention analytics and timed mention protection. |

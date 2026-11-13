@@ -15,6 +15,7 @@ import type {
   StringSelectMenuInteraction,
   UserSelectMenuInteraction,
 } from "discord.js";
+import { MessageFlags } from "discord.js";
 import { getConfig, ModuleName, type Config } from "./config.js";
 import { getBlacklistRecord, listBlacklist } from "./data.js";
 import { Ids, parseInteractionId } from "./ids.js";
@@ -46,6 +47,26 @@ import {
   type SharedRoleView,
 } from "./ui.js";
 
+async function deferEphemeral(interaction: Interaction): Promise<void> {
+  if (!interaction.isRepliable() || interaction.deferred || interaction.replied) {
+    return;
+  }
+  await interaction
+    .deferReply({ flags: MessageFlags.Ephemeral })
+    .catch(() => undefined);
+}
+
+async function deferComponent(interaction: Interaction): Promise<void> {
+  if (
+    !interaction.isMessageComponent() ||
+    interaction.deferred ||
+    interaction.replied
+  ) {
+    return;
+  }
+  await interaction.deferUpdate().catch(() => undefined);
+}
+
 async function announceCreation(
   services: ModuleServices,
   config: Config,
@@ -75,12 +96,13 @@ async function handleCreateModal(
 ): Promise<void> {
   if (!interaction.isModalSubmit()) return;
 
+  await deferEphemeral(interaction);
   const guild = await resolveGuild(services, guildId);
   const member = guild
     ? await fetchMember(guild, interaction.user.id)
     : null;
   if (!guild || !member || !isEligible(member, config)) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard(
           "Boosters Only",
@@ -99,13 +121,13 @@ async function handleCreateModal(
     config,
   );
   if (!result.ok) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(makeErrorCard("Can't Create Role", result.reason)),
     );
     return;
   }
 
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       noPingCard(buildOwnerPanel(result.record, result.role, config)),
     ),
@@ -121,10 +143,11 @@ async function handleRenameModal(
 ): Promise<void> {
   if (!interaction.isModalSubmit()) return;
 
+  await deferEphemeral(interaction);
   const owned = await loadOwnedRole(services, guildId, interaction.user.id);
   const guild = await resolveGuild(services, guildId);
   if (!owned || !guild) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard("Role Gone", "You don't have a custom role anymore."),
       ),
@@ -139,14 +162,14 @@ async function handleRenameModal(
     config,
   );
   if (error) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(makeErrorCard("Can't Rename", error)),
     );
     return;
   }
 
   const refreshed = (await fetchRole(guild, owned.role.id)) ?? owned.role;
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       noPingCard(buildOwnerPanel(owned.record, refreshed, config)),
     ),
@@ -161,10 +184,11 @@ async function handleColorModal(
 ): Promise<void> {
   if (!interaction.isModalSubmit()) return;
 
+  await deferEphemeral(interaction);
   const owned = await loadOwnedRole(services, guildId, interaction.user.id);
   const guild = await resolveGuild(services, guildId);
   if (!owned || !guild) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard("Role Gone", "You don't have a custom role anymore."),
       ),
@@ -178,14 +202,14 @@ async function handleColorModal(
     interaction.fields.getTextInputValue("color"),
   );
   if (error) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(makeErrorCard("Can't Recolour", error)),
     );
     return;
   }
 
   const refreshed = (await fetchRole(guild, owned.role.id)) ?? owned.role;
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       noPingCard(buildOwnerPanel(owned.record, refreshed, config)),
     ),
@@ -201,10 +225,11 @@ async function handleShareSelect(
   const targetId = interaction.values[0];
   if (!targetId) return;
 
+  await deferEphemeral(interaction);
   const owned = await loadOwnedRole(services, guildId, interaction.user.id);
   const guild = await resolveGuild(services, guildId);
   if (!owned || !guild) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard("Role Gone", "You don't have a custom role anymore."),
       ),
@@ -221,13 +246,13 @@ async function handleShareSelect(
     config,
   );
   if (!result.ok) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(makeErrorCard("Can't Share", result.reason)),
     );
     return;
   }
 
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       noPingCard(
         makeSuccessCard("Role Shared", `<@${targetId}> now has your role.`),
@@ -241,10 +266,11 @@ async function handleManageShares(
   services: ModuleServices,
   guildId: string,
 ): Promise<void> {
+  await deferEphemeral(interaction);
   const owned = await loadOwnedRole(services, guildId, interaction.user.id);
   const guild = await resolveGuild(services, guildId);
   if (!owned || !guild) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard("Role Gone", "You don't have a custom role anymore."),
       ),
@@ -262,7 +288,7 @@ async function handleManageShares(
     });
   }
 
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       noPingCard(buildManageSharesPanel(interaction.user.id, options)),
     ),
@@ -277,9 +303,10 @@ async function handleUnshare(
   const targetId = interaction.values[0];
   if (!targetId) return;
 
+  await deferEphemeral(interaction);
   const owned = await loadOwnedRole(services, guildId, interaction.user.id);
   if (!owned) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard("Role Gone", "You don't have a custom role anymore."),
       ),
@@ -295,13 +322,13 @@ async function handleUnshare(
     owned.role,
   );
   if (!result.ok) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(makeErrorCard("Can't Unshare", result.reason)),
     );
     return;
   }
   if (!result.removed) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard("Not Shared", "That member doesn't have your role."),
       ),
@@ -309,7 +336,7 @@ async function handleUnshare(
     return;
   }
 
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       noPingCard(
         makeSuccessCard(
@@ -329,9 +356,10 @@ async function handleRenounce(
   const roleId = interaction.values[0];
   if (!roleId) return;
 
+  await deferEphemeral(interaction);
   const loaded = await loadRoleById(services, guildId, roleId);
   if (!loaded?.record.shares.includes(interaction.user.id)) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard("Role Gone", "That role is no longer shared with you."),
       ),
@@ -347,13 +375,13 @@ async function handleRenounce(
     loaded.role,
   );
   if (!result.ok) {
-    await interaction.reply(
+    await interaction.editReply(
       ephemeralCard(makeErrorCard("Can't Renounce", result.reason)),
     );
     return;
   }
 
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       noPingCard(
         makeSuccessCard(
@@ -412,9 +440,10 @@ export async function handleBoosterRoleInteraction(
   try {
     if (parsed.action === "admin-blacklist-page") {
       if (!interaction.isButton()) return;
+      await deferComponent(interaction);
       const records = await listBlacklist(services, guildId);
       const page = Number.parseInt(parsed.rest[1] ?? "0", 10);
-      await interaction.update(
+      await interaction.editReply(
         ephemeralCard(
           noPingCard(
             buildBlacklistPageCard(
@@ -556,13 +585,14 @@ export async function handleBoosterRoleInteraction(
       }
       case "delete": {
         if (!interaction.isButton()) return;
+        await deferEphemeral(interaction);
         const owned = await loadOwnedRole(
           services,
           guildId,
           interaction.user.id,
         );
         if (!owned) {
-          await interaction.reply(
+          await interaction.editReply(
             ephemeralCard(
               makeErrorCard(
                 "Role Gone",
@@ -572,7 +602,7 @@ export async function handleBoosterRoleInteraction(
           );
           return;
         }
-        await interaction.reply(
+        await interaction.editReply(
           ephemeralCard(
             noPingCard(
               buildDeleteConfirmPanel(interaction.user.id, owned.role),
@@ -583,13 +613,14 @@ export async function handleBoosterRoleInteraction(
       }
       case "delete-confirm": {
         if (!interaction.isButton()) return;
+        await deferEphemeral(interaction);
         const owned = await loadOwnedRole(
           services,
           guildId,
           interaction.user.id,
         );
         if (!owned) {
-          await interaction.reply(
+          await interaction.editReply(
             ephemeralCard(
               makeErrorCard(
                 "Role Gone",
@@ -607,17 +638,17 @@ export async function handleBoosterRoleInteraction(
           "deleted by the owner",
         );
         if (!deleted) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               makeErrorCard(
                 "Role Not Deleted",
-                "Your data was removed, but I couldn't delete the Discord role. Ask an administrator to delete it.",
+                "Nothing was removed. Ask an administrator to check my role hierarchy and try again.",
               ),
             ),
           );
           return;
         }
-        await interaction.update(
+        await interaction.editReply(
           ephemeralCard(
             makeSuccessCard(
               "Role Deleted",
@@ -629,13 +660,14 @@ export async function handleBoosterRoleInteraction(
       }
       case "delete-cancel": {
         if (!interaction.isButton()) return;
+        await deferComponent(interaction);
         const owned = await loadOwnedRole(
           services,
           guildId,
           interaction.user.id,
         );
         if (!owned) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               makeErrorCard(
                 "Role Gone",
@@ -645,7 +677,7 @@ export async function handleBoosterRoleInteraction(
           );
           return;
         }
-        await interaction.update(
+        await interaction.editReply(
           ephemeralCard(
             noPingCard(
               buildOwnerPanel(owned.record, owned.role, config),
@@ -656,13 +688,14 @@ export async function handleBoosterRoleInteraction(
       }
       case "shared-page": {
         if (!interaction.isButton()) return;
+        await deferComponent(interaction);
         const shared = await loadSharedRoles(
           services,
           guildId,
           interaction.user.id,
         );
         if (shared.length === 0) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               makeErrorCard(
                 "Role Gone",
@@ -682,7 +715,7 @@ export async function handleBoosterRoleInteraction(
         const member = guild
           ? await fetchMember(guild, interaction.user.id)
           : null;
-        await interaction.update(
+        await interaction.editReply(
           ephemeralCard(
             noPingCard(
               buildSharedPanel(
@@ -698,13 +731,14 @@ export async function handleBoosterRoleInteraction(
       }
       case "panel": {
         if (!interaction.isButton()) return;
+        await deferComponent(interaction);
         const owned = await loadOwnedRole(
           services,
           guildId,
           interaction.user.id,
         );
         if (owned) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               noPingCard(
                 buildOwnerPanel(owned.record, owned.role, config),
@@ -728,7 +762,7 @@ export async function handleBoosterRoleInteraction(
           ? await fetchMember(guild, interaction.user.id)
           : null;
         if (member && isEligible(member, config)) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               noPingCard(
                 buildCreatePanel(
@@ -742,14 +776,14 @@ export async function handleBoosterRoleInteraction(
           return;
         }
         if (views.length > 0) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               noPingCard(buildSharedPanel(interaction.user.id, views)),
             ),
           );
           return;
         }
-        await interaction.update(
+        await interaction.editReply(
           ephemeralCard(
             makeErrorCard(
               "Role Gone",
@@ -761,13 +795,14 @@ export async function handleBoosterRoleInteraction(
       }
       case "shared": {
         if (!interaction.isButton()) return;
+        await deferComponent(interaction);
         const owned = await loadOwnedRole(
           services,
           guildId,
           interaction.user.id,
         );
         if (owned) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               noPingCard(
                 buildOwnerPanel(owned.record, owned.role, config),
@@ -782,7 +817,7 @@ export async function handleBoosterRoleInteraction(
           interaction.user.id,
         );
         if (shared.length === 0) {
-          await interaction.update(
+          await interaction.editReply(
             ephemeralCard(
               makeInfoCard(
                 "Shared With Me",
@@ -801,7 +836,7 @@ export async function handleBoosterRoleInteraction(
         const member = guild
           ? await fetchMember(guild, interaction.user.id)
           : null;
-        await interaction.update(
+        await interaction.editReply(
           ephemeralCard(
             noPingCard(
               buildSharedPanel(
@@ -831,17 +866,16 @@ export async function handleBoosterRoleInteraction(
       error,
       customId: interaction.customId,
     });
-    if (interaction.isRepliable() && !interaction.replied) {
-      await interaction
-        .reply(
-          ephemeralCard(
-            makeErrorCard(
-              "Something Went Wrong",
-              "That action couldn't be completed. Try again.",
-            ),
-          ),
-        )
-        .catch(() => undefined);
+    const card = ephemeralCard(
+      makeErrorCard(
+        "Something Went Wrong",
+        "That action couldn't be completed. Try again.",
+      ),
+    );
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(card).catch(() => undefined);
+    } else if (interaction.isRepliable()) {
+      await interaction.reply(card).catch(() => undefined);
     }
   }
 }

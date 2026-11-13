@@ -261,26 +261,71 @@ export async function getConfession(
   return { meta, index };
 }
 
+async function readCounter(
+  services: ModuleServices,
+  guildId: string,
+): Promise<number> {
+  const value = await services.helpers.moduleData.get<number>(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    CounterKey,
+  );
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
 export async function listRecentConfessions(
   services: ModuleServices,
   guildId: string,
 ): Promise<ConfessionListItem[]> {
-  const entries = await services.helpers.moduleData.list<ConfessionIndex>({
-    guildId,
-    moduleName: ModuleName,
-    targetId: GuildTarget,
-    prefix: IndexPrefix,
-    limit: 1000,
-  });
+  const [counter, entries] = await Promise.all([
+    readCounter(services, guildId),
+    services.helpers.moduleData.list<ConfessionIndex>({
+      guildId,
+      moduleName: ModuleName,
+      targetId: GuildTarget,
+      prefix: IndexPrefix,
+      limit: 5000,
+    }),
+  ]);
 
-  const items: ConfessionListItem[] = [];
+  const byNumber = new Map<number, ConfessionIndex>();
   for (const entry of entries) {
     const number = Number(entry.key.slice(IndexPrefix.length));
     if (!Number.isInteger(number) || number < 1) continue;
-    items.push({ number, index: entry.value });
+    byNumber.set(number, entry.value);
   }
-  items.sort((a, b) => b.number - a.number);
-  return items;
+
+  if (counter > 5000) {
+    const newest = Math.min(counter, 1000);
+    const numbers = Array.from(
+      { length: newest },
+      (_, offset) => counter - offset,
+    );
+    const missing = numbers.filter((number) => !byNumber.has(number));
+    for (let start = 0; start < missing.length; start += 50) {
+      const chunk = missing.slice(start, start + 50);
+      const values = await Promise.all(
+        chunk.map((number) =>
+          services.helpers.moduleData.get<ConfessionIndex>(
+            guildId,
+            ModuleName,
+            GuildTarget,
+            `${IndexPrefix}${number}`,
+          ),
+        ),
+      );
+      for (let index = 0; index < chunk.length; index += 1) {
+        const value = values[index];
+        if (value) byNumber.set(chunk[index]!, value);
+      }
+    }
+  }
+
+  return [...byNumber.entries()]
+    .sort(([a], [b]) => b - a)
+    .slice(0, 1000)
+    .map(([number, index]) => ({ number, index }));
 }
 
 export async function deleteConfessionRecords(
@@ -319,7 +364,7 @@ export async function deleteConfessionRecords(
       guildId,
       moduleName: ModuleName,
       targetId: GuildTarget,
-      prefix: `${KidsPrefix}${number}`,
+      prefix: `${KidsPrefix}${number}.`,
       limit: 5000,
     }),
   ]);
@@ -339,6 +384,12 @@ export async function deleteConfessionRecords(
         GuildTarget,
         entry.key,
       ),
+    ),
+    services.helpers.moduleData.delete(
+      guildId,
+      ModuleName,
+      GuildTarget,
+      `${KidsPrefix}${number}`,
     ),
   ]);
 }
@@ -384,6 +435,30 @@ export async function markReported(
     key,
     marker,
   );
+}
+
+function reportClaimKey(guildId: string, key: string): string {
+  return `${ModuleName}:report-claim:${guildId}:${key}`;
+}
+
+export async function claimReport(
+  services: ModuleServices,
+  guildId: string,
+  key: string,
+): Promise<boolean> {
+  return services.helpers.cache
+    .setNx(reportClaimKey(guildId, key), String(Date.now()), 60_000)
+    .catch(() => true);
+}
+
+export async function releaseReportClaim(
+  services: ModuleServices,
+  guildId: string,
+  key: string,
+): Promise<void> {
+  await services.helpers.cache
+    .del(reportClaimKey(guildId, key))
+    .catch(() => undefined);
 }
 
 export async function banAuthor(
@@ -558,37 +633,52 @@ async function clearAuthorLinks(
   userId: string,
 ): Promise<number> {
   let cleared = 0;
-  const confessions = await listRecentConfessions(services, guildId);
-  for (const { number } of confessions) {
-    const record = await getConfession(services, guildId, number);
-    if (record?.meta.authorId !== userId) continue;
-    await services.helpers.moduleData.set(
-      guildId,
-      ModuleName,
-      record.index.messageId,
-      MetaKey,
-      { ...record.meta, authorId: null },
-    );
-    cleared += 1;
-  }
+  const counter = await readCounter(services, guildId);
+  const batchSize = 20;
 
-  const replies = await services.helpers.moduleData.list<ReplyRecord>({
-    guildId,
-    moduleName: ModuleName,
-    targetId: GuildTarget,
-    prefix: ReplyIndexPrefix,
-    limit: 5000,
-  });
-  for (const entry of replies) {
-    if (entry.value.authorId !== userId) continue;
-    await services.helpers.moduleData.set(
-      guildId,
-      ModuleName,
-      GuildTarget,
-      `${ReplyIndexPrefix}${entry.value.path}`,
-      { ...entry.value, authorId: null },
+  for (let start = 1; start <= counter; start += batchSize) {
+    const end = Math.min(counter, start + batchSize - 1);
+    const numbers: number[] = [];
+    for (let number = start; number <= end; number += 1) {
+      numbers.push(number);
+    }
+    await Promise.all(
+      numbers.map(async (number) => {
+        const record = await getConfession(services, guildId, number);
+        if (record?.meta.authorId === userId) {
+          await services.helpers.moduleData.set(
+            guildId,
+            ModuleName,
+            record.index.messageId,
+            MetaKey,
+            { ...record.meta, authorId: null },
+          );
+          cleared += 1;
+        }
+
+        const replies = await services.helpers.moduleData.list<ReplyRecord>({
+          guildId,
+          moduleName: ModuleName,
+          targetId: GuildTarget,
+          prefix: `${ReplyIndexPrefix}${number}.`,
+          limit: 5000,
+        });
+        await Promise.all(
+          replies
+            .filter((entry) => entry.value.authorId === userId)
+            .map(async (entry) => {
+              await services.helpers.moduleData.set(
+                guildId,
+                ModuleName,
+                GuildTarget,
+                `${ReplyIndexPrefix}${entry.value.path}`,
+                { ...entry.value, authorId: null },
+              );
+              cleared += 1;
+            }),
+        );
+      }),
     );
-    cleared += 1;
   }
   return cleared;
 }

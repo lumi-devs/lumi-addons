@@ -12,6 +12,7 @@ const RoleRecordSchema = z.object({
   roleId: z.string(),
   ownerId: z.string(),
   shares: z.array(z.string()),
+  pendingRemovals: z.array(z.string()).default([]),
   createdAt: z.number(),
   graceUntil: z.number().nullable(),
 });

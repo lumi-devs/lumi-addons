@@ -57,7 +57,7 @@ export function allBusy(
 export async function getConfig(
   services: ModuleServices,
   guildId: string,
-): Promise<Config> {
+): Promise<Config | null> {
   let stored: unknown = null;
   try {
     stored = await services.moduleConfig.read(
@@ -70,21 +70,22 @@ export async function getConfig(
       guildId,
       error,
     });
+    return null;
   }
 
   const parsed = ConfigSchema.safeParse(stored ?? {});
-  if (parsed.success) {
-    return {
-      ...parsed.data,
-      baseChannelIds: [...new Set(parsed.data.baseChannelIds)],
-    };
+  if (!parsed.success) {
+    services.observability.logger.warn(
+      "multi-lounge config invalid, skipping",
+      { guildId, issues: parsed.error.issues },
+    );
+    return null;
   }
 
-  services.observability.logger.warn(
-    "multi-lounge config invalid, using defaults",
-    { guildId, issues: parsed.error.issues },
-  );
-  return ConfigSchema.parse({});
+  return {
+    ...parsed.data,
+    baseChannelIds: [...new Set(parsed.data.baseChannelIds)],
+  };
 }
 
 function groupKey(baseId: string): string {

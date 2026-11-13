@@ -10,6 +10,7 @@ import {
 } from "@lumi/ui";
 import { PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { ModuleName, readConfig, type Config } from "../config.js";
+import { setConfessButton } from "../cards.js";
 import {
   banAuthor,
   deleteConfessionRecords,
@@ -364,6 +365,18 @@ export const confessionsCommand: CommandDefinition = {
         number,
         record.index.messageId,
       );
+      const newest = (
+        await listRecentConfessions(services, guildId).catch(() => [])
+      )[0];
+      if (newest) {
+        await setConfessButton(
+          services,
+          guildId,
+          newest.number,
+          true,
+          config.reportChannelId !== null,
+        );
+      }
       await logModeration(services, config, number, "deleted");
 
       const body = `**Confession #${number}** was removed.`;

@@ -22,10 +22,12 @@ import {
   type SendableChannels,
 } from "discord.js";
 import { ModuleName, readConfig } from "../config.js";
+import { setConfessButton } from "../cards.js";
 import { openConfessModal } from "../openConfess.js";
 import {
   authorHashFor,
   claimCooldown,
+  claimReport,
   clearCooldown,
   confessionReportKey,
   deleteConfessionRecords,
@@ -38,6 +40,7 @@ import {
   markReported,
   nextConfessionNumber,
   nextReplyPath,
+  releaseReportClaim,
   replyReportKey,
   saveConfession,
   saveReply,
@@ -60,7 +63,11 @@ import {
   ReplyImageId,
   ReplyTextId,
 } from "../ui.js";
-import { readUploadedImage } from "../uploads.js";
+import {
+  attachmentFromUpload,
+  readUploadedImage,
+  stableCdnUrl,
+} from "../uploads.js";
 
 async function deferEphemeral(interaction: Interaction): Promise<void> {
   if (!interaction.isRepliable() || interaction.deferred || interaction.replied) {
@@ -162,40 +169,6 @@ async function sendModeratorAudit(
     .catch(() => undefined);
 }
 
-async function removeConfessButton(
-  services: ModuleServices,
-  guildId: string,
-  previous: { number: number } | null,
-  reportable: boolean,
-): Promise<void> {
-  if (!previous) return;
-  const record = await getConfession(services, guildId, previous.number).catch(
-    () => null,
-  );
-  if (!record?.meta.text) return;
-  const channel = await services.client.channels
-    .fetch(record.index.channelId)
-    .catch(() => null);
-  if (!channel || !("messages" in channel)) return;
-  await channel.messages
-    .fetch(record.index.messageId)
-    .then((message) =>
-      message.edit(
-        cardMessage(
-          confessionCard(
-            record.meta.number,
-            record.meta.text ?? "",
-            record.meta.title ?? null,
-            record.meta.imageUrl ?? null,
-            reportable,
-            false,
-          ),
-        ),
-      ),
-    )
-    .catch(() => undefined);
-}
-
 async function handleConfessSubmit(
   interaction: ModalSubmitInteraction,
   services: ModuleServices,
@@ -282,10 +255,19 @@ async function handleConfessSubmit(
     return;
   }
 
-  let imageUrl: string | null = null;
-  if (upload) {
-    imageUrl = upload.url;
+  const attachment = upload ? await attachmentFromUpload(upload) : null;
+  if (upload && !attachment) {
+    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
+    await replyEphemeral(
+      interaction,
+      makeErrorCard(
+        "Could Not Process Image",
+        "The image could not be read. Please try again with a smaller image.",
+      ),
+    );
+    return;
   }
+  const cardImageUrl = attachment ? `attachment://${attachment.name}` : null;
 
   let number: number;
   try {
@@ -313,18 +295,19 @@ async function handleConfessSubmit(
 
   let message: Message;
   try {
-    message = await channel.send(
-      cardCreateOptions(
+    message = await channel.send({
+      ...cardCreateOptions(
         confessionCard(
           number,
           text,
           title,
-          imageUrl,
+          cardImageUrl,
           config.reportChannelId !== null,
           true,
         ),
       ),
-    );
+      ...(attachment ? { files: [attachment] } : {}),
+    });
   } catch (error) {
     services.observability?.logger?.warn?.("confession post failed", {
       guildId,
@@ -340,6 +323,10 @@ async function handleConfessSubmit(
     );
     return;
   }
+
+  const imageUrl = attachment
+    ? stableCdnUrl(message.attachments.first()?.url ?? "") || null
+    : null;
 
   let threadId: string | null = null;
   if (config.autoThread) {
@@ -425,12 +412,15 @@ async function handleConfessSubmit(
     imageUrl,
   );
 
-  await removeConfessButton(
-    services,
-    guildId,
-    previous,
-    config.reportChannelId !== null,
-  );
+  if (previous) {
+    await setConfessButton(
+      services,
+      guildId,
+      previous.number,
+      false,
+      config.reportChannelId !== null,
+    );
+  }
 }
 
 async function handleReplyButton(
@@ -619,10 +609,18 @@ async function handleReplySubmit(
     return;
   }
 
-  let imageUrl: string | null = null;
-  if (upload) {
-    imageUrl = upload.url;
+  const attachment = upload ? await attachmentFromUpload(upload) : null;
+  if (upload && !attachment) {
+    await replyEphemeral(
+      interaction,
+      makeErrorCard(
+        "Could Not Process Image",
+        "The image could not be read. Please try again with a smaller image.",
+      ),
+    );
+    return;
   }
+  const cardImageUrl = attachment ? `attachment://${attachment.name}` : null;
 
   const path = await nextReplyPath(services, guildId, number, parentPath);
   const isOp = authorHash === record.meta.authorHash;
@@ -631,17 +629,21 @@ async function handleReplySubmit(
     number,
     path,
     text,
-    imageUrl,
+    cardImageUrl,
     config.reportChannelId !== null,
     isOp,
     quote,
   );
+  const basePayload = {
+    ...cardCreateOptions(card),
+    ...(attachment ? { files: [attachment] } : {}),
+  };
   const payload: MessageReplyOptions = parent
     ? {
-        ...cardCreateOptions(card),
+        ...basePayload,
         reply: { messageReference: parent.messageId, failIfNotExists: false },
       }
-    : cardCreateOptions(card);
+    : basePayload;
 
   let sent: Message;
   try {
@@ -660,6 +662,10 @@ async function handleReplySubmit(
     );
     return;
   }
+
+  const imageUrl = attachment
+    ? stableCdnUrl(sent.attachments.first()?.url ?? "") || null
+    : null;
 
   try {
     await saveReply(services, guildId, {
@@ -680,6 +686,15 @@ async function handleReplySubmit(
       guildId,
       error,
     });
+    await sent.delete().catch(() => undefined);
+    await replyEphemeral(
+      interaction,
+      makeErrorCard(
+        "Could Not Reply",
+        "The reply could not be recorded, so it was removed. Please try again.",
+      ),
+    );
+    return;
   }
 
   await replyEphemeral(
@@ -736,12 +751,21 @@ async function submitReport(
     return;
   }
 
+  if (!(await claimReport(services, options.guildId, options.key))) {
+    await replyEphemeral(
+      interaction,
+      makeWarningCard("Already Reported", options.alreadyReported),
+    );
+    return;
+  }
+
   await deferEphemeral(interaction);
 
   const channel = await services.client.channels
     .fetch(options.reportChannelId)
     .catch(() => null);
   if (!channel?.isSendable()) {
+    await releaseReportClaim(services, options.guildId, options.key);
     await replyEphemeral(
       interaction,
       makeErrorCard(
@@ -763,6 +787,7 @@ async function submitReport(
       guildId: options.guildId,
       error,
     });
+    await releaseReportClaim(services, options.guildId, options.key);
     await replyEphemeral(
       interaction,
       makeErrorCard(

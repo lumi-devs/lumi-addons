@@ -47,7 +47,7 @@ async function withLocalLock<T>(
   }
 }
 
-async function withRoleLock<T>(
+export async function withRoleLock<T>(
   services: ModuleServices,
   key: string,
   task: () => Promise<T>,
@@ -94,7 +94,8 @@ export function validateRoleName(
   maxLength: number,
 ): NameValidation {
   const value = raw
-    .replace(/\p{Cc}/gu, " ")
+    .normalize("NFC")
+    .replace(/[\p{Cc}\p{Cf}]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (value.length === 0) {
@@ -365,6 +366,7 @@ async function createBoosterRoleUnlocked(
     roleId: created.id,
     ownerId: member.id,
     shares: [],
+    pendingRemovals: [],
     createdAt: Date.now(),
     graceUntil: null,
   };
@@ -446,6 +448,10 @@ export async function shareRoleWithMember(
   targetId: string,
   config: Config,
 ): Promise<ShareResult> {
+  return withRoleLock(services, `role:${guild.id}:${record.roleId}`, async () => {
+    const fresh = await getRoleById(services, guild.id, record.roleId);
+    if (!fresh) return { ok: false, reason: "That role no longer exists." };
+    record = fresh;
   if (targetId === record.ownerId) {
     return { ok: false, reason: "You already own this role." };
   }
@@ -502,6 +508,7 @@ export async function shareRoleWithMember(
     return { ok: false, reason: "I couldn't save the share. Try again." };
   }
   return { ok: true, record };
+  });
 }
 
 export async function removeShareFromRole(
@@ -510,33 +517,81 @@ export async function removeShareFromRole(
   record: RoleRecord,
   targetId: string,
   role: Role | null,
-  options: { force?: boolean } = {},
 ): Promise<RemoveShareResult> {
-  if (!record.shares.includes(targetId)) {
-    return { ok: true, removed: false };
-  }
+  return withRoleLock(services, `role:${guildId}:${record.roleId}`, async () => {
+    const fresh = await getRoleById(services, guildId, record.roleId);
+    if (!fresh) return { ok: true, removed: false };
+    record = fresh;
+    if (!record.shares.includes(targetId)) {
+      return { ok: true, removed: false };
+    }
 
-  if (role) {
-    const guild = await resolveGuild(services, guildId);
-    const target = guild ? await fetchMember(guild, targetId) : null;
-    if (target?.roles.cache.has(role.id)) {
-      const removed = await target.roles
-        .remove(role, "Booster role unshared")
-        .then(() => true)
-        .catch(() => false);
-      if (!removed && options.force !== true) {
-        return {
-          ok: false,
-          reason: "I couldn't remove the role from that member. Check role hierarchy.",
-        };
+    if (role) {
+      const target = await fetchMember(role.guild, targetId);
+      if (target?.roles.cache.has(role.id)) {
+        const removed = await target.roles
+          .remove(role, "Booster role unshared")
+          .then(() => true)
+          .catch(() => false);
+        if (!removed) {
+          record.pendingRemovals = [
+            ...new Set([...record.pendingRemovals, targetId]),
+          ];
+          await setRoleRecord(services, guildId, record);
+          return {
+            ok: false,
+            reason:
+              "I couldn't remove the role from that member. Check role hierarchy.",
+          };
+        }
       }
     }
-  }
 
-  record.shares = record.shares.filter((id) => id !== targetId);
-  await setRoleRecord(services, guildId, record);
-  await removeSharedRole(services, guildId, targetId, record.roleId);
-  return { ok: true, removed: true };
+    record.shares = record.shares.filter((id) => id !== targetId);
+    record.pendingRemovals = record.pendingRemovals.filter(
+      (id) => id !== targetId,
+    );
+    await setRoleRecord(services, guildId, record);
+    await removeSharedRole(services, guildId, targetId, record.roleId);
+    return { ok: true, removed: true };
+  });
+}
+
+export async function retryPendingRemovals(
+  services: ModuleServices,
+  guild: Guild,
+  record: RoleRecord,
+): Promise<RoleRecord> {
+  if (record.pendingRemovals.length === 0) return record;
+  return withRoleLock(services, `role:${guild.id}:${record.roleId}`, async () => {
+    const fresh = await getRoleById(services, guild.id, record.roleId);
+    if (!fresh || fresh.pendingRemovals.length === 0) return fresh ?? record;
+    const role = await fetchRole(guild, fresh.roleId);
+    const pending: string[] = [];
+    const cleared: string[] = [];
+    for (const memberId of fresh.pendingRemovals) {
+      const member = await fetchMember(guild, memberId);
+      if (!role || !member?.roles.cache.has(role.id)) {
+        cleared.push(memberId);
+        continue;
+      }
+      const removed = await member.roles
+        .remove(role, "Retrying booster role removal")
+        .then(() => true)
+        .catch(() => false);
+      if (removed) cleared.push(memberId);
+      else pending.push(memberId);
+    }
+    if (cleared.length > 0) {
+      fresh.pendingRemovals = pending;
+      fresh.shares = fresh.shares.filter((id) => !cleared.includes(id));
+      await setRoleRecord(services, guild.id, fresh);
+      for (const memberId of cleared) {
+        await removeSharedRole(services, guild.id, memberId, fresh.roleId);
+      }
+    }
+    return fresh;
+  });
 }
 
 export async function removeUserFromShares(
@@ -556,7 +611,6 @@ export async function removeUserFromShares(
       record,
       userId,
       role,
-      { force: true },
     );
     if (result.ok && result.removed) removed += 1;
   }
@@ -619,28 +673,34 @@ export async function deleteBoosterRole(
   const guild = await resolveGuild(services, guildId);
   let roleName = "custom role";
   let deleted = false;
+  let shouldCleanup = false;
   if (guild) {
     const role = await fetchRole(guild, record.roleId);
     if (role) {
       roleName = role.name;
-      const protection = protectedRoleReason(guild, role);
-      if (!protection) {
-        const guard = await botRoleGuard(guild, role);
-        deleted =
-          guard === null &&
-          (await role
-            .delete(`Booster role cleanup: ${reason}`)
-            .then(() => true)
-            .catch(() => false));
-        if (!deleted) await stripRoleFromHolders(guild, role.id, record);
-      }
+      if (protectedRoleReason(guild, role)) return false;
+      const guard = await botRoleGuard(guild, role);
+      deleted =
+        guard === null &&
+        (await role
+          .delete(`Booster role cleanup: ${reason}`)
+          .then(() => true)
+          .catch(() => false));
+      if (!deleted) await stripRoleFromHolders(guild, role.id, record);
+      shouldCleanup = deleted;
     } else {
       deleted = true;
+      shouldCleanup = true;
     }
+  } else {
+    deleted = true;
+    shouldCleanup = true;
   }
 
-  await cleanupRoleRecord(services, guildId, record);
-  await logRoleRemoval(services, config, record, roleName, reason);
+  if (shouldCleanup) {
+    await cleanupRoleRecord(services, guildId, record);
+    await logRoleRemoval(services, config, record, roleName, reason);
+  }
   return deleted;
 }
 
@@ -684,7 +744,6 @@ export async function purgeUserRoles(
       record,
       userId,
       role,
-      { force: true },
     );
     if (result.ok && result.removed) shares += 1;
   }

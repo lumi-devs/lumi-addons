@@ -49,9 +49,11 @@ plus lifetime created, removed, and peak-concurrent counters.
 
 ## Permissions
 
-- The bot needs **Manage Channels**, **View Channels**, and **Connect** in the
-  affected channels and category. Clone creation also needs the category and
-  base channel to be visible to the bot.
+- The bot needs **Manage Channels**, **View Channels**, **Connect**, and
+  **Move Members** in the affected channels and category. Clone creation also
+  needs the category and base channel to be visible to the bot; **Move Members**
+  lets it move a joiner into the newly created lounge. If the move fails, the
+  unused clone is deleted instead of being kept empty.
 - `/lounge stats` requires the `mod.*` permit and Discord's **Manage Server**
   permission. Errors and denials are ephemeral.
 - The bot's gateway configuration must include voice state events; the host

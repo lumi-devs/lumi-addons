@@ -17,6 +17,7 @@ import { getRoleById, getUserRoleIndex, type RoleRecord } from "./data.js";
 import { IdPrefix } from "./ids.js";
 import { handleBoosterRoleInteraction } from "./interactions.js";
 import memberUpdateListener from "./listeners/member-update.js";
+import memberRemoveListener from "./listeners/member-remove.js";
 import { purgeUserRoles } from "./roles.js";
 import { sweepTask } from "./tasks/sweep.js";
 
@@ -98,7 +99,7 @@ const boosterRolesModule: ModuleDefinition = defineModule({
   },
   permitNodes: [PermitNode],
   commands: [boosterRoleCommand],
-  listeners: [memberUpdateListener, interactionListener],
+  listeners: [memberUpdateListener, memberRemoveListener, interactionListener],
   tasks: [sweepTask],
   async onLoad() {
     return [];

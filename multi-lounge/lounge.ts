@@ -1,6 +1,7 @@
 import type { ModuleServices } from "@lumi/module-kit";
 import {
   ChannelType,
+  DiscordAPIError,
   type Guild,
   type GuildMember,
   type OverwriteData,
@@ -70,10 +71,17 @@ async function resolveVoiceChannel(
   channelId: string,
 ): Promise<VoiceChannel | null> {
   const cached = guild.channels.cache.get(channelId);
-  const channel =
-    cached ?? (await guild.channels.fetch(channelId).catch(() => null));
-  if (!channel || channel.type !== ChannelType.GuildVoice) return null;
-  return channel;
+  if (cached) {
+    return cached.type === ChannelType.GuildVoice ? cached : null;
+  }
+  try {
+    const channel = await guild.channels.fetch(channelId);
+    if (!channel || channel.type !== ChannelType.GuildVoice) return null;
+    return channel;
+  } catch (error) {
+    if (error instanceof DiscordAPIError && error.code === 10003) return null;
+    throw error;
+  }
 }
 
 function overwriteSnapshots(base: VoiceChannel): OverwriteData[] {
@@ -176,16 +184,33 @@ async function deleteAllExtras(
   services: ModuleServices,
   guild: Guild,
   extras: readonly ExtraLounge[],
-): Promise<void> {
+): Promise<ExtraLounge[]> {
+  const failed: ExtraLounge[] = [];
   for (const extra of extras) {
     const channel = await resolveVoiceChannel(guild, extra.channelId);
     if (channel) {
-      await channel
+      const deleted = await channel
         .delete("Multi Lounge: base channel removed")
-        .catch(() => undefined);
+        .then(() => true)
+        .catch((error) => {
+          services.observability.logger.warn(
+            "multi-lounge extra delete failed",
+            {
+              guildId: guild.id,
+              channelId: extra.channelId,
+              error,
+            },
+          );
+          return false;
+        });
+      if (!deleted) {
+        failed.push(extra);
+        continue;
+      }
     }
     await recordDeletion(services, guild.id);
   }
+  return failed;
 }
 
 async function findBaseForExtra(
@@ -268,8 +293,12 @@ async function handleArrival(
   const base = await resolveVoiceChannel(guild, baseId);
   if (!base) {
     const group = await readGroup(services, guild.id, baseId);
-    await deleteAllExtras(services, guild, group.extras);
-    await removeGroup(services, guild.id, baseId);
+    const failed = await deleteAllExtras(services, guild, group.extras);
+    if (failed.length === 0) {
+      await removeGroup(services, guild.id, baseId);
+    } else {
+      await writeGroup(services, guild.id, { baseId, extras: failed });
+    }
     return;
   }
 
@@ -300,17 +329,38 @@ async function handleArrival(
     return;
   }
 
+  if (member?.voice.channelId === channelId) {
+    const moved = await member.voice
+      .setChannel(created.channelId, "Multi Lounge: opening a new lounge")
+      .then(() => true)
+      .catch((error) => {
+        services.observability.logger.warn(
+          "multi-lounge move to new lounge failed",
+          {
+            guildId: guild.id,
+            channelId: created.channelId,
+            userId: member.id,
+            error,
+          },
+        );
+        return false;
+      });
+    if (!moved) {
+      await resolveVoiceChannel(guild, created.channelId)
+        .then((channel) =>
+          channel?.delete("Multi Lounge: unseeded lounge"),
+        )
+        .catch(() => undefined);
+      await releaseCreationCooldown(services, guild.id, baseId);
+      return;
+    }
+  }
+
   await writeGroup(services, guild.id, {
     baseId,
     extras: [...extras, created],
   });
   await recordCreation(services, guild.id);
-
-  if (channelId === baseId && member?.voice.channelId === baseId) {
-    await member.voice
-      .setChannel(created.channelId, "Multi Lounge: opening a new lounge")
-      .catch(() => undefined);
-  }
 }
 
 export async function handleVoiceState(
@@ -325,7 +375,7 @@ export async function handleVoiceState(
 
   await serialize(guildId, async () => {
     const config = await getConfig(services, guildId);
-    if (config.baseChannelIds.length === 0) return;
+    if (!config || config.baseChannelIds.length === 0) return;
     const guild = await resolveGuild(services, guildId);
     if (!guild) return;
 
@@ -351,6 +401,7 @@ export async function reconcileGuild(
 ): Promise<number> {
   return serialize(guildId, async () => {
     const config = await getConfig(services, guildId);
+    if (!config) return 0;
     const guild = await resolveGuild(services, guildId);
     if (!guild) return 0;
 
@@ -358,8 +409,15 @@ export async function reconcileGuild(
     const groups = await listGroups(services, guildId);
     for (const group of groups) {
       if (!configured.has(group.baseId)) {
-        await deleteAllExtras(services, guild, group.extras);
-        await removeGroup(services, guildId, group.baseId);
+        const failed = await deleteAllExtras(services, guild, group.extras);
+        if (failed.length === 0) {
+          await removeGroup(services, guildId, group.baseId);
+        } else {
+          await writeGroup(services, guildId, {
+            baseId: group.baseId,
+            extras: failed,
+          });
+        }
       }
     }
 
@@ -370,8 +428,12 @@ export async function reconcileGuild(
       const base = await resolveVoiceChannel(guild, baseId);
       if (!base) {
         const group = await readGroup(services, guildId, baseId);
-        await deleteAllExtras(services, guild, group.extras);
-        await removeGroup(services, guildId, baseId);
+        const failed = await deleteAllExtras(services, guild, group.extras);
+        if (failed.length === 0) {
+          await removeGroup(services, guildId, baseId);
+        } else {
+          await writeGroup(services, guildId, { baseId, extras: failed });
+        }
         continue;
       }
       const group = await readGroup(services, guildId, baseId);

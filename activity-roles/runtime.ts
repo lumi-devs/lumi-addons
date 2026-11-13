@@ -124,6 +124,13 @@ async function reconcileOnce(
   const removed: string[] = [];
   const skipped: string[] = [];
   const manager = canManageMember(guild, member);
+  const beforeKey = [...grantedBefore].sort().join(":");
+  let persistedKey = beforeKey;
+
+  const persistGranted = async (): Promise<void> => {
+    await setGranted(services, guild.id, member.id, [...nextGranted]);
+    persistedKey = [...nextGranted].sort().join(":");
+  };
 
   for (const roleId of grantedBefore) {
     if (desired.has(roleId)) continue;
@@ -161,18 +168,21 @@ async function reconcileOnce(
       continue;
     }
     try {
-      await member.roles.add(roleId, RoleChangeReason);
       nextGranted.add(roleId);
+      await persistGranted();
+      await member.roles.add(roleId, RoleChangeReason);
       added.push(roleId);
     } catch (error) {
+      if (nextGranted.delete(roleId)) {
+        await persistGranted().catch(() => undefined);
+      }
       skipped.push(roleId);
       logRoleFailure(services, guild.id, member.id, roleId, error);
     }
   }
 
-  const beforeKey = [...grantedBefore].sort().join(":");
   const afterKey = [...nextGranted].sort().join(":");
-  if (beforeKey !== afterKey) {
+  if (persistedKey !== afterKey) {
     await setGranted(services, guild.id, member.id, [...nextGranted]);
   }
 

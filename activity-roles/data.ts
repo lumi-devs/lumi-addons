@@ -12,6 +12,7 @@ const RuleTargetId = "_";
 const RulePrefix = "rule:";
 const GrantedKey = "granted";
 const RuleCacheTtlMs = 30_000;
+const RuleQueryLimit = 5_000;
 
 const ActivityRuleSchema = z.object({
   type: z.enum(ActivityTypeNames),
@@ -53,6 +54,7 @@ export async function listRules(
     moduleName: ModuleName,
     targetId: RuleTargetId,
     prefix: RulePrefix,
+    limit: RuleQueryLimit,
   });
   const rules: ActivityRule[] = [];
   for (const entry of entries) {

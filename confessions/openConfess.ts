@@ -45,9 +45,12 @@ export async function openConfessModal(
     return;
   }
 
-  const channel = await services.client.channels
-    .fetch(config.confessionChannelId)
-    .catch(() => null);
+  const [channel, authorHash] = await Promise.all([
+    services.client.channels
+      .fetch(config.confessionChannelId)
+      .catch(() => null),
+    authorHashFor(services, guildId, interaction.user.id),
+  ]);
   if (!channel?.isSendable()) {
     await interaction.reply(
       ephemeralCard(
@@ -60,8 +63,11 @@ export async function openConfessModal(
     return;
   }
 
-  const authorHash = await authorHashFor(services, guildId, interaction.user.id);
-  if (await isBanned(services, guildId, authorHash)) {
+  const [banned, cooling] = await Promise.all([
+    isBanned(services, guildId, authorHash),
+    onCooldown(services, guildId, authorHash),
+  ]);
+  if (banned) {
     await interaction.reply(
       ephemeralCard(
         makeErrorCard(
@@ -72,7 +78,7 @@ export async function openConfessModal(
     );
     return;
   }
-  if (await onCooldown(services, guildId, authorHash)) {
+  if (cooling) {
     await interaction.reply(
       ephemeralCard(
         makeWarningCard(

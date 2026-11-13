@@ -12,6 +12,7 @@ import {
 import {
   type ChatInputCommandInteraction,
   type Guild,
+  type GuildMember,
   SlashCommandBuilder,
 } from "discord.js";
 import {
@@ -194,12 +195,32 @@ async function checkMember(
   services: ModuleServices,
   guild: Guild,
 ): Promise<void> {
+  await interaction.deferReply({ ephemeral: true });
   const target = interaction.options.getUser("member") ?? interaction.user;
-  const member = await guild.members
-    .fetch({ user: target.id, withPresences: true })
-    .catch(() => null);
-  if (!member) {
-    await interaction.reply(
+  let member: GuildMember | null = null;
+  try {
+    member = await guild.members.fetch({
+      user: target.id,
+      withPresences: true,
+    });
+  } catch (error) {
+    services.observability.logger.warn("activity role check failed", {
+      guildId: guild.id,
+      userId: target.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    await interaction.editReply(
+      ephemeralCard(
+        makeErrorCard(
+          "Check Failed",
+          "Discord didn't respond in time. Try again in a moment.",
+        ),
+      ),
+    );
+    return;
+  }
+  if (!member?.id) {
+    await interaction.editReply(
       ephemeralCard(
         makeErrorCard(
           "Member Not Found",
@@ -223,7 +244,7 @@ async function checkMember(
       `-# ...and ${matched.length - matchedLines.length} more`,
     );
   }
-  await interaction.reply(
+  await interaction.editReply(
     ephemeralCard(
       makeInfoCard(`🔎 Activity Check — ${member.user.username}`, [
         `**Member**\n<@${member.id}>`,

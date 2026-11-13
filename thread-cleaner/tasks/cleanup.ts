@@ -2,12 +2,14 @@ import type { ModuleServices, TaskDefinition } from "@lumi/module-kit";
 import { ModuleName, StateKey } from "../constants.js";
 import {
   deleteThreadState,
+  readThreadState,
   type ThreadState,
   ThreadStateSchema,
 } from "../state.js";
 
-const ScanLimit = 2_000;
+const ScanLimit = 5_000;
 const BatchLimit = 100;
+const RetryDelayMs = 15 * 60_000;
 
 function errorCode(error: unknown): number | null {
   if (typeof error !== "object" || error === null || !("code" in error)) {
@@ -28,7 +30,6 @@ async function processThread(
   services: ModuleServices,
   guildId: string,
   threadId: string,
-  state: ThreadState,
 ): Promise<void> {
   try {
     const channel = await services.client.channels.fetch(threadId, {
@@ -39,7 +40,10 @@ async function processThread(
       return;
     }
 
-    if (state.action === "lock") {
+    const current = await readThreadState(services, guildId, threadId);
+    if (!current || current.dueAt > Date.now()) return;
+
+    if (current.action === "lock") {
       await channel.setLocked(true);
     }
     await channel.setArchived(true);
@@ -53,6 +57,15 @@ async function processThread(
       "thread-cleaner failed to clean up thread",
       { guildId, threadId, error },
     );
+
+    const current = await readThreadState(services, guildId, threadId);
+    if (!current) return;
+    await services.helpers.moduleData
+      .set(guildId, ModuleName, threadId, StateKey, {
+        ...current,
+        dueAt: Date.now() + RetryDelayMs,
+      } satisfies ThreadState)
+      .catch(() => undefined);
   }
 }
 
@@ -93,6 +106,11 @@ export const cleanupTask: TaskDefinition = {
           queues.set(guild.id, queue);
         }
 
+        if (!services.modules.isEnabled(guild.id, ModuleName)) {
+          queue.length = 0;
+          continue;
+        }
+
         while (queue.length > 0 && work < BatchLimit) {
           const entry = queue.shift();
           if (!entry) break;
@@ -109,12 +127,7 @@ export const cleanupTask: TaskDefinition = {
 
           work += 1;
           progressed = true;
-          await processThread(
-            services,
-            entry.guildId,
-            entry.targetId,
-            parsed.data,
-          );
+          await processThread(services, entry.guildId, entry.targetId);
           break;
         }
       }

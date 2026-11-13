@@ -86,23 +86,24 @@ export async function recordRoleMentions(
         services,
         `mentions:${guildId}:${roleId}:${day}`,
         async () => {
-          const count = await services.helpers.moduleData.incr(
+          const stored = await services.helpers.moduleData.get<number>(
             guildId,
             moduleName,
             roleId,
             key,
-            1,
           );
-          if (count === 1) {
-            await services.helpers.moduleData.set(
-              guildId,
-              moduleName,
-              roleId,
-              key,
-              1,
-              { ttlMs: MentionsRetentionMs },
-            );
-          }
+          const current =
+            typeof stored === "number" && Number.isFinite(stored)
+              ? Math.max(0, Math.trunc(stored))
+              : 0;
+          await services.helpers.moduleData.set(
+            guildId,
+            moduleName,
+            roleId,
+            key,
+            current + 1,
+            { ttlMs: MentionsRetentionMs },
+          );
         },
       ),
     ),
