@@ -1,4 +1,5 @@
 import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
+import { withKeyLock } from "@lumi/module-kit";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -83,8 +84,27 @@ async function handleAdd(
     return;
   }
 
-  const entries = await getEntries(services, guildId);
-  if (entries.length >= MaxEntries) {
+  const outcome = await withKeyLock(
+    services,
+    `${ModuleName}:entries:${guildId}`,
+    async (): Promise<
+      { ok: true; entry: StatusEntry } | { ok: false }
+    > => {
+      const entries = await getEntries(services, guildId);
+      if (entries.length >= MaxEntries) return { ok: false };
+
+      const entry: StatusEntry = {
+        id: nextEntryId(entries),
+        text,
+        type,
+        presence,
+      };
+      await saveEntries(services, guildId, [...entries, entry]);
+      return { ok: true, entry };
+    },
+  );
+
+  if (!outcome.ok) {
     await interaction.reply(
       errorCard(
         "Limit Reached",
@@ -94,14 +114,7 @@ async function handleAdd(
     return;
   }
 
-  const entry: StatusEntry = {
-    id: nextEntryId(entries),
-    text,
-    type,
-    presence,
-  };
-  await saveEntries(services, guildId, [...entries, entry]);
-
+  const { entry } = outcome;
   await interaction.reply(
     ephemeralCard(
       makeSuccessCard("Status Added", [
@@ -119,9 +132,18 @@ async function handleRemove(
   guildId: string,
 ): Promise<void> {
   const id = interaction.options.getInteger("id", true);
-  const entries = await getEntries(services, guildId);
-  const remaining = entries.filter((entry) => entry.id !== id);
-  if (remaining.length === entries.length) {
+  const removed = await withKeyLock(
+    services,
+    `${ModuleName}:entries:${guildId}`,
+    async (): Promise<boolean> => {
+      const entries = await getEntries(services, guildId);
+      const remaining = entries.filter((entry) => entry.id !== id);
+      if (remaining.length === entries.length) return false;
+      await saveEntries(services, guildId, remaining);
+      return true;
+    },
+  );
+  if (!removed) {
     await interaction.reply(
       errorCard(
         "Not Found",
@@ -131,7 +153,6 @@ async function handleRemove(
     return;
   }
 
-  await saveEntries(services, guildId, remaining);
   await interaction.reply(
     ephemeralCard(
       makeSuccessCard("Status Removed", `Entry **#${id}** was deleted.`),

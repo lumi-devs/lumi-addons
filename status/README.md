@@ -33,6 +33,8 @@ placeholders so the values stay live.
 Status text is sanitized before saving: newlines and control characters are
 removed, whitespace is collapsed, and the result is capped at 128 characters.
 
+All error and denial responses are ephemeral. Adding and removing statuses are serialized per server, so concurrent edits cannot exceed the 25-entry cap or drop an entry.
+
 ## Single-controller behavior
 
 Presence is global, so only one server's rotation controls it at a time. Every

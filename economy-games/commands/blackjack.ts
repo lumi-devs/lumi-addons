@@ -90,18 +90,7 @@ export const blackjackCommand: CommandDefinition = {
         const existing = await getBlackjack(services, guildId, userId);
         if (existing) {
           if (existing.expiresAt > Date.now()) return { kind: "busy" };
-          const expired = await takeBlackjack(services, guildId, userId);
-          if (expired) {
-            await services.helpers.economy.refund(
-              guildId,
-              userId,
-              BigInt(expired.bet),
-              {
-                type: "blackjack_expired_refund",
-                description: "Expired blackjack refund",
-              },
-            );
-          }
+          await takeBlackjack(services, guildId, userId);
         }
 
         const wager = BigInt(bet);
@@ -180,7 +169,7 @@ export const blackjackCommand: CommandDefinition = {
           ephemeralCard(
             makeErrorCard(
               "Insufficient Funds",
-              `You need ${bet.toLocaleString("en-US")} coins to place that bet.`,
+              `You need ${bet} coins to place that bet.`,
             ),
           ),
         );
@@ -259,15 +248,6 @@ export async function handleBlackjackButton(
       if (!state) return { kind: "missing" };
 
       if (state.expiresAt <= Date.now()) {
-        await services.helpers.economy.refund(
-          guildId,
-          userId,
-          BigInt(state.bet),
-          {
-            type: "blackjack_expired_refund",
-            description: "Expired blackjack refund",
-          },
-        );
         return { kind: "expired", state };
       }
 
@@ -276,26 +256,29 @@ export async function handleBlackjackButton(
         return { kind: "stale" };
       }
 
+      const settleTaken = async () => {
+        try {
+          return await settleBlackjack(
+            services,
+            guildId,
+            userId,
+            state,
+            config,
+          );
+        } catch (error) {
+          await saveBlackjack(services, guildId, state).catch(() => undefined);
+          throw error;
+        }
+      };
+
       if (action === "stand") {
-        const settlement = await settleBlackjack(
-          services,
-          guildId,
-          userId,
-          state,
-          config,
-        );
+        const settlement = await settleTaken();
         return { kind: "settled", state, settlement };
       }
 
       state.player.push(drawCard(state.deck));
       if (isBust(state.player) || handValue(state.player) === 21) {
-        const settlement = await settleBlackjack(
-          services,
-          guildId,
-          userId,
-          state,
-          config,
-        );
+        const settlement = await settleTaken();
         return { kind: "settled", state, settlement };
       }
 
@@ -339,7 +322,7 @@ export async function handleBlackjackButton(
       await interaction.editReply(
         ephemeralCard(
           makeInfoCard("Blackjack Expired", [
-            `Bet refunded — ${BigInt(outcome.state.bet).toLocaleString("en-US")} coins`,
+            `Bet forfeited — ${outcome.state.bet} coins`,
             "The five-minute table limit was reached.",
           ]),
         ),

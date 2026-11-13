@@ -84,7 +84,11 @@ export const cleanupTask: TaskDefinition = {
     const now = Date.now();
     const queues = new Map<
       string,
-      Array<{ guildId: string; targetId: string; value: unknown }>
+      {
+        entries: Array<{ guildId: string; targetId: string; key: string; value: unknown }>;
+        cursor: { guildId: string; targetId: string; key: string } | null;
+        done: boolean;
+      }
     >();
     let work = 0;
     let progressed = true;
@@ -95,24 +99,40 @@ export const cleanupTask: TaskDefinition = {
       for (const guild of ordered) {
         if (work >= BatchLimit) break;
 
-        let queue = queues.get(guild.id);
-        if (!queue) {
-          queue = await services.helpers.moduleData.list<unknown>({
+        let state = queues.get(guild.id);
+        if (!state) {
+          state = { entries: [], cursor: null, done: false };
+          queues.set(guild.id, state);
+        }
+
+        if (state.entries.length === 0 && !state.done) {
+          state.entries = await services.helpers.moduleData.list<unknown>({
             guildId: guild.id,
             moduleName: ModuleName,
             key: StateKey,
+            ...(state.cursor ? { after: state.cursor } : {}),
             limit: ScanLimit,
           });
-          queues.set(guild.id, queue);
+          const last = state.entries.at(-1);
+          if (last) {
+            state.cursor = {
+              guildId: last.guildId,
+              targetId: last.targetId,
+              key: last.key,
+            };
+          }
+          state.done = state.entries.length < ScanLimit;
+          if (!state.done) progressed = true;
         }
 
         if (!services.modules.isEnabled(guild.id, ModuleName)) {
-          queue.length = 0;
+          state.entries.length = 0;
+          state.done = true;
           continue;
         }
 
-        while (queue.length > 0 && work < BatchLimit) {
-          const entry = queue.shift();
+        while (state.entries.length > 0 && work < BatchLimit) {
+          const entry = state.entries.shift();
           if (!entry) break;
 
           const parsed = ThreadStateSchema.safeParse(entry.value);

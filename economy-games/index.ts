@@ -47,10 +47,10 @@ const blackjackSweepTask: TaskDefinition = {
   cron: "*/5 * * * *",
   timezone: "UTC",
   async handler(services) {
-    const refunded = await sweepBlackjacks(services);
-    if (refunded > 0) {
-      services.observability.logger.info("Refunded expired blackjack games", {
-        refunded,
+    const expired = await sweepBlackjacks(services);
+    if (expired > 0) {
+      services.observability.logger.info("Forfeited expired blackjack games", {
+        expired,
       });
     }
   },

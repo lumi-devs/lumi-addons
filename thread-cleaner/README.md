@@ -6,7 +6,7 @@ Automatically archives or locks threads after a configurable period of inactivit
 
 When a thread is created under an enabled parent channel, Thread Cleaner records its cleanup deadline. Every message posted in a tracked thread pushes that deadline back, at most once per 60 seconds per thread. Every five minutes a sweep archives threads whose deadline has passed, or locks them and then archives them when the configured action is `lock`.
 
-Each sweep processes every enabled guild and caps work per guild, so a busy server cannot crowd out cleanup in other servers. Processed threads are removed from tracking immediately, so a thread is only cleaned up once. If a thread is deleted manually, its tracking record is removed. Missing threads and unknown-channel API errors are treated as stale and their records are discarded.
+Each sweep processes every enabled guild and caps work per guild, so a busy server cannot crowd out cleanup in other servers. Tracking records are read in keyset pages, so guilds with more records than one page are fully scanned instead of only seeing the first page. Processed threads are removed from tracking immediately, so a thread is only cleaned up once. If a thread is deleted manually, its tracking record is removed. Missing threads and unknown-channel API errors are treated as stale and their records are discarded.
 
 ## Configuration
 

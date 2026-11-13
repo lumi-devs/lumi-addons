@@ -1,16 +1,17 @@
 import type { ModuleServices } from "@lumi/module-kit";
+import { withKeyLock } from "@lumi/module-kit";
 import { type CardReply, noPingCard } from "@lumi/ui";
 import {
   PermissionFlagsBits,
   type Guild,
   type Role,
 } from "discord.js";
+import { ModuleName } from "./config.js";
 import {
   deleteBlock,
   getBlock,
   setBlock,
   type BlockRecord,
-  withKeyLock,
 } from "./data.js";
 import {
   buildBlockCard,
@@ -157,7 +158,7 @@ export async function applyBlock(
   manual: boolean,
   logChannelId: string | null,
 ): Promise<BlockApplyOutcome> {
-  return withKeyLock(services, `block:${guild.id}:${roleId}`, async () => {
+  return withKeyLock(services, `${ModuleName}:lock:block:${guild.id}:${roleId}`, async () => {
     const existing = await getBlock(services, guild.id, roleId);
     if (existing) {
       if (existing.expiresAt > Date.now()) {
@@ -251,7 +252,7 @@ export async function restoreBlock(
   reason: "expired" | "manual",
   logChannelId: string | null,
 ): Promise<RestoreOutcome> {
-  return withKeyLock(services, `block:${guild.id}:${block.roleId}`, () =>
+  return withKeyLock(services, `${ModuleName}:lock:block:${guild.id}:${block.roleId}`, () =>
     restoreBlockLocked(services, guild, block, reason, logChannelId),
   );
 }
@@ -262,7 +263,7 @@ export async function reconcileBlock(
   block: BlockRecord,
   logChannelId: string | null,
 ): Promise<void> {
-  await withKeyLock(services, `block:${guild.id}:${block.roleId}`, async () => {
+  await withKeyLock(services, `${ModuleName}:lock:block:${guild.id}:${block.roleId}`, async () => {
     const fresh = await getBlock(services, guild.id, block.roleId);
     if (!fresh) return;
 

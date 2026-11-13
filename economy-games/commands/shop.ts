@@ -173,14 +173,20 @@ export const shopCommand: CommandDefinition = {
       }
 
       const price = BigInt(item.price);
-      const paid = await services.helpers.economy.debit(
-        guildId,
-        userId,
-        price,
-        {
-          ledger: { type: "shop_purchase", description: item.name },
-        },
-      );
+      let paid: boolean;
+      try {
+        paid = await services.helpers.economy.debit(
+          guildId,
+          userId,
+          price,
+          {
+            ledger: { type: "shop_purchase", description: item.name },
+          },
+        );
+      } catch (error) {
+        await releaseStock(services, guildId, item.name, item.stock);
+        throw error;
+      }
       if (!paid) {
         await releaseStock(services, guildId, item.name, item.stock);
         await interaction.editReply(
@@ -314,17 +320,28 @@ export const shopCommand: CommandDefinition = {
           if (item.consumable) {
             reward = rollConsumableReward(config);
             if (reward > 0n) {
-              await services.helpers.economy.credit(
-                guildId,
-                userId,
-                reward,
-                {
-                  ledger: {
-                    type: "shop_use_reward",
-                    description: item.name,
+              try {
+                await services.helpers.economy.credit(
+                  guildId,
+                  userId,
+                  reward,
+                  {
+                    ledger: {
+                      type: "shop_use_reward",
+                      description: item.name,
+                    },
                   },
-                },
-              );
+                );
+              } catch (error) {
+                await addInventory(
+                  services,
+                  guildId,
+                  userId,
+                  item.name,
+                  1,
+                ).catch(() => undefined);
+                throw error;
+              }
             }
           }
           return { kind: "used" as const, remaining, reward };

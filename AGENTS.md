@@ -92,6 +92,7 @@ get / set / take / delete / deleteTarget / deleteModule / deleteForUser / list /
 - `key` is the record kind.
 - Use `ttlMs` for expiring records instead of manual timestamps.
 - Use `list({ prefix })` for collections; never store unbounded arrays in one record.
+- `set` has no compare-and-swap. Wrap read-modify-write sequences with `withKeyLock(services, key, task, { deadlineMs })` from `@lumi/module-kit`; use `tryKeyLock` for non-blocking claims. Keys must be namespaced (`${ModuleName}:...`).
 - Use `services.helpers.economy` for ledger-backed money.
 - No local files, no secrets, no `data/` directory.
 

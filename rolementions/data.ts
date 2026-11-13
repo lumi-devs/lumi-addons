@@ -1,4 +1,5 @@
 import type { ModuleServices } from "@lumi/module-kit";
+import { withKeyLock } from "@lumi/module-kit";
 import { z } from "zod";
 import { ModuleName } from "./config.js";
 
@@ -8,7 +9,6 @@ export const MentionsRetentionMs = 48 * 60 * 60 * 1000;
 const BlockSafetyTtlMs = 7 * 24 * 60 * 60 * 1000;
 
 const DayPattern = /^\d{4}-\d{2}-\d{2}$/;
-const localLocks = new Map<string, Promise<void>>();
 
 export function utcDayKey(date = new Date()): string {
   return date.toISOString().slice(0, 10);
@@ -16,59 +16,6 @@ export function utcDayKey(date = new Date()): string {
 
 export function mentionsKey(day: string): string {
   return `${MentionsPrefix}${day}`;
-}
-
-async function withLocalLock<T>(
-  key: string,
-  task: () => Promise<T>,
-): Promise<T> {
-  const previous = localLocks.get(key) ?? Promise.resolve();
-  const { promise: current, resolve: release } =
-    Promise.withResolvers<void>();
-  const tail = previous.then(() => current);
-  localLocks.set(key, tail);
-  await previous;
-  try {
-    return await task();
-  } finally {
-    release();
-    if (localLocks.get(key) === tail) localLocks.delete(key);
-  }
-}
-
-export async function withKeyLock<T>(
-  services: ModuleServices,
-  key: string,
-  task: () => Promise<T>,
-): Promise<T> {
-  const lockKey = `${ModuleName}:lock:${key}`;
-  return withLocalLock(lockKey, async () => {
-    if (!services.helpers.cache.distributed) return task();
-
-    const deadline = Date.now() + 3_000;
-    let release: (() => Promise<void>) | null = null;
-    while (!release && Date.now() < deadline) {
-      try {
-        release = await services.helpers.cache.takeLock(
-          lockKey,
-          30_000,
-        );
-      } catch {
-        break;
-      }
-      if (!release) {
-        const { promise, resolve } = Promise.withResolvers<void>();
-        setTimeout(resolve, 20);
-        await promise;
-      }
-    }
-
-    try {
-      return await task();
-    } finally {
-      if (release) await release().catch(() => undefined);
-    }
-  });
 }
 
 export async function recordRoleMentions(
@@ -84,7 +31,7 @@ export async function recordRoleMentions(
     [...new Set(roleIds)].map((roleId) =>
       withKeyLock(
         services,
-        `mentions:${guildId}:${roleId}:${day}`,
+        `${ModuleName}:lock:mentions:${guildId}:${roleId}:${day}`,
         async () => {
           const stored = await services.helpers.moduleData.get<number>(
             guildId,

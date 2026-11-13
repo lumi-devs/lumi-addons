@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { ModuleServices } from "@lumi/module-kit";
+import { withKeyLock } from "@lumi/module-kit";
 import { ModuleName } from "./config.js";
 
 const GuildTarget = "_";
@@ -11,50 +12,13 @@ const KidsPrefix = "kids:";
 const DmOptPrefix = "dmopt:";
 const IndexPrefix = "c:";
 const BanPrefix = "ban:";
-const LocalLocks = new Map<string, Promise<void>>();
 
-async function withLocalLock<T>(
-  key: string,
-  task: () => Promise<T>,
-): Promise<T> {
-  const previous = LocalLocks.get(key) ?? Promise.resolve();
-  const { promise: current, resolve: release } =
-    Promise.withResolvers<void>();
-  const tail = previous.then(() => current);
-  LocalLocks.set(key, tail);
-  await previous;
-  try {
-    return await task();
-  } finally {
-    release();
-    if (LocalLocks.get(key) === tail) LocalLocks.delete(key);
-  }
-}
-
-async function withSaltLock<T>(
+function withSaltLock<T>(
   services: ModuleServices,
   guildId: string,
   task: () => Promise<T>,
 ): Promise<T> {
-  const lockKey = `${ModuleName}:salt-lock:${guildId}`;
-  return withLocalLock(lockKey, async () => {
-    if (!services.helpers.cache.distributed) return task();
-    const deadline = Date.now() + 5_000;
-    let release: (() => Promise<void>) | null = null;
-    while (!release && Date.now() < deadline) {
-      release = await services.helpers.cache
-        .takeLock(lockKey, 30_000)
-        .catch(() => null);
-      if (!release) {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-    }
-    try {
-      return await task();
-    } finally {
-      if (release) await release().catch(() => undefined);
-    }
-  });
+  return withKeyLock(services, `${ModuleName}:salt-lock:${guildId}`, task);
 }
 
 export interface ConfessionMeta {

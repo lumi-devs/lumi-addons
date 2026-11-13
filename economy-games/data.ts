@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import type { ModuleServices } from "@lumi/module-kit";
+import { tryKeyLock } from "@lumi/module-kit";
 import { ephemeralCard, makeErrorCard } from "@lumi/ui";
 import {
   type ChatInputCommandInteraction,
@@ -105,16 +106,15 @@ export function validateBet(
     return "Bet must be a positive whole number.";
   }
   if (bet < min || bet > max) {
-    return `Bet must be between ${min.toLocaleString("en-US")} and ${max.toLocaleString("en-US")}.`;
+    return `Bet must be between ${min} and ${max}.`;
   }
   return null;
 }
 
 export function formatMoney(amount: bigint): string {
-  return `🪙 ${amount.toLocaleString("en-US")}`;
+  return `🪙 ${amount}`;
 }
 
-const LocalLocks = new Map<string, Promise<void>>();
 const LocalCooldowns = new Map<string, number>();
 
 export function userLockKey(
@@ -131,28 +131,12 @@ export async function withLock<T>(
   ttlMs: number,
   task: () => Promise<T>,
 ): Promise<T | null> {
-  const cache = services.helpers.cache;
-  if (cache.distributed) {
-    const release = await cache.takeLock(key, ttlMs).catch(() => null);
-    if (!release) return null;
-    try {
-      return await task();
-    } finally {
-      await release().catch(() => undefined);
-    }
-  }
-
-  const previous = LocalLocks.get(key) ?? Promise.resolve();
-  const tail = previous.catch(() => undefined).then(() => task());
-  const settled = tail.then(
-    () => undefined,
-    () => undefined,
-  );
-  LocalLocks.set(key, settled);
+  const release = await tryKeyLock(services, key, ttlMs);
+  if (!release) return null;
   try {
-    return await tail;
+    return await task();
   } finally {
-    if (LocalLocks.get(key) === settled) LocalLocks.delete(key);
+    await release().catch(() => undefined);
   }
 }
 
@@ -565,7 +549,7 @@ export async function sweepBlackjacks(
     moduleName: ModuleName,
     key: BlackjackKey,
   });
-  let refunded = 0;
+  let expired = 0;
 
   for (const entry of entries) {
     const state = parseState(entry.value);
@@ -591,16 +575,7 @@ export async function sweepBlackjacks(
         await saveBlackjack(services, entry.guildId, taken);
         continue;
       }
-      await services.helpers.economy.refund(
-        entry.guildId,
-        entry.targetId,
-        BigInt(taken.bet),
-        {
-          type: "blackjack_expired_refund",
-          description: "Expired blackjack refund",
-        },
-      );
-      refunded += 1;
+      expired += 1;
     } catch (error) {
       services.observability.logger.warn("blackjack sweep failed", {
         guildId: entry.guildId,
@@ -609,7 +584,7 @@ export async function sweepBlackjacks(
     }
   }
 
-  return refunded;
+  return expired;
 }
 
 export type RouletteBetKind =

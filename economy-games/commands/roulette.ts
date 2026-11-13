@@ -83,7 +83,7 @@ export const rouletteCommand: CommandDefinition = {
         ephemeralCard(
           makeErrorCard(
             "Insufficient Funds",
-            `You need ${bet.toLocaleString("en-US")} coins to place that bet.`,
+            `You need ${bet} coins to place that bet.`,
           ),
         ),
       );

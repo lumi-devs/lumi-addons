@@ -8,7 +8,7 @@ All responses are ephemeral, so bets, payouts, inventories, and jail sentences s
 
 ### Games
 
-- `/blackjack <bet>` — deal a hand and use **Hit** or **Stand**. Natural blackjack returns the configured `blackjackPayout` multiplier including the stake; a normal win returns `2x`; a push refunds the stake. The dealer stands on 17. Tables expire after 5 minutes and expired bets are refunded by a sweep task.
+- `/blackjack <bet>` — deal a hand and use **Hit** or **Stand**. Natural blackjack returns the configured `blackjackPayout` multiplier including the stake; a normal win returns `2x`; a push refunds the stake. The dealer stands on 17. Tables expire after 5 minutes; an abandoned hand forfeits the stake.
 - `/roulette <bet> [choice]` — single-zero wheel. `choice` accepts `red`, `black`, `odd`, `even`, `low` (1-18), `high` (19-36), `green`, or an exact number `0`-`36`. Even-money bets return `2x` the stake. Green and exact numbers pay `35:1` (`36x` including the stake). Without a choice the command shows the bet options.
 
 ### Crime
