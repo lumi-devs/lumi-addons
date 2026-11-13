@@ -5,8 +5,10 @@ import { ModuleName } from "./config.js";
 const GuildTarget = "_";
 const SaltKey = "salt";
 const CounterKey = "counter";
-const ReplyCounterKey = "replies";
 const MetaKey = "meta";
+const ReplyIndexPrefix = "r:";
+const KidsPrefix = "kids:";
+const DmOptPrefix = "dmopt:";
 const IndexPrefix = "c:";
 const BanPrefix = "ban:";
 const LocalLocks = new Map<string, Promise<void>>();
@@ -60,6 +62,22 @@ export interface ConfessionMeta {
   channelId: string;
   threadId: string | null;
   authorHash: string;
+  title?: string | null;
+  authorId?: string | null;
+}
+
+export interface ReplyRecord {
+  path: string;
+  number: number;
+  parentPath: string | null;
+  authorHash: string;
+  authorId?: string | null;
+  text: string;
+  imageUrl: string | null;
+  isOp: boolean;
+  messageId: string;
+  channelId: string;
+  createdAt: number;
 }
 
 export interface ConfessionIndex {
@@ -91,6 +109,8 @@ export interface UserHashStatus {
 export interface UserHashEraseResult {
   deleted: number;
   cooldownCleared: boolean;
+  clearedAuthorLinks: number;
+  dmOptOutCleared: boolean;
 }
 
 export function hashAuthor(salt: string, userId: string): string {
@@ -149,16 +169,46 @@ export async function nextConfessionNumber(
   );
 }
 
-export async function nextReplyNumber(
+export async function nextReplyPath(
   services: ModuleServices,
   guildId: string,
-  messageId: string,
-): Promise<number> {
-  return services.helpers.moduleData.incr(
+  number: number,
+  parentPath: string | null,
+): Promise<string> {
+  const base = parentPath ?? String(number);
+  const index = await services.helpers.moduleData.incr(
     guildId,
     ModuleName,
-    messageId,
-    ReplyCounterKey,
+    GuildTarget,
+    `${KidsPrefix}${base}`,
+  );
+  return `${base}.${index}`;
+}
+
+export async function saveReply(
+  services: ModuleServices,
+  guildId: string,
+  reply: ReplyRecord,
+): Promise<void> {
+  await services.helpers.moduleData.set(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    `${ReplyIndexPrefix}${reply.path}`,
+    reply,
+  );
+}
+
+export async function getReply(
+  services: ModuleServices,
+  guildId: string,
+  path: string,
+): Promise<ReplyRecord | null> {
+  return services.helpers.moduleData.get<ReplyRecord>(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    `${ReplyIndexPrefix}${path}`,
   );
 }
 
@@ -254,24 +304,67 @@ export async function deleteConfessionRecords(
     GuildTarget,
     `${ReportedPrefix}${number}`,
   );
+
+  const [replies, counters] = await Promise.all([
+    services.helpers.moduleData.list<ReplyRecord>({
+      guildId,
+      moduleName: ModuleName,
+      targetId: GuildTarget,
+      prefix: `${ReplyIndexPrefix}${number}.`,
+      limit: 5000,
+    }),
+    services.helpers.moduleData.list<unknown>({
+      guildId,
+      moduleName: ModuleName,
+      targetId: GuildTarget,
+      prefix: `${KidsPrefix}${number}`,
+      limit: 5000,
+    }),
+  ]);
+  await Promise.all([
+    ...replies.map((entry) =>
+      services.helpers.moduleData.delete(
+        guildId,
+        ModuleName,
+        GuildTarget,
+        entry.key,
+      ),
+    ),
+    ...counters.map((entry) =>
+      services.helpers.moduleData.delete(
+        guildId,
+        ModuleName,
+        GuildTarget,
+        entry.key,
+      ),
+    ),
+  ]);
 }
 
 const ReportedPrefix = "reported:";
 
-export interface ReportMarker {
+export interface TimestampMarker {
   at: number;
+}
+
+export function confessionReportKey(number: number): string {
+  return `${ReportedPrefix}${number}`;
+}
+
+export function replyReportKey(path: string): string {
+  return `${ReportedPrefix}reply:${path}`;
 }
 
 export async function isReported(
   services: ModuleServices,
   guildId: string,
-  number: number,
+  key: string,
 ): Promise<boolean> {
-  const marker = await services.helpers.moduleData.get<ReportMarker>(
+  const marker = await services.helpers.moduleData.get<TimestampMarker>(
     guildId,
     ModuleName,
     GuildTarget,
-    `${ReportedPrefix}${number}`,
+    key,
   );
   return marker !== null;
 }
@@ -279,14 +372,14 @@ export async function isReported(
 export async function markReported(
   services: ModuleServices,
   guildId: string,
-  number: number,
+  key: string,
 ): Promise<void> {
-  const marker: ReportMarker = { at: Date.now() };
+  const marker: TimestampMarker = { at: Date.now() };
   await services.helpers.moduleData.set(
     guildId,
     ModuleName,
     GuildTarget,
-    `${ReportedPrefix}${number}`,
+    key,
     marker,
   );
 }
@@ -370,6 +463,45 @@ export async function clearCooldown(
   await services.helpers.cache.del(cooldownKey(guildId, authorHash));
 }
 
+export async function setReplyDmOptOut(
+  services: ModuleServices,
+  guildId: string,
+  userId: string,
+  optOut: boolean,
+): Promise<void> {
+  if (optOut) {
+    const marker: TimestampMarker = { at: Date.now() };
+    await services.helpers.moduleData.set(
+      guildId,
+      ModuleName,
+      GuildTarget,
+      `${DmOptPrefix}${userId}`,
+      marker,
+    );
+    return;
+  }
+  await services.helpers.moduleData.delete(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    `${DmOptPrefix}${userId}`,
+  );
+}
+
+export async function hasReplyDmOptOut(
+  services: ModuleServices,
+  guildId: string,
+  userId: string,
+): Promise<boolean> {
+  const marker = await services.helpers.moduleData.get<TimestampMarker>(
+    guildId,
+    ModuleName,
+    GuildTarget,
+    `${DmOptPrefix}${userId}`,
+  );
+  return marker !== null;
+}
+
 export async function readUserHashStatus(
   services: ModuleServices,
   guildId: string,
@@ -391,8 +523,23 @@ export async function eraseUserHashData(
   guildId: string,
   userId: string,
 ): Promise<UserHashEraseResult> {
+  const clearedAuthorLinks = await clearAuthorLinks(
+    services,
+    guildId,
+    userId,
+  );
+  const dmOptOutCleared = await hasReplyDmOptOut(services, guildId, userId);
+  await setReplyDmOptOut(services, guildId, userId, false);
+
   const salt = await readSalt(services, guildId);
-  if (!salt) return { deleted: 0, cooldownCleared: false };
+  if (!salt) {
+    return {
+      deleted: 0,
+      cooldownCleared: false,
+      clearedAuthorLinks,
+      dmOptOutCleared,
+    };
+  }
 
   const authorHash = hashAuthor(salt, userId);
   const cooldownCleared = await onCooldown(services, guildId, authorHash);
@@ -400,5 +547,46 @@ export async function eraseUserHashData(
   if (cooldownCleared) {
     await clearCooldown(services, guildId, authorHash);
   }
-  return { deleted, cooldownCleared };
+  return { deleted, cooldownCleared, clearedAuthorLinks, dmOptOutCleared };
+}
+
+async function clearAuthorLinks(
+  services: ModuleServices,
+  guildId: string,
+  userId: string,
+): Promise<number> {
+  let cleared = 0;
+  const confessions = await listRecentConfessions(services, guildId);
+  for (const { number } of confessions) {
+    const record = await getConfession(services, guildId, number);
+    if (record?.meta.authorId !== userId) continue;
+    await services.helpers.moduleData.set(
+      guildId,
+      ModuleName,
+      record.index.messageId,
+      MetaKey,
+      { ...record.meta, authorId: null },
+    );
+    cleared += 1;
+  }
+
+  const replies = await services.helpers.moduleData.list<ReplyRecord>({
+    guildId,
+    moduleName: ModuleName,
+    targetId: GuildTarget,
+    prefix: ReplyIndexPrefix,
+    limit: 5000,
+  });
+  for (const entry of replies) {
+    if (entry.value.authorId !== userId) continue;
+    await services.helpers.moduleData.set(
+      guildId,
+      ModuleName,
+      GuildTarget,
+      `${ReplyIndexPrefix}${entry.value.path}`,
+      { ...entry.value, authorId: null },
+    );
+    cleared += 1;
+  }
+  return cleared;
 }

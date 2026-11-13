@@ -4,8 +4,8 @@
   "displayName": "Confessions",
   "emoji": "🕊️",
   "category": "Community",
-  "description": "Anonymous confessions with numbered cards, optional threads, anonymous replies, cooldowns, and hash-based moderator bans.",
-  "version": "2.0.0",
+  "description": "Anonymous confessions with titles, threaded reply trees, reply DMs with opt-out, cooldowns, and hash-based moderator bans.",
+  "version": "2.1.0",
   "entry": "index.ts",
   "configKey": "confessions-config",
   "configFields": [
@@ -21,7 +21,7 @@
       "key": "logChannelId",
       "label": "Moderation Log",
       "type": "channel",
-      "description": "Optional channel that records confession moderation actions without author identities.",
+      "description": "Optional channel that records confession and reply audits with irreversible author hashes, never raw identities.",
       "channelTypes": [0]
     },
     {
@@ -53,6 +53,13 @@
       "default": true
     },
     {
+      "key": "replyDm",
+      "label": "Reply DM Notifications",
+      "type": "boolean",
+      "description": "DM the parent author when someone replies to their confession or reply. People can opt out from the DM itself.",
+      "default": true
+    },
+    {
       "key": "cooldownMinutes",
       "label": "Cooldown (minutes)",
       "type": "number",
@@ -65,5 +72,5 @@
   "requirements": [],
   "conflicts": [],
   "capabilities": [],
-  "endUserDataStatement": "Stores a per-guild random salt, irreversible SHA-256 author hashes used only for bans and cooldowns, confession text, rehosted upload URLs, message and thread IDs, counters, and report markers holding only a timestamp. No raw user IDs or reversible identity keys are stored; authors cannot be identified or direct-messaged. Reporters are named only in the report message sent to the configured report channel, not in stored data."
+  "endUserDataStatement": "Stores a per-guild random salt, irreversible SHA-256 author hashes used only for bans and cooldowns, confession titles and text, rehosted upload URLs, message and thread IDs, reply paths, counters, and report markers holding only a timestamp. Raw user IDs are stored only to deliver reply DM notifications and honour DM opt-outs, and are erasable through the module data-deletion request. Reporters are named only in the report message sent to the configured report channel, not in stored data."
 }

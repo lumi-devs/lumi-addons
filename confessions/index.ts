@@ -13,8 +13,8 @@ const confessionsModule: ModuleDefinition = defineModule({
   displayName: "Confessions",
   emoji: "🕊️",
   description:
-    "Anonymous confessions with numbered cards, optional threads, anonymous replies, cooldowns, and hash-based moderator bans.",
-  version: "2.0.0",
+    "Anonymous confessions with optional titles, threaded reply trees, reply DMs with opt-out, cooldowns, and hash-based moderator bans.",
+  version: "2.1.0",
   config: ConfigSchema,
   dataLifecycle: {
     async exportUserData(services, guildId, userId) {
@@ -33,6 +33,14 @@ const confessionsModule: ModuleDefinition = defineModule({
         notes: [
           ...(result.cooldownCleared
             ? ["Cleared the active confession cooldown for this server."]
+            : []),
+          ...(result.clearedAuthorLinks > 0
+            ? [
+                `Cleared ${result.clearedAuthorLinks} stored author link(s) used for reply notifications.`,
+              ]
+            : []),
+          ...(result.dmOptOutCleared
+            ? ["Removed the reply DM opt-out preference for this server."]
             : []),
           "Confession records are tied to message IDs and irreversible hashes. They cannot be located from a user ID and are not deleted by this request.",
         ],

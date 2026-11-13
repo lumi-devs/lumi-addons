@@ -11,6 +11,7 @@ export const ConfigSchema = z.object({
   reportPingRoleId: z.string().min(1).nullable().default(null),
   autoThread: z.boolean().default(true),
   allowImages: z.boolean().default(true),
+  replyDm: z.boolean().default(true),
   cooldownMinutes: z.number().int().min(0).max(1440).default(5),
 });
 
