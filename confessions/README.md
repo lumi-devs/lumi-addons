@@ -78,14 +78,14 @@ Configure the addon in `/lumi` -> **Modules** -> **Confessions**.
 | Reply DM Notifications | on | DM the parent author when someone replies to them. |
 | Cooldown (minutes) | 5 | Minimum gap between confessions from one author. `0` disables it. |
 
-The bot needs **View Channel**, **Send Messages**, and **Attach Files** in the
-confession channel. Uploaded images are rehosted to the moderation log channel
-when one is configured, otherwise to the confession channel, so the bot also
-needs those permissions there. Reports need the same permissions in the
-configured report log channel. For auto-threads it also needs **Create Public
-Threads** and **Send Messages in Threads**. Deleting confessions uses **Manage
-Messages**, and removing their threads uses **Manage Threads**. No privileged
-gateway intents are required.
+The bot needs **View Channel**, **Send Messages**, and **Embed Links** in the
+confession channel. Uploaded images are rendered straight from Discord's
+attachment URL, so the bot never re-uploads them. Reports need **Send Messages**
+and **Embed Links** in the configured report log channel, and moderator audits
+need the same in the moderation log channel. For auto-threads it also needs
+**Create Public Threads** and **Send Messages in Threads**. Deleting confessions
+uses **Manage Messages**, and removing their threads uses **Manage Threads**. No
+privileged gateway intents are required.
 
 ## Commands
 

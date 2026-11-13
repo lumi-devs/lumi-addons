@@ -60,7 +60,7 @@ import {
   ReplyImageId,
   ReplyTextId,
 } from "../ui.js";
-import { readUploadedImage, rehostUpload } from "../rehost.js";
+import { readUploadedImage } from "../uploads.js";
 
 async function deferEphemeral(interaction: Interaction): Promise<void> {
   if (!interaction.isRepliable() || interaction.deferred || interaction.replied) {
@@ -284,22 +284,7 @@ async function handleConfessSubmit(
 
   let imageUrl: string | null = null;
   if (upload) {
-    imageUrl = await rehostUpload(
-      services,
-      upload,
-      config.logChannelId ?? channel.id,
-    );
-    if (!imageUrl) {
-      await clearCooldown(services, guildId, authorHash).catch(() => undefined);
-      await replyEphemeral(
-        interaction,
-        makeErrorCard(
-          "Could Not Process Image",
-          "The uploaded image could not be saved. Please try again.",
-        ),
-      );
-      return;
-    }
+    imageUrl = upload.url;
   }
 
   let number: number;
@@ -636,21 +621,7 @@ async function handleReplySubmit(
 
   let imageUrl: string | null = null;
   if (upload) {
-    imageUrl = await rehostUpload(
-      services,
-      upload,
-      config.logChannelId ?? record.index.channelId,
-    );
-    if (!imageUrl) {
-      await replyEphemeral(
-        interaction,
-        makeErrorCard(
-          "Could Not Process Image",
-          "The uploaded image could not be saved. Please try again.",
-        ),
-      );
-      return;
-    }
+    imageUrl = upload.url;
   }
 
   const path = await nextReplyPath(services, guildId, number, parentPath);
