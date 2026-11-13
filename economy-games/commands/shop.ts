@@ -44,7 +44,7 @@ function unknownItemMessage(
 
 export const shopCommand: CommandDefinition = {
   data: new SlashCommandBuilder()
-    .setName("shop")
+    .setName("gameshop")
     .setDescription("Browse, buy, and use server shop items")
     .setDMPermission(false)
     .addSubcommand((sub) =>
@@ -244,7 +244,7 @@ export const shopCommand: CommandDefinition = {
             makeEmptyCard(
               "Inventory",
               "Your inventory is empty.",
-              "Buy something with `/shop buy`.",
+              "Buy something with `/gameshop buy`.",
             ),
           ),
         );
@@ -410,7 +410,7 @@ export const shopCommand: CommandDefinition = {
           ephemeralCard(
             makeErrorCard(
               "Not Owned",
-              `You do not own **${item.name}**. Buy it with \`/shop buy\` first.`,
+              `You do not own **${item.name}**. Buy it with \`/gameshop buy\` first.`,
             ),
           ),
         );

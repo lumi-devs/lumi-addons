@@ -34,11 +34,11 @@ Each grind has a cooldown, a base payout band, and a bonus roll:
 
 ### Shop
 
-- `/shop view [page]` — browse configured items, prices, stock, and tags.
-- `/shop buy <item>` — debit the price, reserve stock, add the item to your inventory, and grant its role if configured.
-- `/shop inventory [page]` — list owned items.
-- `/shop use <item>` — consume an item. Consumables pay a random reward between `consumableMin` and `consumableMax`; role items apply their role. Non-consumable collectibles cannot be used.
-- `/shop equip <item>` — toggle a role item: grant its role if you do not have it, remove it if you do.
+- `/gameshop view [page]` — browse configured items, prices, stock, and tags.
+- `/gameshop buy <item>` — debit the price, reserve stock, add the item to your inventory, and grant its role if configured.
+- `/gameshop inventory [page]` — list owned items.
+- `/gameshop use <item>` — consume an item. Consumables pay a random reward between `consumableMin` and `consumableMax`; role items apply their role. Non-consumable collectibles cannot be used.
+- `/gameshop equip <item>` — toggle a role item: grant its role if you do not have it, remove it if you do.
 
 Shop items are configured one per line:
 
@@ -66,7 +66,7 @@ Buying a role item still adds it to your inventory. If the bot lacks Manage Role
 | `begCooldownMinutes` | 2 | Beg cooldown. |
 | `fishCooldownMinutes` | 10 | Fish cooldown. |
 | `mineCooldownMinutes` | 10 | Mine cooldown. |
-| `consumableMin` / `consumableMax` | 20 / 120 | Reward band for `/shop use`. |
+| `consumableMin` / `consumableMax` | 20 / 120 | Reward band for `/gameshop use`. |
 | `shopItems` | empty | Shop item lines. |
 
 ## Privacy and data

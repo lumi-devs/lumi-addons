@@ -109,7 +109,7 @@
       "key": "consumableMin",
       "label": "Consumable Minimum Reward",
       "type": "number",
-      "description": "Smallest reward from /shop use.",
+      "description": "Smallest reward from /gameshop use.",
       "default": 20,
       "min": 0,
       "category": "Shop"
@@ -118,7 +118,7 @@
       "key": "consumableMax",
       "label": "Consumable Maximum Reward",
       "type": "number",
-      "description": "Largest reward from /shop use.",
+      "description": "Largest reward from /gameshop use.",
       "default": 120,
       "min": 0,
       "category": "Shop"
