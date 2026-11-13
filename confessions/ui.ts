@@ -1,8 +1,10 @@
 import {
+  AccentColors,
   createActionButton,
   createPaginationRow,
   formatPageFooter,
   formatTimestamp,
+  makeCard,
   makeInfoCard,
   noPingCard,
   row,
@@ -77,6 +79,14 @@ function textInput(
   return input;
 }
 
+function confessButton() {
+  return createActionButton({
+    customId: `${ModuleName}:new`,
+    label: "Make a Confession",
+    style: ButtonStyle.Primary,
+  });
+}
+
 function replyButton(number: number) {
   return createActionButton({
     customId: `${ReplyButtonPrefix}:${number}`,
@@ -123,10 +133,14 @@ export function confessionCard(
   title: string | null,
   imageUrl: string | null,
   reportable: boolean,
+  showConfessButton: boolean,
 ): CardReply {
   const buttons = reportable
     ? [replyButton(number), reportButton(number)]
     : [replyButton(number)];
+  if (showConfessButton) {
+    buttons.unshift(confessButton());
+  }
   const displayTitle = title?.trim() ? title.trim() : `Confession #${number}`;
   const options: CardOptions = {
     footer: `Confession #${number}`,
@@ -154,13 +168,14 @@ export function replyCard(
     actionRows: [row(...buttons)],
     ...(imageUrl ? { mediaGallery: imageGallery(imageUrl) } : {}),
   };
-  const parentPath = path.includes(".")
-    ? path.slice(0, path.lastIndexOf("."))
-    : null;
-  const title = parentPath
-    ? `Reply to Reply #${parentPath}`
+  const nested = path.includes(".");
+  const title = nested
+    ? "Reply to Reply"
     : `Reply to Confession #${number}`;
-  return noPingCard(makeInfoCard(`↩️ ${title}`, body, options));
+  const card = isOp
+    ? makeCard(AccentColors.gold, `↩️ ${title}`, body, options)
+    : makeInfoCard(`↩️ ${title}`, body, options);
+  return noPingCard(card);
 }
 
 export function buildConfessModal(allowImages: boolean): ModalBuilder {
@@ -222,7 +237,7 @@ export function buildReplyToReplyModal(
 ): ModalBuilder {
   const modal = new ModalBuilder()
     .setCustomId(`${ReplyToModalPrefix}:${number}:${path}`)
-    .setTitle(`Reply to Reply #${path}`);
+    .setTitle("Reply to Reply");
 
   modal.addComponents(
     new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(

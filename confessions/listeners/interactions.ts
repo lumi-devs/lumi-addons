@@ -22,6 +22,7 @@ import {
   type SendableChannels,
 } from "discord.js";
 import { ModuleName, readConfig } from "../config.js";
+import { openConfessModal } from "../openConfess.js";
 import {
   authorHashFor,
   claimCooldown,
@@ -161,6 +162,40 @@ async function sendModeratorAudit(
     .catch(() => undefined);
 }
 
+async function removeConfessButton(
+  services: ModuleServices,
+  guildId: string,
+  previous: { number: number } | null,
+  reportable: boolean,
+): Promise<void> {
+  if (!previous) return;
+  const record = await getConfession(services, guildId, previous.number).catch(
+    () => null,
+  );
+  if (!record?.meta.text) return;
+  const channel = await services.client.channels
+    .fetch(record.index.channelId)
+    .catch(() => null);
+  if (!channel || !("messages" in channel)) return;
+  await channel.messages
+    .fetch(record.index.messageId)
+    .then((message) =>
+      message.edit(
+        cardMessage(
+          confessionCard(
+            record.meta.number,
+            record.meta.text ?? "",
+            record.meta.title ?? null,
+            record.meta.imageUrl ?? null,
+            reportable,
+            false,
+          ),
+        ),
+      ),
+    )
+    .catch(() => undefined);
+}
+
 async function handleConfessSubmit(
   interaction: ModalSubmitInteraction,
   services: ModuleServices,
@@ -286,11 +321,23 @@ async function handleConfessSubmit(
     return;
   }
 
+  const previous =
+    (await listRecentConfessions(services, guildId).catch(() => [])).find(
+      (item) => item.number < number,
+    ) ?? null;
+
   let message: Message;
   try {
     message = await channel.send(
       cardCreateOptions(
-        confessionCard(number, text, title, imageUrl, config.reportChannelId !== null),
+        confessionCard(
+          number,
+          text,
+          title,
+          imageUrl,
+          config.reportChannelId !== null,
+          true,
+        ),
       ),
     );
   } catch (error) {
@@ -330,6 +377,8 @@ async function handleConfessSubmit(
     threadId,
     authorHash,
     title,
+    text,
+    imageUrl,
     authorId: interaction.user.id,
   };
   const index = {
@@ -389,6 +438,13 @@ async function handleConfessSubmit(
       `**Content:** ${text}`,
     ],
     imageUrl,
+  );
+
+  await removeConfessButton(
+    services,
+    guildId,
+    previous,
+    config.reportChannelId !== null,
   );
 }
 
@@ -960,6 +1016,11 @@ export const interactionListener: ListenerDefinition = {
           parts[2],
           action === "mutedms",
         );
+        return;
+      }
+
+      if (action === "new") {
+        await openConfessModal(interaction, services);
         return;
       }
 

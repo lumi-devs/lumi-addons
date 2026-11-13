@@ -63,6 +63,8 @@ export interface ConfessionMeta {
   threadId: string | null;
   authorHash: string;
   title?: string | null;
+  text?: string | null;
+  imageUrl?: string | null;
   authorId?: string | null;
 }
 

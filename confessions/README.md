@@ -33,7 +33,9 @@ Bans are stored as `ban:<hash>` records in durable data.
 ## How it works
 
 - `/confess` opens an anonymous confession modal with an optional **Title**
-  (100 characters) and the confession text.
+  (100 characters) and the confession text. The newest confession card also
+  carries a **Make a Confession** button, which moves along as new confessions
+  post.
 - The confession posts with the title as its heading, or **Confession #N** when
   no title is given. The footer always shows the confession number.
 - With **Auto-Thread** enabled, a thread named `Confession #N` opens under the
@@ -44,7 +46,7 @@ Bans are stored as `ban:<hash>` records in durable data.
   Hierarchical numbering (`1.1`, `1.1.1`) appears only in the moderation log,
   report cards, and the ephemeral confirmation messages.
 - A reply author who is the confession's own author is marked with a **👑 OP**
-  footer.
+  footer and a gold side panel.
 - Each confession card and each reply card has a **Reply** button. Replying to a
   reply targets that reply's author (native message reference plus a quote), not
   the root confession.
@@ -105,8 +107,8 @@ confession must still be recorded. Deleting a confession does not clear a ban.
 Stored per server:
 
 - the random salt and confession counter;
-- per confession: number, title, channel/message/thread IDs, and the
-  irreversible author hash;
+- per confession: number, title, text, image URL, channel/message/thread IDs,
+  and the irreversible author hash;
 - per reply: hierarchical path (`1.1`, `1.1.1`), parent path, message/channel
   IDs, text, image URL, and the irreversible author hash;
 - author user IDs for reply DM delivery, and per-user DM opt-out markers;
