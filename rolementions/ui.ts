@@ -12,6 +12,20 @@ import { ModuleName } from "./config.js";
 
 export const StatsPageSize = 10;
 
+function paginate<T>(
+  entries: readonly T[],
+  page: number,
+): { totalPages: number; page: number; slice: T[] } {
+  const totalPages = Math.max(1, Math.ceil(entries.length / StatsPageSize));
+  const current = Math.min(Math.max(0, Math.trunc(page)), totalPages - 1);
+  const start = current * StatsPageSize;
+  return {
+    totalPages,
+    page: current,
+    slice: entries.slice(start, start + StatsPageSize),
+  };
+}
+
 export function roleText(roleId: string, roleName?: string | null): string {
   const name = roleName?.trim();
   if (!name) return `\`${roleId}\``;
@@ -45,16 +59,8 @@ export interface TopStatsInput {
 }
 
 export function buildTopStatsCard(input: TopStatsInput): CardReply {
-  const totalPages = Math.max(
-    1,
-    Math.ceil(input.entries.length / StatsPageSize),
-  );
-  const page = Math.min(
-    Math.max(0, Math.trunc(input.page)),
-    totalPages - 1,
-  );
+  const { totalPages, page, slice } = paginate(input.entries, input.page);
   const start = page * StatsPageSize;
-  const slice = input.entries.slice(start, start + StatsPageSize);
   const lines = slice.map(
     (entry, index) =>
       `**#${start + index + 1}** ${roleText(entry.roleId, entry.roleName)} — **${entry.count}**`,
@@ -94,16 +100,7 @@ export interface RoleStatsInput {
 }
 
 export function buildRoleStatsCard(input: RoleStatsInput): CardReply {
-  const totalPages = Math.max(
-    1,
-    Math.ceil(input.entries.length / StatsPageSize),
-  );
-  const page = Math.min(
-    Math.max(0, Math.trunc(input.page)),
-    totalPages - 1,
-  );
-  const start = page * StatsPageSize;
-  const slice = input.entries.slice(start, start + StatsPageSize);
+  const { totalPages, page, slice } = paginate(input.entries, input.page);
   const total = input.entries.reduce((sum, entry) => sum + entry.count, 0);
   const lines = slice.map((entry) => {
     const timestamp = Date.parse(`${entry.day}T00:00:00Z`);

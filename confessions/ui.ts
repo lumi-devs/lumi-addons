@@ -206,14 +206,10 @@ export function buildConfessModal(allowImages: boolean): ModalBuilder {
   return modal;
 }
 
-export function buildReplyModal(
-  number: number,
+function addReplyFields(
+  modal: ModalBuilder,
   allowImages: boolean,
 ): ModalBuilder {
-  const modal = new ModalBuilder()
-    .setCustomId(`${ReplyModalPrefix}:${number}`)
-    .setTitle(`Reply to Confession #${number}`);
-
   modal.addComponents(
     new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
       textInput(ReplyTextId, "Your reply", TextInputStyle.Paragraph, {
@@ -222,12 +218,19 @@ export function buildReplyModal(
       }),
     ),
   );
-
-  if (allowImages) {
-    modal.addComponents(imageUploadLabel(ReplyImageId));
-  }
-
+  if (allowImages) modal.addComponents(imageUploadLabel(ReplyImageId));
   return modal;
+}
+
+export function buildReplyModal(
+  number: number,
+  allowImages: boolean,
+): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(`${ReplyModalPrefix}:${number}`)
+    .setTitle(`Reply to Confession #${number}`);
+
+  return addReplyFields(modal, allowImages);
 }
 
 export function buildReplyToReplyModal(
@@ -239,20 +242,7 @@ export function buildReplyToReplyModal(
     .setCustomId(`${ReplyToModalPrefix}:${number}:${path}`)
     .setTitle("Reply to Reply");
 
-  modal.addComponents(
-    new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-      textInput(ReplyTextId, "Your reply", TextInputStyle.Paragraph, {
-        maxLength: MaxTextLength,
-        placeholder: "This is posted anonymously.",
-      }),
-    ),
-  );
-
-  if (allowImages) {
-    modal.addComponents(imageUploadLabel(ReplyImageId));
-  }
-
-  return modal;
+  return addReplyFields(modal, allowImages);
 }
 
 function messageTimestamp(messageId: string): number | null {
