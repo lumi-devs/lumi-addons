@@ -9,8 +9,10 @@ import {
 } from "@lumi/ui";
 import type {
   ButtonInteraction,
+  Guild,
   GuildMember,
   Interaction,
+  ModalSubmitInteraction,
   Role,
   StringSelectMenuInteraction,
   UserSelectMenuInteraction,
@@ -33,6 +35,7 @@ import {
   renameBoosterRole,
   resolveGuild,
   shareRoleWithMember,
+  type OwnedRole,
 } from "./roles.js";
 import {
   buildBlacklistPageCard,
@@ -86,6 +89,30 @@ async function announceCreation(
     ]),
   );
   await channel.send(cardCreateOptions(card)).catch(() => undefined);
+}
+
+type OwnedRoleInteraction =
+  | ButtonInteraction
+  | ModalSubmitInteraction
+  | UserSelectMenuInteraction;
+
+async function requireOwnedRole(
+  interaction: OwnedRoleInteraction,
+  services: ModuleServices,
+  guildId: string,
+): Promise<{ owned: OwnedRole; guild: Guild } | null> {
+  await deferEphemeral(interaction);
+  const owned = await loadOwnedRole(services, guildId, interaction.user.id);
+  const guild = await resolveGuild(services, guildId);
+  if (!owned || !guild) {
+    await interaction.editReply(
+      ephemeralCard(
+        makeErrorCard("Role Gone", "You don't have a custom role anymore."),
+      ),
+    );
+    return null;
+  }
+  return { owned, guild };
 }
 
 async function handleCreateModal(
@@ -143,17 +170,9 @@ async function handleRenameModal(
 ): Promise<void> {
   if (!interaction.isModalSubmit()) return;
 
-  await deferEphemeral(interaction);
-  const owned = await loadOwnedRole(services, guildId, interaction.user.id);
-  const guild = await resolveGuild(services, guildId);
-  if (!owned || !guild) {
-    await interaction.editReply(
-      ephemeralCard(
-        makeErrorCard("Role Gone", "You don't have a custom role anymore."),
-      ),
-    );
-    return;
-  }
+  const context = await requireOwnedRole(interaction, services, guildId);
+  if (!context) return;
+  const { owned, guild } = context;
 
   const error = await renameBoosterRole(
     guild,
@@ -184,17 +203,9 @@ async function handleColorModal(
 ): Promise<void> {
   if (!interaction.isModalSubmit()) return;
 
-  await deferEphemeral(interaction);
-  const owned = await loadOwnedRole(services, guildId, interaction.user.id);
-  const guild = await resolveGuild(services, guildId);
-  if (!owned || !guild) {
-    await interaction.editReply(
-      ephemeralCard(
-        makeErrorCard("Role Gone", "You don't have a custom role anymore."),
-      ),
-    );
-    return;
-  }
+  const context = await requireOwnedRole(interaction, services, guildId);
+  if (!context) return;
+  const { owned, guild } = context;
 
   const error = await recolorBoosterRole(
     guild,
@@ -225,17 +236,9 @@ async function handleShareSelect(
   const targetId = interaction.values[0];
   if (!targetId) return;
 
-  await deferEphemeral(interaction);
-  const owned = await loadOwnedRole(services, guildId, interaction.user.id);
-  const guild = await resolveGuild(services, guildId);
-  if (!owned || !guild) {
-    await interaction.editReply(
-      ephemeralCard(
-        makeErrorCard("Role Gone", "You don't have a custom role anymore."),
-      ),
-    );
-    return;
-  }
+  const context = await requireOwnedRole(interaction, services, guildId);
+  if (!context) return;
+  const { owned, guild } = context;
 
   const result = await shareRoleWithMember(
     services,
@@ -266,17 +269,9 @@ async function handleManageShares(
   services: ModuleServices,
   guildId: string,
 ): Promise<void> {
-  await deferEphemeral(interaction);
-  const owned = await loadOwnedRole(services, guildId, interaction.user.id);
-  const guild = await resolveGuild(services, guildId);
-  if (!owned || !guild) {
-    await interaction.editReply(
-      ephemeralCard(
-        makeErrorCard("Role Gone", "You don't have a custom role anymore."),
-      ),
-    );
-    return;
-  }
+  const context = await requireOwnedRole(interaction, services, guildId);
+  if (!context) return;
+  const { owned, guild } = context;
 
   const options: ShareOption[] = [];
   for (const memberId of owned.record.shares.slice(0, 25)) {

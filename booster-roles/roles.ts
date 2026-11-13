@@ -203,11 +203,16 @@ export async function cleanupRoleRecord(
   }
 }
 
+export interface OwnedRole {
+  record: RoleRecord;
+  role: Role;
+}
+
 export async function loadOwnedRole(
   services: ModuleServices,
   guildId: string,
   ownerId: string,
-): Promise<{ record: RoleRecord; role: Role } | null> {
+): Promise<OwnedRole | null> {
   const record = await getRoleByOwner(services, guildId, ownerId);
   if (!record) return null;
 
@@ -226,7 +231,7 @@ export async function loadRoleById(
   services: ModuleServices,
   guildId: string,
   roleId: string,
-): Promise<{ record: RoleRecord; role: Role } | null> {
+): Promise<OwnedRole | null> {
   const record = await getRoleById(services, guildId, roleId);
   if (!record) return null;
 
@@ -245,7 +250,7 @@ export async function loadSharedRoles(
   services: ModuleServices,
   guildId: string,
   userId: string,
-): Promise<{ record: RoleRecord; role: Role }[]> {
+): Promise<OwnedRole[]> {
   const index = await getUserRoleIndex(services, guildId, userId);
   if (index.shared.length === 0) return [];
 
