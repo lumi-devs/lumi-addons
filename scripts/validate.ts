@@ -7,8 +7,6 @@ const ROOT = path.resolve(fileURLToPath(new URL("../", import.meta.url)));
 const SKIP: Record<string, true> = {
   node_modules: true,
   scripts: true,
-  docs: true,
-  data: true,
   ".lumi": true,
   dist: true,
   coverage: true,

@@ -24,7 +24,7 @@ export async function getConfig(
       ConfigKey,
     );
   } catch (error) {
-    services.observability.logger.warn("dragme config read failed", {
+    services.observability?.logger?.warn?.("dragme config read failed", {
       guildId,
       error,
     });
@@ -33,7 +33,7 @@ export async function getConfig(
   const parsed = ConfigSchema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 
-  services.observability.logger.warn("dragme invalid config, using defaults", {
+  services.observability?.logger?.warn?.("dragme invalid config, using defaults", {
     guildId,
     issues: parsed.error.issues,
   });

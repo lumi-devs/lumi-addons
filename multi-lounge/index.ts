@@ -36,7 +36,7 @@ const reconcileTask: TaskDefinition = {
     for (const guild of services.client.guilds.cache.values()) {
       if (!services.modules.isEnabled(guild.id, ModuleName)) continue;
       const release = await services.helpers.cache
-        .takeLock(`lumi:multi-lounge:reconcile:${guild.id}`, 120_000)
+        .takeLock(`${ModuleName}:reconcile:${guild.id}`, 120_000)
         .catch(() => null);
       if (!release) continue;
       try {

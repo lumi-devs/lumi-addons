@@ -49,14 +49,14 @@ export async function getConfig(
       ConfigKey,
     );
   } catch (error) {
-    services.observability.logger.warn("config read failed", {
+    services.observability?.logger?.warn?.("config read failed", {
       guildId,
       error,
     });
   }
   const parsed = ConfigSchema.safeParse(stored ?? {});
   if (!parsed.success) {
-    services.observability.logger.warn("invalid config, using defaults", {
+    services.observability?.logger?.warn?.("invalid config, using defaults", {
       guildId,
       issues: parsed.error.issues,
     });
@@ -1150,8 +1150,7 @@ export function roleGrantNote(result: RoleGrantResult): string {
       return "Role not granted: Discord rejected the role change.";
   }
 }
-
-function randomInclusive(min: number, max: number): number {
+export function randomInclusive(min: number, max: number): number {
   const low = Math.min(min, max);
   const high = Math.max(min, max);
   if (high <= low) return low;

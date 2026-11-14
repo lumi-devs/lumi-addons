@@ -256,7 +256,7 @@ export async function recordPeak(
 }
 
 function cooldownKey(guildId: string, baseId: string): string {
-  return `lumi:multi-lounge:create:${guildId}:${baseId}`;
+  return `${ModuleName}:create:${guildId}:${baseId}`;
 }
 
 export async function claimCreationCooldown(

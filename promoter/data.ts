@@ -65,7 +65,7 @@ export async function getConfig(
       ConfigKey,
     );
   } catch (error) {
-    services.observability.logger.warn("promoter config read failed", {
+    services.observability?.logger?.warn?.("promoter config read failed", {
       guildId,
       error,
     });
@@ -73,7 +73,7 @@ export async function getConfig(
 
   const parsed = ConfigSchema.safeParse(stored ?? {});
   if (!parsed.success) {
-    services.observability.logger.warn(
+    services.observability?.logger?.warn?.(
       "promoter config invalid, using defaults",
       { guildId, issues: parsed.error.issues },
     );

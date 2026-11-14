@@ -37,5 +37,5 @@
     }
   },
   "include": ["*/**/*.ts"],
-  "exclude": ["node_modules", ".lumi", "scripts", "docs", "dist", "coverage"]
+  "exclude": ["node_modules", ".lumi", "scripts", "dist", "coverage"]
 }
