@@ -404,7 +404,6 @@ export async function markReported(
 function reportClaimKey(guildId: string, key: string): string {
   return `${ModuleName}:report-claim:${guildId}:${key}`;
 }
-
 export async function claimReport(
   services: ModuleServices,
   guildId: string,
@@ -412,7 +411,7 @@ export async function claimReport(
 ): Promise<boolean> {
   return services.helpers.cache
     .setNx(reportClaimKey(guildId, key), String(Date.now()), 60_000)
-    .catch(() => true);
+    .catch(() => false);
 }
 
 export async function releaseReportClaim(
@@ -493,7 +492,7 @@ export async function claimCooldown(
   if (ttlMs <= 0) return true;
   return services.helpers.cache
     .setNx(cooldownKey(guildId, authorHash), String(Date.now()), ttlMs)
-    .catch(() => true);
+    .catch(() => false);
 }
 
 export async function clearCooldown(
@@ -569,8 +568,8 @@ export async function eraseUserHashData(
     guildId,
     userId,
   );
-  const dmOptOutCleared = await hasReplyDmOptOut(services, guildId, userId);
   await setReplyDmOptOut(services, guildId, userId, false);
+  const dmOptOutCleared = true;
 
   const salt = await readSalt(services, guildId);
   if (!salt) {

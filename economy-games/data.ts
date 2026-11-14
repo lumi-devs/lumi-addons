@@ -332,9 +332,8 @@ export function shuffleDeck(deck: readonly GameCard[]): GameCard[] {
   const cards = [...deck];
   for (let i = cards.length - 1; i > 0; i -= 1) {
     const j = randomInt(i + 1);
-    const current = cards[i];
-    const swapped = cards[j];
-    if (current === undefined || swapped === undefined) continue;
+    const current = cards[i]!;
+    const swapped = cards[j]!;
     cards[i] = swapped;
     cards[j] = current;
   }
@@ -413,8 +412,12 @@ export function decideOutcome(
 }
 
 export function naturalPayout(bet: bigint, multiplier: number): bigint {
-  const total = Math.floor(Number(bet) * multiplier);
-  return total > 0 ? BigInt(total) : 0n;
+  // Use bigint arithmetic to avoid precision loss for large bets
+  // multiplier is typically 1.5 (3:2), so we multiply by numerator/denominator
+  const numerator = Math.round(multiplier * 100);
+  const denominator = 100;
+  const total = (bet * BigInt(numerator)) / BigInt(denominator);
+  return total > 0n ? total : 0n;
 }
 
 export function cardLabel(card: GameCard): string {

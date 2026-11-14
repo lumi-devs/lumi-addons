@@ -120,7 +120,10 @@ export const dragmeCommand: CommandDefinition = {
       return;
     }
 
-    if (guild.voiceStates.cache.get(targetUser.id)?.channelId !== channel.id) {
+    const targetMember = await guild.members
+      .fetch(targetUser.id)
+      .catch(() => null);
+    if (targetMember?.voice.channelId !== channel.id) {
       await fail(
         "Can't Do That",
         `${userMention(targetUser.id)} is not in ${channelMention(channel.id)} right now.`,
@@ -150,6 +153,10 @@ export const dragmeCommand: CommandDefinition = {
       );
       return;
     }
+    if (channel.userLimit > 0 && channel.members.size >= channel.userLimit) {
+      await fail("Can't Do That", `The destination voice channel ${channelMention(channel.id)} is full.`);
+      return;
+    }
 
     if (member.voice.channelId === channel.id) {
       await fail(
@@ -164,6 +171,12 @@ export const dragmeCommand: CommandDefinition = {
         "Join Voice First",
         "Join a voice channel first so I can move you into the requested channel.",
       );
+      return;
+    }
+
+    const memberPermissions = channel.permissionsFor(member);
+    if (!memberPermissions?.has(PermissionFlagsBits.Connect)) {
+      await fail("Missing Permissions", `You need Connect permission in ${channelMention(channel.id)}.`);
       return;
     }
 

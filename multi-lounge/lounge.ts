@@ -133,12 +133,37 @@ async function deleteEmptyExtra(
       .then(() => true)
       .catch(() => false);
     if (!deleted) return extras;
+  } else {
+    services.observability.logger.debug("multi-lounge extra already deleted externally", {
+      guildId: guild.id,
+      channelId,
+    });
   }
 
   const remaining = extras.filter((extra) => extra.channelId !== channelId);
   await writeGroup(services, guild.id, { baseId, extras: remaining });
   await recordDeletion(services, guild.id);
   return remaining;
+}
+
+async function renumberExtras(
+  services: ModuleServices,
+  guildId: string,
+  baseId: string,
+  extras: ExtraLounge[],
+): Promise<ExtraLounge[]> {
+  const renumbered = extras.map((extra, index) => ({
+    ...extra,
+    number: index + 1,
+  }));
+  const changed = renumbered.some((r, i) => {
+    const original = extras[i];
+    return original !== undefined && r.number !== original.number;
+  });
+  if (changed) {
+    await writeGroup(services, guildId, { baseId, extras: renumbered });
+  }
+  return renumbered;
 }
 
 async function pruneExtras(
@@ -172,13 +197,11 @@ async function pruneExtras(
   }
 
   if (changed) {
-    await writeGroup(services, guild.id, {
-      baseId: group.baseId,
-      extras,
-    });
+    extras = await renumberExtras(services, guild.id, group.baseId, extras);
   }
   return extras;
 }
+
 
 async function deleteAllExtras(
   services: ModuleServices,
@@ -329,7 +352,18 @@ async function handleArrival(
     return;
   }
 
-  if (member?.voice.channelId === channelId) {
+  if (member && member.voice.channelId === channelId) {
+    const targetChannel = await resolveVoiceChannel(guild, created.channelId);
+    if (targetChannel && targetChannel.userLimit > 0 && targetChannel.members.size >= targetChannel.userLimit) {
+      await resolveVoiceChannel(guild, created.channelId)
+        .then((channel) =>
+          channel?.delete("Multi Lounge: unseeded lounge (target full)"),
+        )
+        .catch(() => undefined);
+      await releaseCreationCooldown(services, guild.id, baseId);
+      return;
+    }
+
     const moved = await member.voice
       .setChannel(created.channelId, "Multi Lounge: opening a new lounge")
       .then(() => true)

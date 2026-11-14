@@ -28,7 +28,7 @@ export const expireSweepTask: TaskDefinition = {
         const claimed = await services.helpers.moduleData.take<DragRequest>(
           row.guildId,
           ModuleName,
-          row.targetId,
+          request.requesterId,
           PendingKey,
         );
         if (!claimed) continue;

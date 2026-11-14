@@ -118,6 +118,16 @@ async function handleButton(
     return;
   }
 
+  if (channel.userLimit > 0 && channel.members.size >= channel.userLimit) {
+    await claimPendingRequest(services, guild.id, requesterId, requestId);
+    await replyError(
+      interaction,
+      "Channel Full",
+      `The destination voice channel ${channelMention(channel.id)} is full.`,
+    );
+    return;
+  }
+
   if (!channel.members.has(interaction.user.id)) {
     await replyError(
       interaction,
@@ -178,11 +188,23 @@ async function handleButton(
     return;
   }
 
+  const requesterPermissions = channel.permissionsFor(requester);
+  if (!requesterPermissions?.has(PermissionFlagsBits.Connect)) {
+    await editRequestCard(services, claimed, failedCard(claimed));
+    return;
+  }
+
   let moved = true;
   try {
     await requester.voice.setChannel(channel);
-  } catch {
+  } catch (error) {
     moved = false;
+    services.observability.logger.warn("dragme move failed", {
+      guildId: guild.id,
+      requesterId: requester.id,
+      channelId: channel.id,
+      error,
+    });
   }
 
   await editRequestCard(

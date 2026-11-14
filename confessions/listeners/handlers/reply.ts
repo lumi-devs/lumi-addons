@@ -149,8 +149,13 @@ export async function notifyReplyTarget(
       ],
     },
   );
-
-  await user.send(cardCreateOptions(card)).catch(() => undefined);
+  await user.send(cardCreateOptions(card)).catch((e) =>
+    services.observability?.logger?.warn?.("reply DM failed", {
+      guildId,
+      targetId,
+      error: e,
+    }),
+  );
 }
 
 export async function handleReplySubmit(

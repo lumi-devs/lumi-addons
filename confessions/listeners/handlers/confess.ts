@@ -125,7 +125,13 @@ export async function handleConfessSubmit(
 
   const attachment = upload ? await attachmentFromUpload(upload) : null;
   if (upload && !attachment) {
-    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
+    await clearCooldown(services, guildId, authorHash).catch((e) =>
+      services.observability?.logger?.warn?.("clearCooldown failed", {
+        guildId,
+        authorHash,
+        error: e,
+      }),
+    );
     await replyEphemeral(
       interaction,
       makeErrorCard(
@@ -145,7 +151,13 @@ export async function handleConfessSubmit(
       "confession number allocation failed",
       { guildId, error },
     );
-    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
+    await clearCooldown(services, guildId, authorHash).catch((e) =>
+      services.observability?.logger?.warn?.("clearCooldown failed", {
+        guildId,
+        authorHash,
+        error: e,
+      }),
+    );
     await replyEphemeral(
       interaction,
       makeErrorCard(
@@ -181,7 +193,13 @@ export async function handleConfessSubmit(
       guildId,
       error,
     });
-    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
+    await clearCooldown(services, guildId, authorHash).catch((e) =>
+      services.observability?.logger?.warn?.("clearCooldown failed", {
+        guildId,
+        authorHash,
+        error: e,
+      }),
+    );
     await replyEphemeral(
       interaction,
       makeErrorCard(
@@ -249,7 +267,13 @@ export async function handleConfessSubmit(
       }
     }
     await message.delete().catch(() => undefined);
-    await clearCooldown(services, guildId, authorHash).catch(() => undefined);
+    await clearCooldown(services, guildId, authorHash).catch((e) =>
+      services.observability?.logger?.warn?.("clearCooldown failed", {
+        guildId,
+        authorHash,
+        error: e,
+      }),
+    );
     await replyEphemeral(
       interaction,
       makeErrorCard(
