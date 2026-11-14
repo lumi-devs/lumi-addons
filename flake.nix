@@ -18,6 +18,7 @@
             nodejs
             git
             jq
+            biome
           ];
 
           shellHook = ''
