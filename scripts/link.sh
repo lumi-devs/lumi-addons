@@ -11,6 +11,9 @@ LUMI_PATH="${LUMI_PATH:-../lumi-v2}"
 if [ ! -d "$LUMI_PATH" ] && [ -d "../Lumi" ]; then
   LUMI_PATH="../Lumi"
 fi
+if [ ! -d "$LUMI_PATH" ] && [ -d "/home/rebiz/opt/workdir/lumi-v2" ]; then
+  LUMI_PATH="/home/rebiz/opt/workdir/lumi-v2"
+fi
 
 if [ ! -f "$LUMI_PATH/package.json" ]; then
   echo "error: Lumi v2 directory not found at '$LUMI_PATH'." >&2

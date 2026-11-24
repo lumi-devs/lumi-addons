@@ -29,7 +29,7 @@ export async function readConfig(
       ConfigKey,
     );
   } catch (error) {
-    services.observability?.logger?.warn?.("confessions config read failed", {
+    services.observability.logger.warn("confessions config read failed", {
       guildId,
       error,
     });
@@ -38,7 +38,7 @@ export async function readConfig(
   const parsed = ConfigSchema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 
-  services.observability?.logger?.warn?.(
+  services.observability.logger.warn(
     "confessions invalid config, using defaults",
     { guildId, issues: parsed.error.issues },
   );

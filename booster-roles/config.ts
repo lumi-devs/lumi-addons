@@ -33,7 +33,7 @@ export async function getConfig(
       ConfigKey,
     );
   } catch (error) {
-    services.observability?.logger?.warn?.("booster role config read failed", {
+    services.observability.logger.warn("booster role config read failed", {
       guildId,
       error,
     });
@@ -42,7 +42,7 @@ export async function getConfig(
   const parsed = ConfigSchema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 
-  services.observability?.logger?.warn?.(
+  services.observability.logger.warn(
     "invalid booster role config, using defaults",
     { guildId, issues: parsed.error.issues },
   );

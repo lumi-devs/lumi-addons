@@ -15,7 +15,7 @@ export const sweepTask: TaskDefinition = {
 
       const blocks = await listBlocks(services, guild.id).catch(
         (error: unknown) => {
-          services.observability?.logger?.warn?.(
+          services.observability.logger.warn(
             "role mention block sweep failed",
             { guildId: guild.id, error },
           );
@@ -32,7 +32,7 @@ export const sweepTask: TaskDefinition = {
           block,
           config.logChannelId,
         ).catch((error: unknown) => {
-          services.observability?.logger?.warn?.(
+          services.observability.logger.warn(
             "role mention block reconcile failed",
             { guildId: guild.id, roleId: block.roleId, error },
           );

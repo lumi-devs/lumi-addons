@@ -60,7 +60,7 @@ export async function readConfig(
       ConfigKey,
     );
   } catch (error) {
-    services.observability?.logger?.warn?.("role-mentions config read failed", {
+    services.observability.logger.warn("role-mentions config read failed", {
       guildId,
       error,
     });
@@ -69,7 +69,7 @@ export async function readConfig(
   const parsed = ConfigSchema.safeParse(stored ?? {});
   if (parsed.success) return parsed.data;
 
-  services.observability?.logger?.warn?.(
+  services.observability.logger.warn(
     "role-mentions invalid config, using defaults",
     { guildId, issues: parsed.error.issues },
   );
@@ -90,7 +90,7 @@ export async function saveConfig(
     );
     return true;
   } catch (error) {
-    services.observability?.logger?.warn?.("role-mentions config save failed", {
+    services.observability.logger.warn("role-mentions config save failed", {
       guildId,
       error,
     });

@@ -137,7 +137,7 @@ export const statsPaginationListener: ListenerDefinition = {
         ),
       );
     } catch (error) {
-      services.observability?.logger?.warn?.(
+      services.observability.logger.warn(
         "role mention stats pagination failed",
         { guildId, error },
       );

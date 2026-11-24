@@ -857,7 +857,7 @@ export async function handleBoosterRoleInteraction(
         return;
     }
   } catch (error) {
-    services.observability?.logger?.error?.("booster role interaction failed", {
+    services.observability.logger.error("booster role interaction failed", {
       error,
       customId: interaction.customId,
     });

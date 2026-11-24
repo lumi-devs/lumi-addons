@@ -72,7 +72,7 @@ async function submitReport(
   try {
     await channel.send(cardCreateOptions(makeWarningCard(options.title, lines)));
   } catch (error) {
-    services.observability?.logger?.warn?.("confession report failed", {
+    services.observability.logger.warn("confession report failed", {
       guildId: options.guildId,
       error,
     });

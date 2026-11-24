@@ -102,7 +102,7 @@ async function sweepGuild(
     try {
       await sweepRole(services, guild, record, config);
     } catch (error) {
-      services.observability?.logger?.warn?.("booster role sweep failed", {
+      services.observability.logger.warn("booster role sweep failed", {
         guildId: guild.id,
         roleId: record.roleId,
         error,
@@ -119,7 +119,7 @@ export async function sweepBoosterRoles(
     try {
       await sweepGuild(services, guild);
     } catch (error) {
-      services.observability?.logger?.warn?.("booster role sweep aborted", {
+      services.observability.logger.warn("booster role sweep aborted", {
         guildId: guild.id,
         error,
       });

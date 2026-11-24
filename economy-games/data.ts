@@ -49,14 +49,14 @@ export async function getConfig(
       ConfigKey,
     );
   } catch (error) {
-    services.observability?.logger?.warn?.("config read failed", {
+    services.observability.logger.warn("config read failed", {
       guildId,
       error,
     });
   }
   const parsed = ConfigSchema.safeParse(stored ?? {});
   if (!parsed.success) {
-    services.observability?.logger?.warn?.("invalid config, using defaults", {
+    services.observability.logger.warn("invalid config, using defaults", {
       guildId,
       issues: parsed.error.issues,
     });

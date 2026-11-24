@@ -150,7 +150,7 @@ export async function notifyReplyTarget(
     },
   );
   await user.send(cardCreateOptions(card)).catch((e) =>
-    services.observability?.logger?.warn?.("reply DM failed", {
+    services.observability.logger.warn("reply DM failed", {
       guildId,
       targetId,
       error: e,
@@ -280,7 +280,7 @@ export async function handleReplySubmit(
   try {
     sent = await target.send(payload);
   } catch (error) {
-    services.observability?.logger?.warn?.("confession reply failed", {
+    services.observability.logger.warn("confession reply failed", {
       guildId,
       error,
     });
@@ -313,7 +313,7 @@ export async function handleReplySubmit(
       createdAt: Date.now(),
     });
   } catch (error) {
-    services.observability?.logger?.warn?.("confession reply save failed", {
+    services.observability.logger.warn("confession reply save failed", {
       guildId,
       error,
     });

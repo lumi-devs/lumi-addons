@@ -1,4 +1,4 @@
-import type { CommandDefinition } from "@lumi/module-kit";
+import type { CommandDefinition, ModuleServices } from "@lumi/module-kit";
 import {
   ephemeralCard,
   makeErrorCard,
@@ -36,11 +36,9 @@ import {
   type SharedRoleView,
 } from "../ui.js";
 
-type Services = Parameters<NonNullable<CommandDefinition["execute"]>>[1];
-
 async function hasPermit(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guild: Guild,
   node: string,
 ): Promise<boolean> {
@@ -71,7 +69,7 @@ async function hasPermit(
 
 async function runList(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guildId: string,
 ): Promise<void> {
   const roles = await listRoleRecords(services, guildId);
@@ -97,7 +95,7 @@ async function runList(
 
 async function runInfo(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guildId: string,
 ): Promise<void> {
   const target = interaction.options.getUser("user", true);
@@ -130,7 +128,7 @@ async function runInfo(
 
 async function runStats(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guildId: string,
 ): Promise<void> {
   const [roles, blacklist] = await Promise.all([
@@ -159,7 +157,7 @@ async function runStats(
 
 async function runDeleteUser(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guildId: string,
 ): Promise<void> {
   const target = interaction.options.getUser("user", true);
@@ -207,7 +205,7 @@ async function runDeleteUser(
 
 async function runDeleteRole(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guild: Guild,
   guildId: string,
 ): Promise<void> {
@@ -292,7 +290,7 @@ async function runDeleteRole(
 
 async function runBlacklistAdd(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guildId: string,
 ): Promise<void> {
   const target = interaction.options.getUser("user", true);
@@ -345,7 +343,7 @@ async function runBlacklistAdd(
 
 async function runBlacklistRemove(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guildId: string,
 ): Promise<void> {
   const target = interaction.options.getUser("user", true);
@@ -366,7 +364,7 @@ async function runBlacklistRemove(
 
 async function runBlacklistList(
   interaction: ChatInputCommandInteraction,
-  services: Services,
+  services: ModuleServices,
   guildId: string,
 ): Promise<void> {
   const records = await listBlacklist(services, guildId);

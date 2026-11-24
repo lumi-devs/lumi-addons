@@ -124,7 +124,7 @@ async function restoreBlockLocked(
       );
     }
   } catch (error) {
-    services.observability?.logger?.warn?.("role mention restore failed", {
+    services.observability.logger.warn("role mention restore failed", {
       guildId: guild.id,
       roleId: block.roleId,
       error,
@@ -195,7 +195,7 @@ export async function applyBlock(
         `RoleMentions: ${manual ? "manual" : "automatic"} mention block`,
       );
     } catch (error) {
-      services.observability?.logger?.warn?.("role mention block failed", {
+      services.observability.logger.warn("role mention block failed", {
         guildId: guild.id,
         roleId,
         error,
@@ -220,7 +220,7 @@ export async function applyBlock(
       await role
         .setMentionable(previousMentionable, "RoleMentions: rollback")
         .catch(() => undefined);
-      services.observability?.logger?.error?.(
+      services.observability.logger.error(
         "role mention block record failed",
         { guildId: guild.id, roleId, error },
       );
@@ -298,12 +298,12 @@ export async function reconcileBlock(
         false,
         "RoleMentions: re-applying active mention block",
       );
-      services.observability?.logger?.info?.(
+      services.observability.logger.info(
         "role mention block drift healed",
         { guildId: guild.id, roleId: fresh.roleId },
       );
     } catch (error) {
-      services.observability?.logger?.warn?.(
+      services.observability.logger.warn(
         "role mention block drift heal failed",
         { guildId: guild.id, roleId: fresh.roleId, error },
       );

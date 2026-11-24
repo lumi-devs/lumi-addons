@@ -126,7 +126,7 @@ export async function handleConfessSubmit(
   const attachment = upload ? await attachmentFromUpload(upload) : null;
   if (upload && !attachment) {
     await clearCooldown(services, guildId, authorHash).catch((e) =>
-      services.observability?.logger?.warn?.("clearCooldown failed", {
+      services.observability.logger.warn("clearCooldown failed", {
         guildId,
         authorHash,
         error: e,
@@ -147,12 +147,12 @@ export async function handleConfessSubmit(
   try {
     number = await nextConfessionNumber(services, guildId);
   } catch (error) {
-    services.observability?.logger?.warn?.(
+    services.observability.logger.warn(
       "confession number allocation failed",
       { guildId, error },
     );
     await clearCooldown(services, guildId, authorHash).catch((e) =>
-      services.observability?.logger?.warn?.("clearCooldown failed", {
+      services.observability.logger.warn("clearCooldown failed", {
         guildId,
         authorHash,
         error: e,
@@ -189,12 +189,12 @@ export async function handleConfessSubmit(
       ...(attachment ? { files: [attachment] } : {}),
     });
   } catch (error) {
-    services.observability?.logger?.warn?.("confession post failed", {
+    services.observability.logger.warn("confession post failed", {
       guildId,
       error,
     });
     await clearCooldown(services, guildId, authorHash).catch((e) =>
-      services.observability?.logger?.warn?.("clearCooldown failed", {
+      services.observability.logger.warn("clearCooldown failed", {
         guildId,
         authorHash,
         error: e,
@@ -222,7 +222,7 @@ export async function handleConfessSubmit(
       });
       threadId = thread.id;
     } catch (error) {
-      services.observability?.logger?.warn?.(
+      services.observability.logger.warn(
         "confession thread creation failed",
         { guildId, error },
       );
@@ -248,7 +248,7 @@ export async function handleConfessSubmit(
   try {
     await saveConfession(services, guildId, meta, index);
   } catch (error) {
-    services.observability?.logger?.warn?.("confession record save failed", {
+    services.observability.logger.warn("confession record save failed", {
       guildId,
       error,
     });
@@ -268,7 +268,7 @@ export async function handleConfessSubmit(
     }
     await message.delete().catch(() => undefined);
     await clearCooldown(services, guildId, authorHash).catch((e) =>
-      services.observability?.logger?.warn?.("clearCooldown failed", {
+      services.observability.logger.warn("clearCooldown failed", {
         guildId,
         authorHash,
         error: e,

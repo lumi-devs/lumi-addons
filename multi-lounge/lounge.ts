@@ -1,4 +1,4 @@
-import type { ModuleServices } from "@lumi/module-kit";
+import { withKeyLock, type ModuleServices } from "@lumi/module-kit";
 import {
   ChannelType,
   DiscordAPIError,
@@ -38,22 +38,6 @@ export interface BaseOccupancy {
   baseExists: boolean;
   baseCount: number;
   extras: ExtraOccupancy[];
-}
-
-const tails = new Map<string, Promise<unknown>>();
-
-function serialize<T>(guildId: string, work: () => Promise<T>): Promise<T> {
-  const previous = tails.get(guildId) ?? Promise.resolve();
-  const run = previous.catch(() => undefined).then(work);
-  const tail = run.then(
-    () => undefined,
-    () => undefined,
-  );
-  tails.set(guildId, tail);
-  void tail.then(() => {
-    if (tails.get(guildId) === tail) tails.delete(guildId);
-  });
-  return run;
 }
 
 async function resolveGuild(
@@ -407,7 +391,7 @@ export async function handleVoiceState(
   const newChannelId = newState.channelId;
   if (!guildId || oldChannelId === newChannelId) return;
 
-  await serialize(guildId, async () => {
+  await withKeyLock(services, `multi-lounge:${guildId}`, async () => {
     const config = await getConfig(services, guildId);
     if (!config || config.baseChannelIds.length === 0) return;
     const guild = await resolveGuild(services, guildId);
@@ -433,7 +417,7 @@ export async function reconcileGuild(
   services: ModuleServices,
   guildId: string,
 ): Promise<number> {
-  return serialize(guildId, async () => {
+  return withKeyLock(services, `multi-lounge:${guildId}`, async () => {
     const config = await getConfig(services, guildId);
     if (!config) return 0;
     const guild = await resolveGuild(services, guildId);

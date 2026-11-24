@@ -42,7 +42,7 @@ export const messageCreateListener: ListenerDefinition = {
     if (config.analyticsEnabled) {
       await recordRoleMentions(services, guild.id, roleIds).catch(
         (error: unknown) => {
-          services.observability?.logger?.warn?.(
+          services.observability.logger.warn(
             "role mention analytics failed",
             { guildId: guild.id, error },
           );
@@ -64,7 +64,7 @@ export const messageCreateListener: ListenerDefinition = {
         false,
         config.logChannelId,
       ).catch((error: unknown) => {
-        services.observability?.logger?.warn?.(
+        services.observability.logger.warn(
           "role mention auto-block failed",
           { guildId: guild.id, roleId, error },
         );
