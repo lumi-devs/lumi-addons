@@ -19,9 +19,15 @@
             git
             jq
             biome
+            stdenv.cc.cc.lib
           ];
 
+          env = {
+            BIOME_BINARY = "${pkgs.biome}/bin/biome";
+          };
+
           shellHook = ''
+            export LD_LIBRARY_PATH="${pkgs.stdenv.cc.cc.lib}/lib:$LD_LIBRARY_PATH"
             echo "lumi addons · bun $(bun --version) · node $(node --version)"
             echo "Link a Lumi v2 checkout with: bun run setup"
           '';

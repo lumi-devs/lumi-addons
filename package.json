@@ -7,7 +7,9 @@
   "description": "First-party dynamic addons for the Lumi v2 Discord bot. Each top-level directory is an independent module installed by Lumi's downloader.",
   "scripts": {
     "setup": "sh scripts/setup.sh",
-    "typecheck": "bunx tsc --noEmit -p tsconfig.json",
+    "create": "bun scripts/create.ts",
+    "link": "sh scripts/link.sh",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "test": "bun test",

@@ -42,13 +42,20 @@ nix develop --command bun run validate
 nix develop --command bun run typecheck
 nix develop --command bun run lint
 nix develop --command bun run test
+
+# link all addons in this repo into Lumi's data/addons for live testing:
+nix develop --command bun run link
 ```
 
 `bun run setup` links `.lumi` and `node_modules` to the Lumi checkout. Set `LUMI_PATH` if the checkout is elsewhere.
 
 ## Adding an addon
 
-Create a top-level directory named after the module, add `manifest.json` and `index.ts`, and follow [AGENTS.md](./AGENTS.md). The module name MUST match the directory name. Addons are flat: no nested modules, no cross-addon imports.
+Scaffold a complete compliant addon:
+```bash
+nix develop --command bun run create <addon-name> --category <Category>
+```
+Or create a top-level directory named after the module, add `manifest.json` and `index.ts`, and follow [AGENTS.md](./AGENTS.md). The module name MUST match the directory name. Addons are flat: no nested modules, no cross-addon imports.
 
 ## License
 

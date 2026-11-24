@@ -29,8 +29,10 @@
       "@lumi/foundation": ["./.lumi/packages/foundation/src/index.ts"],
       "@lumi/ui": ["./.lumi/packages/ui/src/index.ts"],
       "@lumi/cache": ["./.lumi/packages/cache/src/index.ts"],
+      "@lumi/cron": ["./.lumi/packages/cron/src/index.ts"],
       "@lumi/redis": ["./.lumi/packages/redis/src/index.ts"],
       "@lumi/db": ["./.lumi/packages/db/src/index.ts"],
+      "@lumi/downloader": ["./.lumi/packages/downloader/src/index.ts"],
       "@lumi/scheduler": ["./.lumi/packages/scheduler/src/index.ts"],
       "@lumi/permits": ["./.lumi/packages/permits/src/index.ts"],
       "@lumi/observability": ["./.lumi/packages/observability/src/index.ts"]
